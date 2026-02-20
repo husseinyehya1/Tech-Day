@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}شاشة العرض العامة - Tech Day{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex flex-col gap-4">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+            <div class="text-sm text-slate-400">الوقت الآن</div>
+            <div class="text-3xl font-mono" id="clock">{{ now|date:"H:i" }}</div>
+        </div>
+        <div class="rounded-2xl bg-emerald-500/10 border border-emerald-500/40 px-6 py-3 text-center">
+            <div class="text-xs text-emerald-300">عدد الحضور المسجلين</div>
+            <div class="text-3xl font-bold">{{ total_present }}</div>
+        </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+        <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+            <div class="text-xs text-slate-400 mb-1">الورشة الحالية</div>
+            {% if current_session %}
+                <div class="text-2xl font-semibold mb-1">{{ current_session.workshop.title }}</div>
+                <div class="text-sm text-slate-300 mb-1">القاعة: {{ current_session.workshop.room }}</div>
+                <div class="text-xs text-slate-400">الفترة: {{ current_session.get_period_display }}</div>
+            {% else %}
+                <div class="text-sm text-slate-400">لا توجد ورشة حالية الآن</div>
+            {% endif %}
+        </div>
+        <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+            <div class="text-xs text-slate-400 mb-1">الورشة القادمة</div>
+            {% if next_session %}
+                <div class="text-2xl font-semibold mb-1">{{ next_session.workshop.title }}</div>
+                <div class="text-sm text-slate-300 mb-1">القاعة: {{ next_session.workshop.room }}</div>
+                <div class="text-xs text-slate-400">الفترة: {{ next_session.get_period_display }}</div>
+            {% else %}
+                <div class="text-sm text-slate-400">لا توجد ورشة قادمة</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 flex-1">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">أفضل المجموعات</h2>
+            <div class="text-xs text-slate-400">حسب عدد الحضور</div>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            {% for item in best_groups %}
+            <div class="rounded-xl bg-slate-950/80 border border-slate-800 p-3 flex flex-col items-center justify-center">
+                <div class="inline-flex items-center justify-center h-10 w-10 rounded-full text-lg font-bold"
+                     style="background-color: {{ item.group.color }}20; color: {{ item.group.color }};">
+                    {{ item.group.code }}
+                </div>
+                <div class="mt-2 text-sm text-slate-200">{{ item.group.name }}</div>
+                <div class="mt-1 text-xs text-slate-400">{{ item.present_count }} حضور</div>
+            </div>
+            {% empty %}
+            <div class="text-slate-400 text-sm">
+                لم يتم تسجيل حضور بعد
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateClock() {
+        var element = document.getElementById("clock");
+        if (!element) return;
+        var now = new Date();
+        var hours = now.getHours().toString().padStart(2, "0");
+        var minutes = now.getMinutes().toString().padStart(2, "0");
+        element.textContent = hours + ":" + minutes;
+    }
+    setInterval(updateClock, 1000 * 30);
+</script>
+{% endblock %}
