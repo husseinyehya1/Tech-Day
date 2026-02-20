@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Tech Day - الفريق التقني بالقليوبية{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'Tajawal', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="dark bg-slate-950 text-slate-50 font-sans min-h-screen flex flex-col">
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-20">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-xl font-bold">
+                    T
+                </div>
+                <div>
+                    <div class="text-sm text-slate-400">الفعالية</div>
+                    <div class="text-lg font-semibold">Tech Day</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:block text-right">
+                    <div class="text-xs text-slate-400">من تنفيذ</div>
+                    <div class="text-sm font-semibold">الفريق التقني بالقليوبية</div>
+                </div>
+                {% if request.user.is_authenticated %}
+                <div class="flex items-center gap-3">
+                    <div class="hidden sm:flex flex-col text-right">
+                        <div class="text-xs text-slate-400">مسجل الدخول</div>
+                        <div class="text-sm font-semibold">
+                            {{ request.user.first_name|default:request.user.username }}
+                        </div>
+                    </div>
+                    {% if request.user.is_superuser or request.user.is_staff %}
+                    <a href="{% url 'dashboard:admin_dashboard' %}"
+                       class="hidden sm:inline-flex items-center px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-100">
+                        لوحة التحكم
+                    </a>
+                    {% elif request.user.student_profile %}
+                    <a href="{% url 'students:detail' request.user.student_profile.pk %}"
+                       class="hidden sm:inline-flex items-center px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-100">
+                        صفحتي
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'users:logout' %}"
+                       class="inline-flex items-center px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 text-sm font-semibold">
+                        تسجيل الخروج
+                    </a>
+                </div>
+                {% else %}
+                <a href="{% url 'users:login' %}"
+                   class="inline-flex items-center px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                    تسجيل دخول
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <footer class="border-t border-slate-800 bg-slate-900 py-3 mt-4">
+        <div class="max-w-6xl mx-auto px-4 text-center text-sm text-slate-400">
+            من تنفيذ الفريق التقني بالقليوبية
+        </div>
+    </footer>
+</body>
+</html>
