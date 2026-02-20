@@ -1,0 +1,5 @@
+django==5.2.8
+gunicorn
+whitenoise
+dj-database-url
+psycopg2-binary
