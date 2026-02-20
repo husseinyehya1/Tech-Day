@@ -1,0 +1,46 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}حذف طالب - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-lg mx-auto space-y-4">
+    <div>
+        <h1 class="text-xl font-semibold">تأكيد حذف الطالب</h1>
+        <p class="text-sm text-slate-400">
+            هل أنت متأكد من حذف هذا الطالب؟ لا يمكن التراجع عن هذه العملية.
+        </p>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-2">
+        <div class="text-sm text-slate-300">
+            الاسم: <span class="font-semibold">{{ student.name }}</span>
+        </div>
+        <div class="text-sm text-slate-300">
+            رقم الطالب: <span class="font-mono text-cyan-400">{{ student.student_id }}</span>
+        </div>
+        <div class="text-sm text-slate-300">
+            المجموعة:
+            {% if student.group %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style="background-color: {{ student.group.color }}20; color: {{ student.group.color }};">
+                    {{ student.group.code }}
+                </span>
+            {% else %}
+                <span class="text-slate-500 text-xs">غير محدد</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" class="flex items-center justify-end gap-3">
+        {% csrf_token %}
+        <a href="{% url 'dashboard:admin_students_list' %}"
+           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+            إلغاء
+        </a>
+        <button type="submit"
+                class="inline-flex items-center px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 text-sm font-semibold">
+            تأكيد الحذف
+        </button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}تعديل جلسة في الجدول - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">تعديل جلسة ورشة</h1>
+            <p class="text-sm text-slate-400">
+                تغيير الورشة أو المجموعة أو الفترة الزمنية.
+            </p>
+        </div>
+        <a href="{% url 'dashboard:admin_schedule' %}"
+           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+            رجوع للجدول
+        </a>
+    </div>
+
+    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+        {% csrf_token %}
+        <div class="space-y-1">
+            <label class="text-sm" for="workshop">الورشة</label>
+            <select id="workshop" name="workshop"
+                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                {% for w in workshops %}
+                <option value="{{ w.id }}" {% if session.workshop_id == w.id %}selected{% endif %}>
+                    {{ w.title }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="space-y-1">
+            <label class="text-sm" for="group">المجموعة</label>
+            <select id="group" name="group"
+                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                {% for g in groups %}
+                <option value="{{ g.id }}" {% if session.group_id == g.id %}selected{% endif %}>
+                    {{ g.name }} ({{ g.code }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="space-y-1">
+                <label class="text-sm" for="period">الفترة الزمنية</label>
+                <select id="period" name="period"
+                        class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    {% for value,label in session.PERIOD_CHOICES %}
+                    <option value="{{ value }}" {% if session.period == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="text-sm" for="start_time">الوقت من</label>
+                <input id="start_time" name="start_time" type="time"
+                       value="{{ session.start_time|time:'H:i' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+        </div>
+        <div class="space-y-1">
+            <label class="text-sm" for="end_time">الوقت إلى</label>
+            <input id="end_time" name="end_time" type="time"
+                   value="{{ session.end_time|time:'H:i' }}"
+                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <a href="{% url 'dashboard:admin_schedule' %}"
+               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+                إلغاء
+            </a>
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                حفظ
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

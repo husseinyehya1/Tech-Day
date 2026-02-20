@@ -1,0 +1,78 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}إدارة الورش - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="space-y-4">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">إدارة الورش</h1>
+            <p class="text-sm text-slate-400">إضافة وتعديل وحذف الورش وتحديث حالتها.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dashboard:admin_workshop_create' %}"
+               class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                إضافة ورشة جديدة
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-slate-900">
+                    <tr>
+                        <th class="px-3 py-2 text-right">اسم الورشة</th>
+                        <th class="px-3 py-2 text-right">القاعة</th>
+                        <th class="px-3 py-2 text-right">المشرف</th>
+                        <th class="px-3 py-2 text-right">الحالة</th>
+                        <th class="px-3 py-2 text-right">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for workshop in workshops %}
+                    <tr class="hover:bg-slate-900/70">
+                        <td class="px-3 py-2">{{ workshop.title }}</td>
+                        <td class="px-3 py-2 text-slate-300">{{ workshop.room }}</td>
+                        <td class="px-3 py-2 text-slate-300">
+                            {% if workshop.supervisor %}
+                                {{ workshop.supervisor.get_full_name|default:workshop.supervisor.username }}
+                            {% else %}
+                                <span class="text-xs text-slate-500">لم يحدد</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-3 py-2 text-xs">
+                            {% if workshop.status == "active" %}
+                                <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-300">نشطة</span>
+                            {% elif workshop.status == "upcoming" %}
+                                <span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 text-amber-300">قادمة</span>
+                            {% else %}
+                                <span class="inline-flex px-2 py-1 rounded-full bg-slate-500/10 text-slate-300">منتهية</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-3 py-2">
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{% url 'dashboard:admin_workshop_update' workshop.pk %}"
+                                   class="inline-flex items-center px-3 py-1.5 rounded-xl bg-cyan-500 text-xs text-slate-950">
+                                    تعديل
+                                </a>
+                                <a href="{% url 'dashboard:admin_workshop_toggle_status' workshop.pk %}"
+                                   class="inline-flex items-center px-3 py-1.5 rounded-xl bg-emerald-500 text-xs text-slate-950">
+                                    تبديل الحالة
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-3 py-4 text-center text-slate-400">
+                            لا توجد ورش مسجلة.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

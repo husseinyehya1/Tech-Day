@@ -1,0 +1,73 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}{% if workshop %}تعديل ورشة{% else %}إضافة ورشة جديدة{% endif %} - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">
+                {% if workshop %}تعديل بيانات الورشة{% else %}إضافة ورشة جديدة{% endif %}
+            </h1>
+            <p class="text-sm text-slate-400">
+                {% if workshop %}
+                    تعديل اسم الورشة والقاعة والمشرف وحالة الورشة.
+                {% else %}
+                    إضافة ورشة جديدة وتحديد القاعة والمشرف وحالة الورشة.
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'dashboard:admin_workshops' %}"
+           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+            رجوع لقائمة الورش
+        </a>
+    </div>
+
+    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+        {% csrf_token %}
+        <div class="space-y-1">
+            <label class="text-sm" for="title">اسم الورشة</label>
+            <input id="title" name="title" type="text" required
+                   value="{{ workshop.title|default_if_none:'' }}"
+                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+        <div class="space-y-1">
+            <label class="text-sm" for="room">القاعة</label>
+            <input id="room" name="room" type="text" required
+                   value="{{ workshop.room|default_if_none:'' }}"
+                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+        <div class="space-y-1">
+            <label class="text-sm" for="supervisor">المشرف</label>
+            <select id="supervisor" name="supervisor"
+                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                <option value="">بدون</option>
+                {% for sup in supervisors %}
+                <option value="{{ sup.id }}" {% if workshop and workshop.supervisor_id == sup.id %}selected{% endif %}>
+                    {{ sup.get_full_name|default:sup.username }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="space-y-1">
+            <label class="text-sm" for="status">الحالة</label>
+            <select id="status" name="status"
+                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                <option value="upcoming" {% if not workshop or workshop.status == 'upcoming' %}selected{% endif %}>قادمة</option>
+                <option value="active" {% if workshop and workshop.status == 'active' %}selected{% endif %}>نشطة</option>
+                <option value="finished" {% if workshop and workshop.status == 'finished' %}selected{% endif %}>منتهية</option>
+            </select>
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <a href="{% url 'dashboard:admin_workshops' %}"
+               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+                إلغاء
+            </a>
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                {% if workshop %}حفظ التعديلات{% else %}حفظ الورشة{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

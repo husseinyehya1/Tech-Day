@@ -1,0 +1,61 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}نقل طالب لمجموعة أخرى - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">نقل الطالب لمجموعة أخرى</h1>
+            <p class="text-sm text-slate-400">
+                اختيار مجموعة جديدة للطالب مع الاحتفاظ بسجلات الحضور.
+            </p>
+        </div>
+        <a href="{% url 'dashboard:admin_students_list' %}"
+           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+            رجوع لقائمة الطلاب
+        </a>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2 text-sm text-slate-300">
+        <div>الطالب: <span class="font-semibold">{{ student.name }}</span></div>
+        <div>
+            المجموعة الحالية:
+            {% if student.group %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style="background-color: {{ student.group.color }}20; color: {{ student.group.color }};">
+                    {{ student.group.name }} ({{ student.group.code }})
+                </span>
+            {% else %}
+                <span class="text-xs text-slate-500">غير محدد</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+        {% csrf_token %}
+        <div class="space-y-1">
+            <label class="text-sm" for="group">المجموعة الجديدة</label>
+            <select id="group" name="group" required
+                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                {% for group in groups %}
+                <option value="{{ group.id }}" {% if student.group_id == group.id %}selected{% endif %}>
+                    {{ group.name }} ({{ group.code }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <a href="{% url 'dashboard:admin_students_list' %}"
+               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+                إلغاء
+            </a>
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 rounded-xl bg-violet-500 hover:bg-violet-400 text-slate-950 text-sm font-semibold">
+                نقل الطالب
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

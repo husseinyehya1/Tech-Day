@@ -1,0 +1,86 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}{% if student %}تعديل طالب{% else %}إضافة طالب جديد{% endif %} - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">
+                {% if student %}تعديل بيانات الطالب{% else %}إضافة طالب جديد{% endif %}
+            </h1>
+            <p class="text-sm text-slate-400">
+                تعبئة بيانات الطالب وربطه بالمجموعة وتوليد حساب إن لزم.
+            </p>
+        </div>
+        <a href="{% url 'dashboard:admin_students_list' %}"
+           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+            رجوع لقائمة الطلاب
+        </a>
+    </div>
+
+    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+        {% csrf_token %}
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="space-y-1">
+                <label class="text-sm" for="name">اسم الطالب</label>
+                <input id="name" name="name" type="text" required
+                       value="{{ student.name|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div class="space-y-1">
+                <label class="text-sm" for="student_id">رقم الطالب (يُستخدم في QR)</label>
+                <input id="student_id" name="student_id" type="text" required
+                       value="{{ student.student_id|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="space-y-1">
+                <label class="text-sm" for="group">المجموعة</label>
+                <select id="group" name="group"
+                        class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="">بدون</option>
+                    {% for group in groups %}
+                    <option value="{{ group.id }}"
+                            {% if student and student.group_id == group.id %}selected{% endif %}>
+                        {{ group.name }} ({{ group.code }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="text-sm" for="school">المدرسة</label>
+                <input id="school" name="school" type="text"
+                       value="{{ student.school|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="space-y-1">
+                <label class="text-sm" for="education_admin">الإدارة التعليمية</label>
+                <input id="education_admin" name="education_admin" type="text"
+                       value="{{ student.education_admin|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div class="space-y-1">
+                <label class="text-sm" for="email">البريد الإلكتروني</label>
+                <input id="email" name="email" type="email"
+                       value="{{ student.email|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <a href="{% url 'dashboard:admin_students_list' %}"
+               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+                إلغاء
+            </a>
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                {% if student %}حفظ التعديلات{% else %}حفظ الطالب{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}إدارة مشرفي الورش - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="space-y-4">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">إدارة مشرفي الورش</h1>
+            <p class="text-sm text-slate-400">إضافة وتعديل مشرفي الورش وربطهم بالورش المختلفة.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dashboard:admin_supervisor_create' %}"
+               class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                إضافة مشرف جديد
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-slate-900">
+                    <tr>
+                        <th class="px-3 py-2 text-right">الاسم</th>
+                        <th class="px-3 py-2 text-right">اسم المستخدم</th>
+                        <th class="px-3 py-2 text-right">البريد الإلكتروني</th>
+                        <th class="px-3 py-2 text-right">عدد الورش</th>
+                        <th class="px-3 py-2 text-right">حالة الحساب</th>
+                        <th class="px-3 py-2 text-right">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for supervisor in supervisors %}
+                    <tr class="hover:bg-slate-900/70">
+                        <td class="px-3 py-2">
+                            {{ supervisor.get_full_name|default:supervisor.username }}
+                        </td>
+                        <td class="px-3 py-2 font-mono text-cyan-400">
+                            {{ supervisor.username }}
+                        </td>
+                        <td class="px-3 py-2 text-slate-300">
+                            {{ supervisor.email|default:"-" }}
+                        </td>
+                        <td class="px-3 py-2 text-slate-300">
+                            {{ supervisor.workshop_count }}
+                        </td>
+                        <td class="px-3 py-2 text-xs">
+                            {% if supervisor.is_active %}
+                                <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-300">
+                                    مفعل
+                                </span>
+                            {% else %}
+                                <span class="inline-flex px-2 py-1 rounded-full bg-slate-500/10 text-slate-300">
+                                    موقوف
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-3 py-2">
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{% url 'dashboard:admin_supervisor_update' supervisor.pk %}"
+                                   class="inline-flex items-center px-2.5 py-1.5 rounded-xl bg-cyan-500 text-xs text-slate-950">
+                                    تعديل
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-3 py-4 text-center text-slate-400">
+                            لا توجد سجلات لمشرفي الورش حتى الآن.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,86 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}التنبيهات والإعلانات - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="grid gap-4 lg:grid-cols-[2fr,1fr] items-start">
+    <div class="space-y-4">
+        <div>
+            <h1 class="text-xl font-semibold">إرسال تنبيه جديد</h1>
+            <p class="text-sm text-slate-400">
+                إرسال رسالة عامة للطلاب أو المجموعات أو المشرفين.
+            </p>
+        </div>
+        <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+            {% csrf_token %}
+            <div class="space-y-1">
+                <label class="text-sm" for="title">عنوان الرسالة</label>
+                <input id="title" name="title" type="text" required
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div class="space-y-1">
+                <label class="text-sm" for="body">نص الرسالة</label>
+                <textarea id="body" name="body" rows="4" required
+                          class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          placeholder="مثال: يرجى التوجه الآن إلى القاعة رقم 3."></textarea>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2">
+                <div class="space-y-1">
+                    <label class="text-sm" for="target">الفئة المستهدفة</label>
+                    <select id="target" name="target"
+                            class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <option value="all">كل الطلاب</option>
+                        <option value="group">مجموعة معينة</option>
+                        <option value="supervisors">المشرفون</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-sm" for="group">المجموعة (اختياري)</label>
+                    <select id="group" name="group"
+                            class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <option value="">كل المجموعات</option>
+                        {% for group in groups %}
+                        <option value="{{ group.id }}">{{ group.name }} ({{ group.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center justify-end">
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold">
+                    إرسال التنبيه
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="space-y-4">
+        <div>
+            <h2 class="text-lg font-semibold mb-2">آخر التنبيهات</h2>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 max-h-[420px] overflow-y-auto">
+            {% for notification in notifications %}
+            <div class="border border-slate-800 rounded-xl p-3 space-y-1">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="text-sm font-semibold text-slate-100">{{ notification.title }}</div>
+                    <div class="text-[11px] text-slate-500">{{ notification.created_at|date:"H:i" }}</div>
+                </div>
+                <div class="text-xs text-slate-300">{{ notification.body }}</div>
+                <div class="text-[11px] text-slate-500 mt-1">
+                    {% if notification.target == "all" %}
+                        لكل الطلاب
+                    {% elif notification.target == "group" and notification.group %}
+                        المجموعة: {{ notification.group.name }} ({{ notification.group.code }})
+                    {% else %}
+                        المشرفون
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-sm text-slate-400">
+                لا توجد تنبيهات بعد.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

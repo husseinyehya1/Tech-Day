@@ -1,0 +1,62 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}{% if supervisor %}تعديل مشرف{% else %}إضافة مشرف جديد{% endif %} - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">
+                {% if supervisor %}تعديل بيانات المشرف{% else %}إضافة مشرف جديد{% endif %}
+            </h1>
+            <p class="text-sm text-slate-400">
+                {% if supervisor %}
+                    تعديل بيانات مشرف الورشة.
+                {% else %}
+                    إضافة مشرف ورشة جديد مع إنشاء حساب في النظام.
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'dashboard:admin_supervisors' %}"
+           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+            رجوع لقائمة المشرفين
+        </a>
+    </div>
+
+    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+        {% csrf_token %}
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="space-y-1">
+                <label class="text-sm" for="first_name">الاسم الأول</label>
+                <input id="first_name" name="first_name" type="text" required
+                       value="{{ supervisor.first_name|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div class="space-y-1">
+                <label class="text-sm" for="last_name">اسم العائلة</label>
+                <input id="last_name" name="last_name" type="text"
+                       value="{{ supervisor.last_name|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+        </div>
+        <div class="space-y-1">
+            <label class="text-sm" for="email">البريد الإلكتروني</label>
+            <input id="email" name="email" type="email" required
+                   value="{{ supervisor.email|default_if_none:'' }}"
+                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <a href="{% url 'dashboard:admin_supervisors' %}"
+               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+                إلغاء
+            </a>
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                {% if supervisor %}حفظ التعديلات{% else %}حفظ المشرف{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

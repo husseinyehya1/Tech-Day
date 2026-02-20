@@ -1,0 +1,87 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}التقارير والإحصائيات - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="space-y-4">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">التقارير والإحصائيات</h1>
+            <p class="text-sm text-slate-400">
+                نظرة سريعة على أعداد الحضور حسب المجموعات والورش.
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dashboard:admin_reports_export_csv' %}"
+               class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold">
+                تصدير CSV
+            </a>
+        </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-3">
+        <div class="rounded-2xl bg-emerald-500/10 border border-emerald-500/40 p-4">
+            <div class="text-xs text-emerald-300 mb-1">عدد الطلاب المسجلين</div>
+            <div class="text-3xl font-bold">{{ total_students }}</div>
+        </div>
+        <div class="rounded-2xl bg-cyan-500/10 border border-cyan-500/40 p-4">
+            <div class="text-xs text-cyan-300 mb-1">إجمالي عمليات تسجيل الحضور</div>
+            <div class="text-3xl font-bold">{{ total_attendance }}</div>
+        </div>
+        <div class="rounded-2xl bg-violet-500/10 border border-violet-500/40 p-4">
+            <div class="text-xs text-violet-300 mb-1">أكثر ورشة حضوراً</div>
+            <div class="text-base font-semibold mt-1">
+                {% if most_attended %}
+                    {{ most_attended.title }} ({{ most_attended.present_count }} حضور)
+                {% else %}
+                    لا توجد بيانات بعد
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-semibold mb-3">الحضور حسب المجموعة</h2>
+            <div class="space-y-2 text-sm">
+                {% for item in by_group %}
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <div>{{ item.name }} ({{ item.code }})</div>
+                        <div class="text-xs text-slate-300">{{ item.present_count }} حضور</div>
+                    </div>
+                    <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        {% with pct=item.present_count|floatformat:0 %}
+                        <div class="h-full bg-emerald-500" style="width: {{ pct }}%;"></div>
+                        {% endwith %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-slate-400 text-sm">لا توجد بيانات بعد.</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-semibold mb-3">الحضور حسب الورشة</h2>
+            <div class="space-y-2 text-sm">
+                {% for item in by_workshop %}
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <div>{{ item.title }}</div>
+                        <div class="text-xs text-slate-300">{{ item.present_count }} حضور</div>
+                    </div>
+                    <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        {% with pct=item.present_count|floatformat:0 %}
+                        <div class="h-full bg-cyan-500" style="width: {{ pct }}%;"></div>
+                        {% endwith %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-slate-400 text-sm">لا توجد بيانات بعد.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

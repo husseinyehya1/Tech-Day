@@ -1,0 +1,63 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}{% if group %}تعديل مجموعة{% else %}إضافة مجموعة جديدة{% endif %} - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">
+                {% if group %}تعديل بيانات المجموعة{% else %}إضافة مجموعة جديدة{% endif %}
+            </h1>
+            <p class="text-sm text-slate-400">
+                تحديد الكود واللون والحد الأقصى للطلاب في المجموعة.
+            </p>
+        </div>
+        <a href="{% url 'dashboard:admin_groups' %}"
+           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+            رجوع لقائمة المجموعات
+        </a>
+    </div>
+
+    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+        {% csrf_token %}
+        <div class="space-y-1">
+            <label class="text-sm" for="name">اسم المجموعة</label>
+            <input id="name" name="name" type="text" required
+                   value="{{ group.name|default_if_none:'' }}"
+                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="space-y-1">
+                <label class="text-sm" for="code">الكود (A/B/C/D)</label>
+                <input id="code" name="code" type="text" required
+                       value="{{ group.code|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div class="space-y-1">
+                <label class="text-sm" for="color">اللون (Hex)</label>
+                <input id="color" name="color" type="text" placeholder="#22c55e"
+                       value="{{ group.color|default_if_none:'' }}"
+                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+        </div>
+        <div class="space-y-1">
+            <label class="text-sm" for="max_students">الحد الأقصى للطلاب</label>
+            <input id="max_students" name="max_students" type="number" min="1"
+                   value="{{ group.max_students|default_if_none:'25' }}"
+                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <a href="{% url 'dashboard:admin_groups' %}"
+               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
+                إلغاء
+            </a>
+            <button type="submit"
+                    class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                حفظ
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

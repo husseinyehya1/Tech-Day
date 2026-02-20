@@ -1,0 +1,53 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}الجدول الزمني - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="space-y-4">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold">الجدول الزمني لليوم</h1>
+            <p class="text-sm text-slate-400">عرض الفترات الزمنية والورش والمجموعات.</p>
+        </div>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs md:text-sm">
+                <thead class="bg-slate-900">
+                    <tr>
+                        <th class="px-3 py-2 text-right">الفترة</th>
+                        {% for group in groups %}
+                        <th class="px-3 py-2 text-right">{{ group.name }} ({{ group.code }})</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for value,label in periods %}
+                    <tr>
+                        <td class="px-3 py-2 text-slate-300 whitespace-nowrap">{{ label }}</td>
+                        {% for group in groups %}
+                        <td class="px-3 py-2 align-top">
+                            {% for session in sessions %}
+                                {% if session.period == value and session.group_id == group.id %}
+                                <div class="space-y-1">
+                                    <div class="text-slate-100">{{ session.workshop.title }}</div>
+                                    <div class="text-slate-400">قاعة {{ session.workshop.room }}</div>
+                                    <div class="text-slate-500">{{ session.start_time }} - {{ session.end_time }}</div>
+                                    <a href="{% url 'dashboard:admin_session_update' session.pk %}"
+                                       class="inline-flex mt-1 items-center px-2 py-1 rounded-xl bg-cyan-500 text-[11px] text-slate-950">
+                                        تعديل
+                                    </a>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

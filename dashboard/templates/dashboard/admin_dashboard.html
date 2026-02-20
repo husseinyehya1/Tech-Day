@@ -1,0 +1,131 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}لوحة تحكم الإدارة - Tech Day{% endblock %}
+
+{% block page %}
+<div class="grid gap-4 xl:grid-cols-[2fr,1fr] items-start">
+    <div class="space-y-4">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+                <div class="text-xs text-slate-400 mb-1">عدد الطلاب المسجلين</div>
+                <div class="text-3xl font-bold">{{ total_students }}</div>
+            </div>
+            <div class="rounded-2xl bg-emerald-500/10 border border-emerald-500/40 p-4">
+                <div class="text-xs text-emerald-300 mb-1">الطلاب الحاضرين الآن</div>
+                <div class="text-3xl font-bold">{{ total_present }}</div>
+            </div>
+            <div class="rounded-2xl bg-violet-500/10 border border-violet-500/40 p-4">
+                <div class="text-xs text-violet-300 mb-1">عدد المجموعات</div>
+                <div class="text-3xl font-bold">{{ groups|length }}</div>
+            </div>
+            <div class="rounded-2xl bg-cyan-500/10 border border-cyan-500/40 p-4">
+                <div class="text-xs text-cyan-300 mb-1">الورش النشطة</div>
+                <div class="text-3xl font-bold">{{ active_workshops }}</div>
+            </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+                <div class="text-xs text-slate-400 mb-1">الوقت الحالي</div>
+                <div class="text-2xl font-mono">{{ now|date:"H:i" }}</div>
+                <div class="text-xs text-slate-500 mt-1">{{ now|date:"Y-m-d" }}</div>
+            </div>
+            <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+                <div class="text-xs text-slate-400 mb-1">حالة الفعالية</div>
+                <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                            {% if event_status == 'جارية' %}bg-emerald-500/10 text-emerald-300
+                            {% elif event_status == 'متوقفة' %}bg-amber-500/10 text-amber-300
+                            {% else %}bg-slate-500/10 text-slate-300{% endif %}">
+                    {{ event_status }}
+                </div>
+            </div>
+            <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-xs text-slate-400">أحدث تنبيه</div>
+                    <a href="{% url 'attendance:scan_qr' %}"
+                       class="inline-flex items-center px-3 py-1 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-[11px] font-semibold">
+                        فتح صفحة مسح QR
+                    </a>
+                </div>
+                {% if latest_notification %}
+                    <div class="text-sm font-semibold text-slate-100 mb-1">{{ latest_notification.title }}</div>
+                    <div class="text-xs text-slate-400 line-clamp-2">{{ latest_notification.body }}</div>
+                {% else %}
+                    <div class="text-xs text-slate-500">لا توجد تنبيهات مفعّلة حاليًا</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-semibold mb-3">حالة الورش</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-900">
+                        <tr>
+                            <th class="px-3 py-2 text-right">الورشة</th>
+                            <th class="px-3 py-2 text-right">الحالة</th>
+                            <th class="px-3 py-2 text-right">القاعة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                        {% for workshop in workshops %}
+                        <tr>
+                            <td class="px-3 py-2">{{ workshop.title }}</td>
+                            <td class="px-3 py-2 text-xs">
+                                {% if workshop.status == "active" %}
+                                    <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-300">نشطة</span>
+                                {% elif workshop.status == "upcoming" %}
+                                    <span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 text-amber-300">قادمة</span>
+                                {% else %}
+                                    <span class="inline-flex px-2 py-1 rounded-full bg-slate-500/10 text-slate-300">منتهية</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-3 py-2 text-xs text-slate-300">{{ workshop.room }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="px-3 py-4 text-center text-slate-400">لا توجد ورش مسجلة</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-semibold mb-3">توزيع المجموعات</h2>
+            <ul class="space-y-2 text-sm">
+                {% for group in groups %}
+                <li class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold"
+                              style="background-color: {{ group.color }}20; color: {{ group.color }};">
+                            {{ group.code }}
+                        </span>
+                        <span class="text-slate-200">{{ group.name }}</span>
+                    </div>
+                    <span class="text-xs text-slate-400">{{ group.student_count }} طالب</span>
+                </li>
+                {% empty %}
+                <li class="text-slate-400">لم يتم إنشاء مجموعات بعد</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-semibold mb-3">آخر العمليات</h2>
+            <ul class="space-y-2 text-xs">
+                {% for log in recent_logs %}
+                <li class="flex items-center justify-between">
+                    <span class="text-slate-200">{{ log.action }}</span>
+                    <span class="text-slate-500">{{ log.created_at|date:"H:i" }}</span>
+                </li>
+                {% empty %}
+                <li class="text-slate-500">لا توجد عمليات مسجلة بعد</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
