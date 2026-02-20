@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}بيانات الطالب - Tech Day{% endblock %}
+
+{% block content %}
+<div class="grid gap-4 md:grid-cols-[2fr,1fr] items-start">
+    <div class="space-y-4">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+            <h1 class="text-xl font-semibold mb-2">بطاقة الطالب</h1>
+            <div class="text-sm text-slate-300 mb-1">الاسم: <span class="font-semibold">{{ student.name }}</span></div>
+            <div class="text-sm text-slate-300 mb-1">الرقم: <span class="font-mono text-cyan-400">{{ student.student_id }}</span></div>
+            <div class="text-sm text-slate-300 mb-1">
+                الإدارة التعليمية:
+                <span class="font-semibold">{{ student.education_admin|default:"-" }}</span>
+            </div>
+            <div class="text-sm text-slate-300 mb-1">
+                البريد الإلكتروني:
+                <span class="font-mono text-cyan-400">{{ student.email|default:"-" }}</span>
+            </div>
+            <div class="text-sm text-slate-300 mb-1">
+                المجموعة:
+                {% if student.group %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style="background-color: {{ student.group.color }}20; color: {{ student.group.color }};">
+                        {{ student.group.code }}
+                    </span>
+                {% else %}
+                    <span class="text-slate-500">لم يتم التحديد</span>
+                {% endif %}
+            </div>
+            <div class="mt-4">
+                <div class="text-sm text-slate-400 mb-1">QR Code للحضور</div>
+                <div id="qrcode" class="bg-slate-950/80 rounded-2xl flex items-center justify-center p-4"></div>
+            </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-semibold mb-3">الجدول الزمني</h2>
+            <div class="grid gap-3 md:grid-cols-2">
+                <div class="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3">
+                    <div class="text-xs text-emerald-300 mb-1">الورشة الحالية</div>
+                    {% if current_session %}
+                        <div class="text-sm font-semibold">{{ current_session.workshop.title }}</div>
+                        <div class="text-xs text-slate-300 mt-1">القاعة: {{ current_session.workshop.room }}</div>
+                        <div class="text-xs text-slate-400 mt-1">
+                            الفترة: {{ current_session.get_period_display }}
+                        </div>
+                    {% else %}
+                        <div class="text-sm text-slate-400">لا توجد ورشة حالية الآن</div>
+                    {% endif %}
+                </div>
+                <div class="rounded-xl border border-cyan-500/40 bg-cyan-500/10 p-3">
+                    <div class="text-xs text-cyan-300 mb-1">الورشة القادمة</div>
+                    {% if next_session %}
+                        <div class="text-sm font-semibold">{{ next_session.workshop.title }}</div>
+                        <div class="text-xs text-slate-300 mt-1">القاعة: {{ next_session.workshop.room }}</div>
+                        <div class="text-xs text-slate-400 mt-1">
+                            الفترة: {{ next_session.get_period_display }}
+                        </div>
+                    {% else %}
+                        <div class="text-sm text-slate-400">لا توجد ورشة قادمة</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if current_session %}
+            <div class="mt-4">
+                <div class="text-xs text-slate-400 mb-1">الوقت المتبقي</div>
+                <div id="countdown" class="text-2xl font-mono text-cyan-400"></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-semibold mb-2">إشعارات</h2>
+            {% if current_session %}
+                <div class="text-sm text-slate-200">
+                    توجه الآن إلى القاعة رقم {{ current_session.workshop.room }}
+                </div>
+            {% else %}
+                <div class="text-sm text-slate-400">
+                    لا توجد ورشة الآن، يرجى متابعة الشاشة العامة
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    var qrelement = document.getElementById('qrcode');
+    if (qrelement) {
+        new QRCode(qrelement, {
+            text: "{{ student.student_id }}",
+            width: 160,
+            height: 160,
+            colorDark: "#22d3ee",
+            colorLight: "#020617",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}الطلاب - Tech Day{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <h1 class="text-xl font-semibold">قائمة الطلاب</h1>
+</div>
+<div class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-slate-900">
+                <tr>
+                    <th class="px-4 py-2 text-right">الاسم</th>
+                    <th class="px-4 py-2 text-right">الرقم</th>
+                    <th class="px-4 py-2 text-right">المجموعة</th>
+                    <th class="px-4 py-2 text-right">عرض</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+                {% for student in students %}
+                <tr class="hover:bg-slate-900/80">
+                    <td class="px-4 py-2">{{ student.name }}</td>
+                    <td class="px-4 py-2">{{ student.student_id }}</td>
+                    <td class="px-4 py-2">
+                        {% if student.group %}
+                            {{ student.group.code }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">
+                        <a href="{% url 'students:detail' student.pk %}"
+                           class="inline-flex items-center px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-semibold">
+                            فتح
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-4 py-4 text-center text-slate-400">
+                        لا توجد بيانات طلاب بعد
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
