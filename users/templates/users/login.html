@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}تسجيل الدخول - Tech Day{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center">
+    <div class="w-full max-w-md bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <h1 class="text-2xl font-bold mb-2 text-center">تسجيل الدخول</h1>
+        <p class="text-sm text-slate-400 mb-6 text-center">
+            اختر حساب المشرف أو الإدارة للدخول إلى لوحة التحكم
+        </p>
+        {% if error %}
+        <div class="mb-4 rounded-xl border border-rose-700/70 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
+            {{ error }}
+        </div>
+        {% endif %}
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm mb-1" for="username">اسم المستخدم</label>
+                <input id="username" name="username" type="text" required
+                       class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <div>
+                <label class="block text-sm mb-1" for="password">كلمة المرور</label>
+                <input id="password" name="password" type="password" required
+                       class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+            <button type="submit"
+                    class="w-full mt-4 inline-flex items-center justify-center rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold py-2.5 text-sm transition">
+                دخول
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
