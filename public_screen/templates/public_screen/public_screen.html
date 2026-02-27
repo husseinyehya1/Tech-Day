@@ -544,34 +544,34 @@
         </div>
     </div>
 
-    <div class="rounded-3xl bg-slate-900/40 border border-slate-800/50 backdrop-blur-xl p-6 flex-1 shadow-2xl overflow-hidden">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+    <div class="rounded-3xl bg-slate-900/40 border border-slate-800/50 backdrop-blur-xl p-4 md:p-8 flex-1 shadow-2xl overflow-hidden">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 gap-4">
             <div class="flex items-center gap-4">
-                <div class="p-3 rounded-2xl bg-amber-500/10 text-amber-500">
-                    <i data-lucide="calendar-days" class="w-6 h-6"></i>
+                <div class="p-2.5 md:p-3 rounded-2xl bg-amber-500/10 text-amber-500">
+                    <i data-lucide="calendar-days" class="w-5 h-5 md:w-6 md:h-6"></i>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-black text-white tracking-tight">الجدول الزمني للفعاليات</h2>
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">عرض مباشر للمسارات والورش لجميع المجموعات</p>
+                    <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">الجدول الزمني للفعاليات</h2>
+                    <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">عرض مباشر للمسارات والورش لجميع المجموعات</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3 px-4 py-2 rounded-2xl bg-slate-950/50 border border-slate-800/50">
-                <div class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
-                <span class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Live Schedule</span>
+            <div class="flex items-center gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-2xl bg-slate-950/50 border border-slate-800/50">
+                <div class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-cyan-500 animate-pulse"></div>
+                <span class="text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Live Schedule</span>
             </div>
         </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-slate-800/50">
-            <table class="w-full text-right border-collapse">
+        <div class="overflow-x-auto rounded-2xl border border-slate-800/50 relative custom-scrollbar">
+            <table class="w-full text-right border-separate border-spacing-0">
                 <thead>
                     <tr class="bg-slate-950/50 border-b border-slate-800">
-                        <th class="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest border-l border-slate-800 sticky right-0 bg-slate-950/80 z-10">الفترة الزمنية</th>
+                        <th class="px-4 py-4 md:px-6 md:py-5 text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest border-l border-slate-800 sticky right-0 bg-slate-950/90 backdrop-blur-md z-20 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.5)]">الفترة الزمنية</th>
                         {% for group in groups %}
-                        <th class="px-6 py-5 min-w-[200px]">
+                        <th class="px-4 py-4 md:px-6 md:py-5 min-w-[160px] md:min-w-[240px]">
                             <div class="flex items-center gap-2 justify-center">
-                                <div class="w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" style="background-color: {{ group.color }}"></div>
-                                <span class="text-sm font-black text-slate-100">{{ group.name }}</span>
-                                <span class="px-2 py-0.5 rounded-lg bg-slate-800 text-[9px] font-black text-slate-500 uppercase">{{ group.code }}</span>
+                                <div class="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" style="background-color: {{ group.color }}"></div>
+                                <span class="text-xs md:text-sm font-black text-slate-100">{{ group.name }}</span>
+                                <span class="px-1.5 py-0.5 rounded-lg bg-slate-800 text-[8px] md:text-[9px] font-black text-slate-500 uppercase">{{ group.code }}</span>
                             </div>
                         </th>
                         {% endfor %}
@@ -580,85 +580,85 @@
                 <tbody class="divide-y divide-slate-800/50">
                     {% for value, label in periods %}
                     <tr class="group/row transition-colors hover:bg-slate-800/10">
-                        <td class="px-6 py-6 border-l border-slate-800 font-bold sticky right-0 bg-slate-900/90 backdrop-blur-md z-10">
+                        <td class="px-4 py-5 md:px-6 md:py-6 border-l border-slate-800 font-bold sticky right-0 bg-slate-900/90 backdrop-blur-md z-10 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.5)]">
                             <div class="flex flex-col gap-1">
-                                <span class="text-slate-100 text-sm font-black">{{ label }}</span>
-                                <span class="text-[11px] text-slate-500 font-mono font-bold tracking-tighter">
+                                <span class="text-slate-100 text-xs md:text-sm font-black whitespace-nowrap">{{ label }}</span>
+                                <span class="text-[10px] md:text-[11px] text-slate-500 font-mono font-bold tracking-tighter">
                                     {{ value }}
                                 </span>
                             </div>
                         </td>
 
                         {% if 'تسجيل' in label or 'راحة' in label or 'ترفيهي' in label or 'الختام' in label %}
-                        <td colspan="{{ groups.count }}" class="px-4 py-4">
-                            <div class="w-full py-5 rounded-[1.5rem] bg-slate-950/30 border border-dashed border-slate-800 flex items-center justify-center gap-5 group/special">
+                        <td colspan="{{ groups.count }}" class="px-3 py-3 md:px-4 md:py-4">
+                            <div class="w-full py-4 md:py-5 rounded-2xl md:rounded-[1.5rem] bg-slate-950/30 border border-dashed border-slate-800 flex items-center justify-center gap-3 md:gap-5 group/special">
                                 {% if 'تسجيل' in label %}
-                                    <div class="p-3 rounded-2xl bg-blue-500/10 text-blue-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="log-in" class="w-6 h-6"></i>
+                                    <div class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-blue-500/10 text-blue-400 group-hover/special:scale-110 transition-transform">
+                                        <i data-lucide="log-in" class="w-5 h-5 md:w-6 md:h-6"></i>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-base font-black text-slate-200">تسجيل الدخول وتنظيم المجموعات</div>
-                                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">General Activity - All Teams</div>
+                                        <div class="text-xs md:text-base font-black text-slate-200">تسجيل الدخول وتنظيم المجموعات</div>
+                                        <div class="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">General Activity - All Teams</div>
                                     </div>
                                 {% elif 'راحة' in label %}
-                                    <div class="p-3 rounded-2xl bg-amber-500/10 text-amber-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="coffee" class="w-6 h-6"></i>
+                                    <div class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-amber-500/10 text-amber-400 group-hover/special:scale-110 transition-transform">
+                                        <i data-lucide="coffee" class="w-5 h-5 md:w-6 md:h-6"></i>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-base font-black text-slate-200">استراحة قصيرة وانتقال بين الورش</div>
-                                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">10 Minutes Break</div>
+                                        <div class="text-xs md:text-base font-black text-slate-200">استراحة قصيرة وانتقال</div>
+                                        <div class="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">10 Minutes Break</div>
                                     </div>
                                 {% elif 'ترفيهي' in label %}
-                                    <div class="p-3 rounded-2xl bg-violet-500/10 text-violet-400 group-hover/special:scale-110 transition-transform animate-pulse">
-                                        <i data-lucide="party-popper" class="w-7 h-7"></i>
+                                    <div class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-violet-500/10 text-violet-400 group-hover/special:scale-110 transition-transform animate-pulse">
+                                        <i data-lucide="party-popper" class="w-6 h-6 md:w-7 md:h-7"></i>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 uppercase tracking-wider">نشاط ترفيهي ولعب جماعي</div>
-                                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Fun & Social Games - All Teams Together</div>
+                                        <div class="text-sm md:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 uppercase tracking-wider">نشاط ترفيهي ولعب جماعي</div>
+                                        <div class="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Fun & Games - All Teams</div>
                                     </div>
                                 {% elif 'الختام' in label %}
-                                    <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="award" class="w-6 h-6"></i>
+                                    <div class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-emerald-500/10 text-emerald-400 group-hover/special:scale-110 transition-transform">
+                                        <i data-lucide="award" class="w-5 h-5 md:w-6 md:h-6"></i>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-base font-black text-slate-200">الجلسة الختامية وتوزيع الشهادات</div>
-                                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Closing Ceremony & Certificates</div>
+                                        <div class="text-xs md:text-base font-black text-slate-200">الجلسة الختامية وتوزيع الشهادات</div>
+                                        <div class="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Closing Ceremony</div>
                                     </div>
                                 {% endif %}
                             </div>
                         </td>
                         {% else %}
                             {% for group in groups %}
-                            <td class="px-4 py-4 align-top">
+                            <td class="px-3 py-4 md:px-4 md:py-4 align-top">
                                 {% for session in sessions %}
                                     {% if session.period == value and session.group_id == group.id %}
-                                    <div class="group/session relative p-5 rounded-3xl bg-slate-950 border border-slate-800 hover:border-cyan-500/30 transition-all shadow-xl hover:shadow-cyan-500/5 group-hover/row:translate-y-[-2px]">
+                                    <div class="group/session relative p-4 md:p-5 rounded-2xl md:rounded-3xl bg-slate-950 border border-slate-800 hover:border-cyan-500/30 transition-all shadow-xl hover:shadow-cyan-500/5 group-hover/row:translate-y-[-2px]">
                                         <!-- Session Status/Icon -->
-                                        <div class="flex items-center justify-between mb-4">
-                                            <div class="p-2.5 rounded-2xl bg-cyan-500/10 text-cyan-400 group-hover/session:scale-110 transition-transform">
-                                                <i data-lucide="monitor-play" class="w-5 h-5"></i>
+                                        <div class="flex items-center justify-between mb-3 md:mb-4">
+                                            <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 group-hover/session:scale-110 transition-transform">
+                                                <i data-lucide="monitor-play" class="w-4 h-4 md:w-5 md:h-5"></i>
                                             </div>
-                                            <span class="text-[9px] font-black text-slate-600 uppercase tracking-widest">Workshop</span>
+                                            <span class="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Workshop</span>
                                         </div>
                                         
                                         <!-- Workshop Details -->
-                                        <div class="space-y-4">
+                                        <div class="space-y-3 md:space-y-4">
                                             <div>
-                                                <h3 class="text-sm font-black text-white leading-tight mb-2 group-hover/session:text-cyan-400 transition-colors">{{ session.workshop.title }}</h3>
-                                                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-violet-500"></i>
+                                                <h3 class="text-xs md:text-sm font-black text-white leading-tight mb-1.5 md:mb-2 group-hover/session:text-cyan-400 transition-colors line-clamp-2">{{ session.workshop.title }}</h3>
+                                                <div class="flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] font-bold text-slate-500">
+                                                    <i data-lucide="map-pin" class="w-3 h-3 md:w-3.5 md:h-3.5 text-violet-500"></i>
                                                     <span class="uppercase tracking-widest">قاعة:</span>
                                                     <span class="text-slate-300">{{ session.workshop.room }}</span>
                                                 </div>
                                             </div>
                                             
                                             <!-- Time Footer -->
-                                            <div class="pt-4 border-t border-slate-800/50 flex items-center justify-between">
-                                                <div class="flex items-center gap-1.5 text-[9px] font-black text-slate-600">
-                                                    <i data-lucide="clock" class="w-3 h-3"></i>
+                                            <div class="pt-3 md:pt-4 border-t border-slate-800/50 flex items-center justify-between">
+                                                <div class="flex items-center gap-1.5 text-[8px] md:text-[9px] font-black text-slate-600">
+                                                    <i data-lucide="clock" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>
                                                     {{ session.start_time|time:"H:i" }} – {{ session.end_time|time:"H:i" }}
                                                 </div>
-                                                <div class="w-1.5 h-1.5 rounded-full bg-cyan-500/50 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></div>
+                                                <div class="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-cyan-500/50 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -675,6 +675,34 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.1);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(30, 41, 59, 0.5);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(6, 182, 212, 0.3);
+    }
+    
+    /* Smooth horizontal scroll indicator for mobile */
+    @media (max-width: 768px) {
+        .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x proximity;
+        }
+        th, td {
+            scroll-snap-align: start;
+        }
+    }
+</style>
 
 <script>
     function updateClock() {
