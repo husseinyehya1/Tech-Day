@@ -26,7 +26,7 @@ if env_file.exists():
         key, value = line.split('=', 1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
-        os.environ.setdefault(key, value)
+        os.environ[key] = value
 
 
 SECRET_KEY = os.environ.get(
@@ -34,13 +34,13 @@ SECRET_KEY = os.environ.get(
     'django-insecure-ggtpe=k$ltr!i1lu#dcol9z)$own#@&ch4ow-z_m@pnxl(4&=c',
 )
 
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '')
 if allowed_hosts_env:
     ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
 else:
-    ALLOWED_HOSTS = ['*']
+    ALLOWED_HOSTS = ['td.edutech-egy.com', 'verify.edutech-egy.com', 'localhost', '127.0.0.1', 'tech-day.fly.dev', "10.206.53.174" ]
 
 
 # Application definition
@@ -51,8 +51,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
     'whitenoise.runserver_nostatic',
+    'django.contrib.staticfiles',
     'users',
     'students',
     'groups',
@@ -96,10 +96,14 @@ WSGI_APPLICATION = 'techday.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+default_sqlite_path = os.environ.get('SQLITE_PATH')
+if not default_sqlite_path:
+    default_sqlite_path = BASE_DIR / 'db.sqlite3'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': default_sqlite_path,
     }
 }
 
@@ -161,15 +165,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 LOGIN_URL = 'users:login'
+LOGIN_REDIRECT_URL = 'dashboard:admin_dashboard'
+LOGOUT_REDIRECT_URL = 'users:login'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.zoho.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'noreply@edutech-egy.com'
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'techday.email_backend.CustomEmailBackend'
+EMAIL_HOST = 'smtp.zeptomail.com'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = os.environ.get('TECHDAY_EMAIL_USER', 'emailapikey')
 EMAIL_HOST_PASSWORD = os.environ.get('TECHDAY_EMAIL_PASSWORD', '')
 DEFAULT_FROM_EMAIL = 'EduTech Egypt System <noreply@edutech-egy.com>'
 fly_app = os.environ.get('FLY_APP_NAME')
-CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = ['https://td.edutech-egy.com']
 if fly_app:
     CSRF_TRUSTED_ORIGINS.append(f'https://{fly_app}.fly.dev')
+SITE_BASE_URL = os.environ.get('SITE_BASE_URL', 'https://td.edutech-egy.com')

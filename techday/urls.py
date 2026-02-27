@@ -16,9 +16,20 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.shortcuts import redirect
+
+from students import views as student_views
+
+from dashboard import views as dashboard_views
+
+def redirect_to_login(request):
+    return redirect('users:login')
 
 urlpatterns = [
+    path('td/<str:identifier>/', student_views.student_verify, name='student_verify'),
     path('admin/', admin.site.urls),
+    path('login/', redirect_to_login),
+    path('dashboard/', dashboard_views.admin_dashboard, name='dashboard'),
     path('حساب/', include('users.urls')),
     path('طلاب/', include('students.urls')),
     path('مجموعات/', include('groups.urls')),

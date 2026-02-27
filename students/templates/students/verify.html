@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>صفحة التحقق - {{ student.name }}</title>
+    <link rel="icon" type="image/webp" href="https://edutech-egy.com/assets/images/logo.webp">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="dark bg-slate-950 text-slate-50 font-sans min-h-screen flex flex-col">
+<div class="relative flex-1 overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 opacity-60">
+        <div class="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl"></div>
+        <div class="absolute -right-32 top-32 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0)_0,_#020617_55%,_#000_100%)]"></div>
+        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-cyan-500/0 via-cyan-500/60 to-emerald-500/0"></div>
+    </div>
+    <main class="relative z-10">
+        <div class="max-w-5xl mx-auto px-4 py-8 md:py-10 space-y-6">
+            <header class="text-center space-y-2">
+                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-200">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                    <span>شهادة حضور صالحة – صفحة التحقق الرسمية</span>
+                </div>
+                <div class="flex flex-col items-center gap-3 mt-3">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/80 border border-slate-700 shadow-lg shadow-cyan-500/20">
+                            <img src="https://td.edutech-egy.com/static/tech-day.webp" alt="Tech Day" class="h-9 w-9 object-contain">
+                        </div>
+                        <div class="text-right">
+                            <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-50">
+                                {{ event.name }}
+                            </h1>
+                            <p class="text-[11px] md:text-xs text-slate-400">
+                                التحقق من بيانات الشهادة المرتبطة برقم الطالب الظاهر أدناه.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-center gap-2 text-[11px] md:text-xs text-slate-300">
+                        {% if event.location_name %}
+                            <span class="inline-flex items-center gap-1 rounded-full bg-slate-900/80 border border-slate-700 px-2 py-1">
+                                <span class="h-1.5 w-1.5 rounded-full bg-cyan-400"></span>
+                                <span>المكان: {{ event.location_name }}</span>
+                            </span>
+                        {% endif %}
+                        {% if event.start_datetime %}
+                            <span class="inline-flex items-center gap-1 rounded-full bg-slate-900/80 border border-slate-700 px-2 py-1">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                                <span>التاريخ: {{ event.start_datetime|date:"Y/m/d H:i" }}</span>
+                            </span>
+                        {% endif %}
+                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-900/80 border border-slate-700 px-2 py-1">
+                            <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                            <span>الجهة المنظمة: EDU-TECH القليوبية</span>
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            <section class="grid gap-4 md:gap-5 md:grid-cols-[1.3fr,1fr] items-stretch">
+                <div class="rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_18px_45px_rgba(15,23,42,0.7)] p-4 md:p-5 space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="space-y-1.5">
+                            <div class="text-[11px] uppercase tracking-wide text-slate-400">بيانات الطالب</div>
+                            <div class="text-xl md:text-2xl font-semibold text-cyan-300 break-words">
+                                {{ student.name }}
+                            </div>
+                            <p class="text-[11px] text-slate-400">
+                                هذه البيانات تم توليدها من نظام Tech Day وفقًا لسجلات الحضور الرسمية للفعالية.
+                            </p>
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            <div class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/50 px-2 py-1 text-[11px] font-medium text-emerald-200">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                                <span>تم التحقق من الشهادة</span>
+                            </div>
+                            <div class="rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2 text-right">
+                                <div class="text-[10px] text-slate-400">رقم الطالب</div>
+                                <div class="font-mono text-xs md:text-sm text-cyan-300">
+                                    {{ student.student_id }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] md:text-xs text-slate-200">
+                        <div class="space-y-1 rounded-xl bg-slate-950/60 border border-slate-800 px-3 py-2.5">
+                            <div class="text-[10px] text-slate-400">المجموعة</div>
+                            {% if student.group %}
+                                <div class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                                     style="background-color: {{ student.group.color }}20; color: {{ student.group.color }};">
+                                    {{ student.group.name }} ({{ student.group.code }})
+                                </div>
+                            {% else %}
+                                <div class="text-[11px] text-slate-500">لم يتم التحديد</div>
+                            {% endif %}
+                        </div>
+                        <div class="space-y-1 rounded-xl bg-slate-950/60 border border-slate-800 px-3 py-2.5">
+                            <div class="text-[10px] text-slate-400">المدرسة</div>
+                            <div class="text-[11px] md:text-xs text-slate-200 break-words">
+                                {{ student.school|default:"غير محدد" }}
+                            </div>
+                        </div>
+                        <div class="space-y-1 rounded-xl bg-slate-950/60 border border-slate-800 px-3 py-2.5">
+                            <div class="text-[10px] text-slate-400">الإدارة التعليمية</div>
+                            <div class="text-[11px] md:text-xs text-slate-200 break-words">
+                                {{ student.education_admin|default:"غير محدد" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 md:p-5 space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <h2 class="text-sm font-semibold text-slate-100">ملخص الحضور</h2>
+                            <div class="inline-flex items-center gap-1 rounded-full bg-slate-950/70 border border-slate-800 px-2 py-1 text-[10px] text-slate-300">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                                <span>سجلات من نظام الحضور</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 text-[11px] md:text-xs">
+                            <div class="rounded-xl bg-slate-950/60 border border-slate-800 px-3 py-2.5 flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="text-[10px] text-slate-400">عدد الجلسات المسجَّلة حضورًا</div>
+                                    <div class="mt-1 text-base font-semibold text-emerald-400">
+                                        {{ present_count }} جلسة
+                                    </div>
+                                </div>
+                                <div class="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-center text-emerald-300 text-sm font-semibold">
+                                    {{ present_count }}
+                                </div>
+                            </div>
+                            <div class="rounded-xl bg-slate-950/60 border border-slate-800 px-3 py-2.5">
+                                <div class="text-[10px] text-slate-400 mb-1.5">ورش العمل التي حضرها</div>
+                                {% if attended_workshops %}
+                                    <ul class="text-[11px] text-slate-200 space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                                        {% for title in attended_workshops %}
+                                            <li class="flex items-start justify-between gap-2">
+                                                <span class="inline-flex min-w-0 flex-1">
+                                                    <span class="mt-1 ml-1 h-1 w-1 rounded-full bg-cyan-400 shrink-0"></span>
+                                                    <span class="truncate">{{ title }}</span>
+                                                </span>
+                                                <span class="inline-flex items-center rounded-full bg-emerald-500/10 text-emerald-300 text-[10px] px-2 py-0.5 shrink-0">
+                                                    حاضر
+                                                </span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <div class="text-[11px] text-slate-500">لا توجد سجلات حضور مسجَّلة لهذا الطالب.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-3.5 text-[11px] text-emerald-100 space-y-2">
+                        <div class="font-semibold text-emerald-300">تحتاج مساعدة؟</div>
+                        <p class="leading-relaxed">
+                            لو احتجت أي مساعدة بخصوص الشهادة أو بيانات الحضور، تواصل مع فريق الدعم
+                            عبر صفحتنا على فيسبوك:
+                            <a href="https://www.facebook.com/ETQal/"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="underline text-emerald-200">
+                                EDU-TECH القليوبية على فيسبوك
+                            </a>
+                        </p>
+                        <p class="leading-relaxed">
+                            وتقدر تتابع EDU-TECH على منصات التواصل:
+                            <a href="https://www.facebook.com/ETQal/"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="underline text-emerald-200 mx-1">
+                                Facebook
+                            </a>
+                            <a href="https://www.instagram.com/edutech_eg/"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="underline text-emerald-200 mx-1">
+                                Instagram
+                            </a>
+                            <a href="https://www.youtube.com/@EDUTEC-egy"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="underline text-emerald-200 mx-1">
+                                YouTube
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+</body>
+</html>
+

@@ -1,104 +1,437 @@
 {% extends "base.html" %}
 
-{% block title %}بيانات الطالب - Tech Day{% endblock %}
+{% block title %}لوحة الطالب - {{ student.name }}{% endblock %}
 
 {% block content %}
-<div class="grid gap-4 md:grid-cols-[2fr,1fr] items-start">
-    <div class="space-y-4">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-            <h1 class="text-xl font-semibold mb-2">بطاقة الطالب</h1>
-            <div class="text-sm text-slate-300 mb-1">الاسم: <span class="font-semibold">{{ student.name }}</span></div>
-            <div class="text-sm text-slate-300 mb-1">الرقم: <span class="font-mono text-cyan-400">{{ student.student_id }}</span></div>
-            <div class="text-sm text-slate-300 mb-1">
-                الإدارة التعليمية:
-                <span class="font-semibold">{{ student.education_admin|default:"-" }}</span>
+<div class="max-w-7xl mx-auto space-y-8 pb-12">
+    {% if student.is_blacklisted %}
+    <div class="bg-rose-500/20 border border-rose-500/50 p-4 rounded-2xl flex items-center gap-4 text-rose-500 animate-pulse">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <div>
+            <h4 class="font-black text-sm">تنبيه هام: تم إدراج حسابك في القائمة السوداء</h4>
+            <p class="text-[10px] opacity-80">يرجى مراجعة إدارة الفعالية فوراً لحل المشكلة.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Header / Hero Section -->
+    <div class="relative overflow-hidden rounded-[2.5rem] bg-slate-900 border border-slate-800 p-8 md:p-12 shadow-2xl shadow-slate-950/50">
+        <!-- Abstract Background Orbs -->
+        <div class="absolute -top-24 -right-24 w-96 h-96 bg-cyan-500/10 blur-[100px] -z-10 rounded-full animate-pulse"></div>
+        <div class="absolute -bottom-24 -left-24 w-80 h-80 bg-blue-600/10 blur-[80px] -z-10 rounded-full"></div>
+        
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-10">
+            <!-- Profile Information -->
+            <div class="flex-1 text-center lg:text-right space-y-6 w-full">
+                <div class="space-y-3">
+                    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[11px] font-black uppercase tracking-widest shadow-sm">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                        </span>
+                        {% if event.is_finished %}الفعالية انتهت بنجاح{% else %}مشارك نشط في Tech Day{% endif %}
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight">
+                        {{ student.name }}
+                    </h1>
+                    <div class="flex flex-wrap justify-center lg:justify-start items-center gap-4 text-slate-400 font-mono text-sm">
+                        <span class="bg-slate-950 px-3 py-1 rounded-lg border border-slate-800">ID: {{ student.student_id }}</span>
+                        <span class="bg-slate-950 px-3 py-1 rounded-lg border border-slate-800">{{ student.education_admin }}</span>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap justify-center lg:justify-start gap-4">
+                    {% if student.group %}
+                    <div class="group relative px-6 py-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center gap-4 transition-all hover:border-cyan-500/50" style="border-right: 4px solid {{ student.group.color }};">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style="background-color: {{ student.group.color }}20;">
+                            <span class="text-xl font-black" style="color: {{ student.group.color }};">{{ student.group.code }}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">مجموعتي</div>
+                            <div class="text-sm font-black text-white">{{ student.group.name }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if student.checked_in %}
+                    <div class="px-6 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
+                        <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="text-right">
+                            <div class="text-[10px] text-emerald-500/70 font-bold uppercase">حالة الحضور</div>
+                            <div class="text-sm font-black text-emerald-400">تم تسجيل الحضور</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="px-6 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3 animate-pulse">
+                        <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="text-right">
+                            <div class="text-[10px] text-amber-500/70 font-bold uppercase">بانتظار التحقق</div>
+                            <div class="text-sm font-black text-amber-400">لم يتم المسح بعد</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="text-sm text-slate-300 mb-1">
-                البريد الإلكتروني:
-                <span class="font-mono text-cyan-400">{{ student.email|default:"-" }}</span>
-            </div>
-            <div class="text-sm text-slate-300 mb-1">
-                المجموعة:
-                {% if student.group %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-                          style="background-color: {{ student.group.color }}20; color: {{ student.group.color }};">
-                        {{ student.group.code }}
-                    </span>
-                {% else %}
-                    <span class="text-slate-500">لم يتم التحديد</span>
-                {% endif %}
-            </div>
-            <div class="mt-4">
-                <div class="text-sm text-slate-400 mb-1">QR Code للحضور</div>
-                <div id="qrcode" class="bg-slate-950/80 rounded-2xl flex items-center justify-center p-4"></div>
+
+            <!-- Digital ID Card (QR) -->
+            <div class="relative group">
+                <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-[2rem] blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                <div class="relative flex flex-col items-center gap-4 bg-white p-6 rounded-[2rem] shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
+                    <div id="qrcode" class="p-2 bg-white rounded-xl"></div>
+                    <div class="text-center">
+                        <p class="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1">Digital Access Key</p>
+                        <p class="text-[9px] text-slate-300 font-mono italic">Tech Day &bull; EduTech Egypt</p>
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
 
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-            <h2 class="text-lg font-semibold mb-3">الجدول الزمني</h2>
-            <div class="grid gap-3 md:grid-cols-2">
-                <div class="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3">
-                    <div class="text-xs text-emerald-300 mb-1">الورشة الحالية</div>
-                    {% if current_session %}
-                        <div class="text-sm font-semibold">{{ current_session.workshop.title }}</div>
-                        <div class="text-xs text-slate-300 mt-1">القاعة: {{ current_session.workshop.room }}</div>
-                        <div class="text-xs text-slate-400 mt-1">
-                            الفترة: {{ current_session.get_period_display }}
-                        </div>
+    <!-- Main Grid: Stats & Actions -->
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <!-- Personal Points -->
+        <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-cyan-500/30 transition-all shadow-xl">
+            <div class="flex items-start justify-between mb-4">
+                <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <span class="text-xs font-mono text-slate-600 font-bold">#{{ rank }} Global</span>
+            </div>
+            <div class="text-3xl font-black text-white mb-1 group-hover:text-cyan-400 transition-colors">{{ student.points }}</div>
+            <div class="text-xs text-slate-500 font-bold uppercase tracking-wider">نقاطي المحصلة</div>
+        </div>
+
+        <!-- Attendance Stats -->
+        <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-emerald-500/30 transition-all shadow-xl">
+            <div class="flex items-start justify-between mb-4">
+                <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </div>
+                <span class="text-xs font-mono text-slate-600 font-bold">{{ attendance_rate }}% Rate</span>
+            </div>
+            <div class="text-3xl font-black text-white mb-1 group-hover:text-emerald-400 transition-colors">{{ attended_count }}/{{ total_sessions }}</div>
+            <div class="text-xs text-slate-500 font-bold uppercase tracking-wider">الجلسات المكتملة</div>
+        </div>
+
+        <!-- Group Performance -->
+        <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-violet-500/30 transition-all shadow-xl">
+            <div class="flex items-start justify-between mb-4">
+                <div class="p-3 rounded-2xl bg-violet-500/10 text-violet-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </div>
+                <span class="text-xs font-mono text-slate-600 font-bold">#{{ group_rank }} Rank</span>
+            </div>
+            <div class="text-3xl font-black text-white mb-1 group-hover:text-violet-400 transition-colors">{{ student.group.points|default:0 }}</div>
+            <div class="text-xs text-slate-500 font-bold uppercase tracking-wider">نقاط المجموعة</div>
+        </div>
+
+        <!-- Certificate Status -->
+        <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-amber-500/30 transition-all shadow-xl">
+            <div class="flex items-start justify-between mb-4">
+                <div class="p-3 rounded-2xl bg-amber-500/10 text-amber-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-5.825-3.044 12.083 12.083 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+                </div>
+                {% if student.checked_in and not student.is_certificate_banned and student.cert_emails_sent < 3 %}
+                <a href="{% url 'students:send_certificate_email' student.pk %}" class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all group/btn relative" title="إرسال الشهادة للبريد">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <span class="absolute -top-8 right-0 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap">إرسال للبريد</span>
+                </a>
+                {% endif %}
+            </div>
+            {% if student.is_certificate_banned %}
+                <div class="text-xl font-black text-rose-500 mb-1">الشهادة محجوبة</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">بسبب مخالفات إدارية</div>
+            {% elif student.checked_in %}
+                <div class="text-xl font-black text-amber-400 mb-1">مؤهل للشهادة</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase">
+                    {% if student.cert_emails_sent > 0 %}
+                        أرسلت {{ student.cert_emails_sent }}/3 مرات
                     {% else %}
-                        <div class="text-sm text-slate-400">لا توجد ورشة حالية الآن</div>
+                        ترسل عبر البريد قريباً
                     {% endif %}
                 </div>
-                <div class="rounded-xl border border-cyan-500/40 bg-cyan-500/10 p-3">
-                    <div class="text-xs text-cyan-300 mb-1">الورشة القادمة</div>
-                    {% if next_session %}
-                        <div class="text-sm font-semibold">{{ next_session.workshop.title }}</div>
-                        <div class="text-xs text-slate-300 mt-1">القاعة: {{ next_session.workshop.room }}</div>
-                        <div class="text-xs text-slate-400 mt-1">
-                            الفترة: {{ next_session.get_period_display }}
-                        </div>
-                    {% else %}
-                        <div class="text-sm text-slate-400">لا توجد ورشة قادمة</div>
-                    {% endif %}
-                </div>
-            </div>
-            {% if current_session %}
-            <div class="mt-4">
-                <div class="text-xs text-slate-400 mb-1">الوقت المتبقي</div>
-                <div id="countdown" class="text-2xl font-mono text-cyan-400"></div>
-            </div>
+            {% else %}
+                <div class="text-xl font-black text-rose-500 mb-1">بانتظار الحضور</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase">يجب تسجيل الحضور أولاً</div>
             {% endif %}
         </div>
     </div>
 
-    <div class="space-y-4">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-            <h2 class="text-lg font-semibold mb-2">إشعارات</h2>
+    <div class="grid gap-8 lg:grid-cols-[1fr,380px]">
+        <!-- Right Column: Timeline & Progress -->
+        <div class="space-y-8">
+            <!-- Current Session (Smart Interactive Card) -->
             {% if current_session %}
-                <div class="text-sm text-slate-200">
-                    توجه الآن إلى القاعة رقم {{ current_session.workshop.room }}
+            <div class="group relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-cyan-600 to-blue-700 p-8 text-white shadow-2xl shadow-cyan-950/20">
+                <div class="absolute -right-10 -bottom-10 opacity-10 rotate-12 scale-150 transition-transform duration-1000 group-hover:rotate-0">
+                    <svg class="w-64 h-64" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
                 </div>
-            {% else %}
-                <div class="text-sm text-slate-400">
-                    لا توجد ورشة الآن، يرجى متابعة الشاشة العامة
+                
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div class="space-y-4">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-wider">
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                            الجلسة الحالية
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-black mb-2">{{ current_session.workshop.title }}</h3>
+                            <div class="flex items-center gap-4 text-white/80 text-sm">
+                                <span class="flex items-center gap-1.5 bg-black/10 px-3 py-1 rounded-lg">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    القاعة: {{ current_session.workshop.room }}
+                                </span>
+                                <span class="flex items-center gap-1.5 bg-black/10 px-3 py-1 rounded-lg">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    {{ current_session.start_time|time:"H:i" }} - {{ current_session.end_time|time:"H:i" }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center p-4 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 min-w-[140px]">
+                        <div id="countdown" class="text-2xl font-black font-mono">00:00</div>
+                        <div class="text-[9px] font-bold uppercase tracking-widest text-white/60 mt-1">Time Remaining</div>
+                    </div>
                 </div>
+            </div>
             {% endif %}
+
+            <!-- Full Training Journey Timeline -->
+            <div class="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 shadow-xl">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-2xl font-black text-white flex items-center gap-4">
+                        <span class="w-2 h-10 bg-cyan-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.5)]"></span>
+                        مساري التدريبي
+                    </h2>
+                    <div class="text-xs font-mono text-slate-500">{{ group_sessions|length }} Sessions</div>
+                </div>
+
+                <div class="space-y-4 relative before:absolute before:right-[3.25rem] before:top-4 before:bottom-4 before:w-px before:bg-slate-800">
+                    {% for session in group_sessions %}
+                    <div class="relative flex items-center gap-6 p-5 rounded-2xl bg-slate-950/50 border border-slate-800/50 transition-all hover:bg-slate-900 group">
+                        <!-- Time Marker -->
+                        <div class="w-20 text-right space-y-1">
+                            <div class="text-[10px] text-slate-500 font-black uppercase">{{ session.get_period_display }}</div>
+                            <div class="text-sm font-black text-slate-300">{{ session.start_time|time:"H:i" }}</div>
+                        </div>
+
+                        <!-- Connector Dot -->
+                        <div class="relative z-10 w-3 h-3 rounded-full bg-slate-800 border-2 border-slate-950 shadow-sm group-hover:scale-125 transition-transform duration-300 
+                            {% if session.attendance_status_value == 'present' %}bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]{% elif session.attendance_status_value == 'late' %}bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]{% endif %}">
+                        </div>
+
+                        <!-- Workshop Content -->
+                        <div class="flex-1">
+                            <h4 class="text-base font-black text-slate-100 group-hover:text-cyan-400 transition-colors">{{ session.workshop.title }}</h4>
+                            <div class="flex items-center gap-3 mt-1.5">
+                                <span class="text-[11px] text-slate-500 font-bold bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">القاعة {{ session.workshop.room }}</span>
+                                {% if session.feedback %}
+                                <div class="flex gap-0.5 text-amber-500">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= session.feedback.rating %}
+                                            <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Status Badge -->
+                        <div class="text-right">
+                            {% if session.attendance_status_value == "present" %}
+                                <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">حاضر</span>
+                            {% elif session.attendance_status_value == "late" %}
+                                <span class="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-black border border-amber-500/20">متأخر</span>
+                            {% elif session.attendance_status_value == "absent" %}
+                                <span class="px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-black border border-rose-500/20">غائب</span>
+                            {% else %}
+                                <span class="px-3 py-1 rounded-full bg-slate-800 text-slate-500 text-[10px] font-black">قادم</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Column: Notifications & Sidebars -->
+        <div class="space-y-8">
+            <!-- Social & Community -->
+            <div class="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 shadow-xl">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.3em] mb-6">روابط تهمك</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    {% if event.whatsapp_group_link %}
+                    <a href="{{ event.whatsapp_group_link }}" target="_blank" class="flex flex-col items-center gap-3 p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-emerald-400 group">
+                        <svg class="w-8 h-8 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.437 5.634 1.437h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        <span class="text-[10px] font-black uppercase">WhatsApp</span>
+                    </a>
+                    {% endif %}
+                    <a href="https://facebook.com/edutech.egypt" target="_blank" class="flex flex-col items-center gap-3 p-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all text-blue-400 group">
+                        <svg class="w-8 h-8 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        <span class="text-[10px] font-black uppercase">Facebook</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Violations Warning (Only if exists) -->
+            {% if violations %}
+            <div class="bg-rose-500/10 border border-rose-500/20 rounded-[2.5rem] p-8 shadow-xl">
+                <div class="flex items-center gap-4 mb-6 text-rose-500">
+                    <div class="p-2 rounded-xl bg-rose-500/20">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <h3 class="text-lg font-black uppercase tracking-widest">تنبيهات إدارية</h3>
+                </div>
+                <div class="space-y-4">
+                    {% for violation in violations %}
+                    <div class="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/20">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] font-black px-2 py-0.5 rounded bg-rose-500 text-white uppercase">{{ violation.get_status_display }}</span>
+                            <span class="text-[9px] font-mono text-rose-500/50">{{ violation.created_at|date:"H:i" }}</span>
+                        </div>
+                        <p class="text-xs text-rose-200/80 leading-relaxed">{{ violation.reason }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Feedback Required -->
+            {% if pending_feedback_workshops %}
+            <div class="bg-amber-500/10 border border-amber-500/20 rounded-[2.5rem] p-8 shadow-xl">
+                <div class="flex items-center gap-4 mb-6 text-amber-500">
+                    <div class="p-2 rounded-xl bg-amber-500/20 animate-bounce">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.54 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.539-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                    </div>
+                    <h3 class="text-lg font-black uppercase tracking-widest">تقييم الورش</h3>
+                </div>
+                <div class="space-y-6">
+                    {% for workshop in pending_feedback_workshops %}
+                    <form action="{% url 'workshops:submit_feedback' %}" method="POST" class="bg-slate-950 rounded-3xl p-5 border border-slate-800 space-y-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="workshop_id" value="{{ workshop.id }}">
+                        <div class="text-xs font-black text-slate-300">{{ workshop.title }}</div>
+                        <div class="flex justify-between items-center rating-stars">
+                            {% for i in "12345" %}
+                            <button type="button" data-value="{{ forloop.counter }}" class="star-btn text-slate-700 transition-all transform hover:scale-125 focus:outline-none">
+                                <svg class="w-8 h-8 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="rating" value="0" required>
+                        </div>
+                        <button type="submit" disabled class="submit-feedback-btn w-full py-3 bg-slate-800 text-slate-500 text-xs font-black uppercase rounded-2xl border border-slate-700 transition-all opacity-50 cursor-not-allowed hover:shadow-lg">
+                            تأكيد التقييم
+                        </button>
+                    </form>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Latest Notifications -->
+            <div class="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 shadow-xl">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.3em] mb-6">التنبيهات</h3>
+                <div class="space-y-4">
+                    {% for notification in notifications %}
+                    <div class="relative p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 hover:border-cyan-500/30 transition-all">
+                        <div class="text-sm font-black text-slate-200 mb-1">{{ notification.title }}</div>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">{{ notification.body }}</p>
+                        <div class="text-[9px] text-slate-600 mt-3 font-mono border-t border-slate-900 pt-2 flex justify-between">
+                            <span>EduTech Team</span>
+                            <span>{{ notification.created_at|date:"H:i" }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-12">
+                        <div class="w-16 h-16 mx-auto mb-4 bg-slate-950 rounded-full flex items-center justify-center border border-slate-800">
+                            <svg class="w-8 h-8 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                        </div>
+                        <p class="text-slate-600 text-[10px] font-black uppercase tracking-widest">لا توجد تنبيهات جديدة</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Credit -->
+    <div class="pt-8 text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 border border-slate-800 shadow-lg">
+            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Developed with 💙 by</span>
+            <span class="text-[11px] text-white font-black">EduTech Egypt Team</span>
         </div>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+    // Modern QR Code Config
     var qrelement = document.getElementById('qrcode');
     if (qrelement) {
         new QRCode(qrelement, {
             text: "{{ student.student_id }}",
             width: 160,
             height: 160,
-            colorDark: "#22d3ee",
-            colorLight: "#020617",
+            colorDark: "#020617",
+            colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
     }
+
+    // Interactive Rating Logic
+    document.querySelectorAll('.rating-stars').forEach(container => {
+        const stars = container.querySelectorAll('.star-btn');
+        const input = container.querySelector('input[name="rating"]');
+        const submitBtn = container.closest('form').querySelector('.submit-feedback-btn');
+
+        stars.forEach((star, index) => {
+            star.addEventListener('click', () => {
+                const val = parseInt(star.getAttribute('data-value'));
+                input.value = val;
+                
+                // Visual feedback
+                stars.forEach((s, i) => {
+                    if (i < val) {
+                        s.classList.replace('text-slate-700', 'text-amber-500');
+                        s.classList.add('scale-110');
+                    } else {
+                        s.classList.replace('text-amber-500', 'text-slate-700');
+                        s.classList.remove('scale-110');
+                    }
+                });
+
+                // Enable submit button
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-800', 'text-slate-500');
+                submitBtn.classList.add('bg-cyan-500', 'text-slate-950', 'shadow-cyan-500/20');
+            });
+        });
+    });
+
+    {% if current_session %}
+    // Precision Countdown
+    function updateCountdown() {
+        const endTimeStr = "{{ current_session.end_time|time:'H:i' }}";
+        const [hours, minutes] = endTimeStr.split(':');
+        const end = new Date();
+        end.setHours(parseInt(hours), parseInt(minutes), 0);
+        
+        const now = new Date();
+        const diff = end - now;
+        
+        const display = document.getElementById('countdown');
+        if (diff > 0) {
+            const m = Math.floor(diff / 1000 / 60);
+            const s = Math.floor((diff / 1000) % 60);
+            display.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+        } else {
+            display.textContent = "00:00";
+            display.parentElement.classList.replace('bg-white/10', 'bg-rose-500/20');
+            display.parentElement.querySelector('div:last-child').textContent = "Session Ended";
+        }
+    }
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+    {% endif %}
 </script>
 {% endblock %}
