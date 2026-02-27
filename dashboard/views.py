@@ -1,19 +1,31 @@
+from datetime import datetime, time
+import io
+import threading
+import csv
+import os
+import tempfile
+import shutil
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMultiAlternatives
-from django.db.models import Count, Max, Q
+from django.core.management import call_command
+from django.db import transaction
+from django.db.models import Count, Max, Q, Avg
+from django.db.models.functions import Trim
 from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.template.loader import render_to_string
 
 from attendance.models import Attendance
 from groups.models import Group
-from students.models import Student
+from students.models import Student, StudentRegistration
 from users.models import User
-from workshops.models import Workshop, WorkshopSession
+from workshops.models import Workshop, WorkshopSession, WorkshopFeedback
 
-from .models import AdminLog, Notification
+from .models import AdminLog, Notification, EventSettings, VIPInvite, VolunteerNote, StudentViolation, FailedEmail
+from techday.utils import send_email_async, get_styled_email_html
 
 
 def require_admin(user):
@@ -32,7 +44,16 @@ def admin_dashboard(request):
     active_workshops = workshops.filter(status='active').count()
     latest_notification = Notification.objects.filter(is_active=True).first()
     recent_logs = AdminLog.objects.all()[:5]
-    event_status = 'جارية'
+    event = EventSettings.get_solo()
+    pending_emails_count = FailedEmail.objects.count()
+    event_status = 'لم تبدأ بعد'
+    if event.is_finished:
+        event_status = 'متوقفة'
+    elif event.start_datetime:
+        if now < event.start_datetime:
+            event_status = 'لم تبدأ بعد'
+        elif now >= event.start_datetime:
+            event_status = 'جارية'
     context = {
         'now': now,
         'total_students': total_students,
@@ -43,8 +64,60 @@ def admin_dashboard(request):
         'latest_notification': latest_notification,
         'recent_logs': recent_logs,
         'event_status': event_status,
+        'event': event,
+        'pending_emails_count': pending_emails_count,
     }
     return render(request, 'dashboard/admin_dashboard.html', context)
+
+
+@login_required
+def admin_event_settings(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    event = EventSettings.get_solo()
+    if request.method == 'POST':
+        action = request.POST.get('action') or 'save'
+        if action == 'end':
+            Workshop.objects.exclude(status='finished').update(status='finished')
+            event.is_finished = True
+            event.save(update_fields=['is_finished'])
+            AdminLog.objects.create(action='تم إنهاء الفعالية وتم تعليم جميع الورش كمنتهية')
+            messages.success(request, 'تم إنهاء الفعالية وتم تعليم جميع الورش كمنتهية.')
+            return redirect('dashboard:admin_event_settings')
+        if action == 'resume':
+            event.is_finished = False
+            event.save(update_fields=['is_finished'])
+            AdminLog.objects.create(action='تم إعادة تشغيل الفعالية مرة أخرى بعد إنهائها')
+            messages.success(request, 'تم إعادة تشغيل الفعالية مرة أخرى.')
+            return redirect('dashboard:admin_event_settings')
+        start_date = request.POST.get('start_date') or ''
+        start_time = request.POST.get('start_time') or ''
+        location_name = (request.POST.get('location_name') or '').strip()
+        location_link = (request.POST.get('location_link') or '').strip()
+        arrival_time_text = (request.POST.get('arrival_time_text') or '').strip()
+        whatsapp_group_link = (request.POST.get('whatsapp_group_link') or '').strip()
+        max_students_raw = (request.POST.get('max_students') or '').strip()
+        max_students = int(max_students_raw) if max_students_raw.isdigit() else None
+
+        if start_date and start_time:
+            try:
+                naive = datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M')
+                event.start_datetime = timezone.make_aware(naive, timezone.get_current_timezone())
+            except ValueError:
+                event.start_datetime = None
+                messages.error(request, 'صيغة التاريخ أو الوقت غير صحيحة.')
+        else:
+            event.start_datetime = None
+        event.location_name = location_name
+        event.location_link = location_link
+        event.arrival_time_text = arrival_time_text
+        event.whatsapp_group_link = whatsapp_group_link
+        event.max_students = max_students
+        event.save()
+        if not messages.get_messages(request):
+            messages.success(request, 'تم حفظ إعدادات الفعالية.')
+        return redirect('dashboard:admin_event_settings')
+    return render(request, 'dashboard/admin_event_settings.html', {'event': event})
 
 
 @login_required
@@ -76,10 +149,27 @@ def admin_student_create(request):
         group_id = request.POST.get('group') or ''
         school = request.POST.get('school') or ''
         education_admin = request.POST.get('education_admin') or ''
-        email = request.POST.get('email') or ''
+        grade = request.POST.get('grade') or ''
+        email = (request.POST.get('email') or '').strip()
         group = Group.objects.filter(id=group_id).first() if group_id else None
+        if student_id and Student.objects.filter(student_id=student_id).exists():
+            messages.error(request, 'رقم الطالب الذي أدخلته مستخدم بالفعل لطالب آخر.')
+            return render(
+                request,
+                'dashboard/admin_student_form.html',
+                {'groups': groups},
+            )
         user = None
         password_plain = None
+        if email:
+            existing_user_with_email = User.objects.filter(email__iexact=email).exists()
+            if existing_user_with_email:
+                messages.error(request, 'هذا البريد الإلكتروني مستخدم بالفعل لحساب آخر، يرجى إدخال بريد مختلف.')
+                return render(
+                    request,
+                    'dashboard/admin_student_form.html',
+                    {'groups': groups},
+                )
         if student_id:
             username = f'student_{student_id}'
             user, created = User.objects.get_or_create(
@@ -92,110 +182,115 @@ def admin_student_create(request):
                 password_plain = get_random_string(10)
                 user.set_password(password_plain)
                 user.save()
+            else:
+                if hasattr(user, 'student_profile'):
+                    messages.error(
+                        request,
+                        'يوجد بالفعل طالب مرتبط بهذا حساب الدخول، لا يمكن ربط نفس الحساب بأكثر من طالب.',
+                    )
+                    return render(
+                        request,
+                        'dashboard/admin_student_form.html',
+                        {'groups': groups},
+                    )
         Student.objects.create(
             name=name,
             student_id=student_id,
             group=group,
             school=school,
             education_admin=education_admin,
+            grade=grade,
             email=email,
             user=user,
+            is_blacklisted=request.POST.get('is_blacklisted') == 'on',
+            is_certificate_banned=request.POST.get('is_certificate_banned') == 'on',
         )
         AdminLog.objects.create(action=f'تم إضافة الطالب {name}')
         if password_plain and email:
+            event = EventSettings.get_solo()
+            whatsapp_block_text = ""
+            whatsapp_block_html = ""
+            if event.whatsapp_group_link:
+                whatsapp_block_text = f"رابط مجموعة الواتساب للفعالية:\n{event.whatsapp_group_link}\n\n"
+                whatsapp_block_html = f"""
+                  <tr>
+                    <td style="padding:12px 0 0 0;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-radius:16px;background-color:#020617;border:1px solid #25d366;">
+                        <tr>
+                          <td style="padding:14px 16px;text-align:center;">
+                            <p style="margin:0 0 10px;font-size:13px;color:#e5e7eb;font-weight:600;">
+                              💬 مجموعة الواتساب الرسمية
+                            </p>
+                            <a href="{event.whatsapp_group_link}"
+                               style="display:inline-block;padding:10px 18px;border-radius:999px;background-color:#25d366;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;">
+                              الانضمام لمجموعة الواتساب
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                """
+
             subject = 'بيانات حسابك في نظام Tech Day – EduTech Egypt'
             text_body = (
                 f'مرحبًا {name},\n\n'
-                f'يسعدنا مشاركتك في فعالية Tech Day – الفريق التقني بالقليوبية.\n\n'
                 f'تم إنشاء حساب لك على نظام متابعة الفعالية، ويمكنك استخدام البيانات التالية لتسجيل الدخول:\n\n'
                 f'اسم المستخدم: {username}\n'
                 f'كلمة المرور: {password_plain}\n\n'
-                f'رابط تسجيل الدخول: https://edutech-egy.com/techday/login\n\n'
-                f'ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول للحفاظ على خصوصية حسابك.\n\n'
-                f'في حال واجهت أي مشكلة في تسجيل الدخول يمكنك التواصل مع فريق الدعم.\n\n'
+                f'رابط تسجيل الدخول: https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/\n\n'
+                f'{whatsapp_block_text}'
+                f'يمكنك أيضًا استخدام رمز الـ QR المرفق لتسجيل حضورك.\n\n'
                 f'تحياتنا،\n'
                 f'EduTech Egypt System'
             )
-            html_body = f"""
-<!DOCTYPE html>
-<html lang="ar">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>{subject}</title>
-  </head>
-  <body style="margin:0;padding:0;background-color:#0f172a;direction:rtl;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td align="center" style="padding:24px 16px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background-color:#020617;border-radius:16px;border:1px solid #1e293b;">
-            <tr>
-              <td style="padding:24px 24px 16px 24px;border-bottom:1px solid #1e293b;">
-                <h1 style="margin:0;font-size:20px;color:#e2e8f0;">مرحبًا {name}</h1>
-                <p style="margin:8px 0 0;font-size:13px;color:#94a3b8;">
-                  يسعدنا مشاركتك في فعالية Tech Day – الفريق التقني بالقليوبية.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 24px 8px 24px;">
-                <p style="margin:0 0 12px;font-size:13px;color:#cbd5f5;">
-                  تم إنشاء حساب لك على نظام متابعة الفعالية. استخدم البيانات التالية لتسجيل الدخول:
-                </p>
-                <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:13px;color:#e2e8f0;">
-                  <tr>
-                    <td style="padding:8px 0;width:120px;color:#94a3b8;">اسم المستخدم</td>
-                    <td style="padding:8px 0;font-family:monospace;color:#22d3ee;">{username}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;width:120px;color:#94a3b8;">كلمة المرور</td>
-                    <td style="padding:8px 0;font-family:monospace;color:#f97316;">{password_plain}</td>
-                  </tr>
-                </table>
-                <p style="margin:12px 0 0;font-size:12px;color:#f97316;">
-                  ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول للحفاظ على خصوصية حسابك.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 24px 24px 24px;">
-                <table role="presentation" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td>
-                      <a href="https://edutech-egy.com/techday/login"
-                         style="display:inline-block;padding:10px 18px;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#6366f1);color:#020617;font-size:13px;font-weight:600;text-decoration:none;">
-                        تسجيل الدخول الآن
-                      </a>
-                    </td>
-                  </tr>
-                </table>
-                <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;">
-                  إذا واجهت أي مشكلة في تسجيل الدخول يمكنك التواصل مع فريق الدعم.
-                </p>
-                <p style="margin:4px 0 0;font-size:12px;color:#64748b;">
-                  تحياتنا،<br>
-                  EduTech Egypt System
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
-"""
-            try:
-                message = EmailMultiAlternatives(
-                    subject,
-                    text_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                )
-                message.attach_alternative(html_body, 'text/html')
-                message.send(fail_silently=False)
-                messages.success(request, 'تم إضافة الطالب، وتم إرسال رسالة دخول احترافية إلى بريده الإلكتروني.')
-            except Exception as e:
-                messages.error(request, f'تم إضافة الطالب، لكن تعذّر إرسال البريد الإلكتروني: {e}')
+            
+            content_blocks = f"""
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">🔐 بيانات الدخول إلى حسابك</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;width:120px;">اسم المستخدم</td>
+                      <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#22d3ee;font-weight:700;">{username}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;">كلمة المرور</td>
+                      <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#f97316;font-weight:700;">{password_plain}</td>
+                    </tr>
+                  </table>
+                </div>
+                {whatsapp_block_html}
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;text-align:center;">
+                  <p class="td-email-text-main" style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:700;">🎫 رمز الـ QR الخاص بحضورك</p>
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={student_id}" alt="QR Code" style="display:block;margin:0 auto;border-radius:12px;border:4px solid #ffffff;box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                  <p class="td-email-text-muted" style="margin:12px 0 0;font-size:12px;color:#94a3b8;">برجاء إظهار هذا الكود عند بوابة الحضور لتسجيل دخولك.</p>
+                </div>
+            """
+            footer_extra = f"""
+                <a href="https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/" 
+                   style="display:inline-block;padding:14px 32px;border-radius:999px;background:linear-gradient(135deg,#06b6d4,#6366f1);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 10px 25px rgba(99,102,241,0.4);">
+                  🚀 دخول المنصة الآن
+                </a>
+            """
+            
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text="بيانات دخولك لفعالية Tech Day + QR للحضور",
+                title=f"👋 مرحبًا {name}",
+                main_text="🎓 يسعدنا مشاركتك في فعالية <b>Tech Day</b> بالقليوبية.",
+                content_blocks_html=content_blocks,
+                footer_extra_html=footer_extra
+            )
+            
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إرسال بيانات دخول طالب جديد')
+            messages.success(request, 'تم إضافة الطالب، سيتم إرسال رسالة الدخول إلى بريده الإلكتروني.')
         else:
             messages.success(request, 'تم إضافة الطالب بنجاح.')
         return redirect('dashboard:admin_students_list')
@@ -209,16 +304,82 @@ def admin_student_update(request, pk):
     student = get_object_or_404(Student, pk=pk)
     groups = Group.objects.all()
     if request.method == 'POST':
-        student.name = request.POST.get('name') or student.name
-        student.student_id = request.POST.get('student_id') or student.student_id
+        old_group = student.group
+        new_name = request.POST.get('name') or student.name
+        new_student_id = request.POST.get('student_id') or student.student_id
         group_id = request.POST.get('group') or ''
-        student.school = request.POST.get('school') or ''
-        student.education_admin = request.POST.get('education_admin') or student.education_admin
-        student.email = request.POST.get('email') or student.email
+        new_school = request.POST.get('school') or ''
+        new_education_admin = request.POST.get('education_admin') or student.education_admin
+        new_email = (request.POST.get('email') or '').strip()
+        if new_email and User.objects.filter(email__iexact=new_email).exclude(id=student.user_id).exists():
+            messages.error(request, 'هذا البريد الإلكتروني مستخدم بالفعل لحساب آخر، يرجى إدخال بريد مختلف.')
+            return render(
+                request,
+                'dashboard/admin_student_form.html',
+                {'student': student, 'groups': groups},
+            )
+        student.name = new_name
+        student.student_id = new_student_id
+        student.school = new_school
+        student.education_admin = new_education_admin
+        student.grade = request.POST.get('grade') or student.grade
+        student.email = new_email or student.email
+        student.is_blacklisted = request.POST.get('is_blacklisted') == 'on'
+        student.is_certificate_banned = request.POST.get('is_certificate_banned') == 'on'
         group = Group.objects.filter(id=group_id).first() if group_id else None
         student.group = group
         student.save()
         AdminLog.objects.create(action=f'تم تحديث بيانات الطالب {student.name}')
+        if group and group != old_group and student.email:
+            group_students = Student.objects.filter(group=group).order_by('name')
+            lines = [s.name for s in group_students]
+            group_list_text = '\n'.join(lines)
+            subject = 'تحديث مجموعتك في فعالية Tech Day – EduTech Egypt'
+            text_body = (
+                f'مرحبًا {student.name},\n\n'
+                f'تم تحديث مجموعتك في فعالية Tech Day – الفريق التقني بالقليوبية.\n\n'
+                f'المجموعة الحالية: {group.name} ({group.code})\n\n'
+                f'زملاؤك في المجموعة:\n'
+                f'{group_list_text}\n\n'
+                f'نتمنى لك تجربة مميزة وممتعة مع فريقك.\n\n'
+                f'تحياتنا،\n'
+                f'EduTech Egypt System'
+            )
+            group_items_html = ''.join(
+                f"<li style='margin:2px 0;'>{s.name}</li>" for s in group_students
+            )
+            
+            content_blocks = f"""
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;text-align:center;">
+                  <p class="td-email-text-main" style="margin:0 0 10px;font-size:14px;color:#94a3b8;">مجموعتك الحالية:</p>
+                  <div class="td-group-badge" style="display:inline-block;padding:8px 20px;border-radius:12px;background-color:#1e293b;color:#ffffff;font-size:18px;font-weight:800;border:1px solid {group.color};">
+                    {group.name} ({group.code})
+                  </div>
+                </div>
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
+                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">👥 زملاؤك في المجموعة:</p>
+                  <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
+                    {group_items_html}
+                  </ul>
+                </div>
+            """
+            
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text=f"تحديث مجموعتك: {group.name}",
+                title="🔄 تحديث المجموعة",
+                main_text=f"مرحبًا {student.name}، تم تغيير مجموعتك في الفعالية.",
+                content_blocks_html=content_blocks
+            )
+            
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [student.email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إرسال بيانات دخول طالب بعد التعديل')
         messages.success(request, 'تم تحديث بيانات الطالب')
         return redirect('dashboard:admin_students_list')
     return render(request, 'dashboard/admin_student_form.html', {'student': student, 'groups': groups})
@@ -263,92 +424,61 @@ def admin_student_send_credentials(request, pk):
         f'يمكنك استخدام البيانات التالية لتسجيل الدخول:\n\n'
         f'اسم المستخدم: {username}\n'
         f'كلمة المرور الجديدة: {password_plain}\n\n'
-        f'رابط تسجيل الدخول: https://edutech-egy.com/techday/login\n\n'
+        f'رابط تسجيل الدخول: https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/\n\n'
+        f'يمكنك أيضًا استخدام رمز الـ QR المرفق في هذه الرسالة لتسجيل حضورك.\n\n'
         f'ننصحك بتغيير كلمة المرور بعد تسجيل الدخول للحفاظ على خصوصية حسابك.\n\n'
         f'في حال واجهت أي مشكلة في تسجيل الدخول يمكنك التواصل مع فريق الدعم.\n\n'
         f'تحياتنا،\n'
         f'EduTech Egypt System'
     )
-    html_body = f"""
-<!DOCTYPE html>
-<html lang="ar">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>{subject}</title>
-  </head>
-  <body style="margin:0;padding:0;background-color:#0f172a;direction:rtl;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td align="center" style="padding:24px 16px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background-color:#020617;border-radius:16px;border:1px solid #1e293b;">
+
+    content_blocks = f"""
+        <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+          <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">🔐 بيانات الدخول المحدثة لحسابك</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
             <tr>
-              <td style="padding:24px 24px 16px 24px;border-bottom:1px solid #1e293b;">
-                <h1 style="margin:0;font-size:20px;color:#e2e8f0;">مرحبًا {name}</h1>
-                <p style="margin:8px 0 0;font-size:13px;color:#94a3b8;">
-                  تم تحديث بيانات الدخول الخاصة بحسابك على نظام متابعة فعالية Tech Day – الفريق التقني بالقليوبية.
-                </p>
-              </td>
+              <td style="padding:8px 0;font-size:13px;color:#94a3b8;width:120px;">اسم المستخدم</td>
+              <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#22d3ee;font-weight:700;">{username}</td>
             </tr>
             <tr>
-              <td style="padding:16px 24px 8px 24px;">
-                <p style="margin:0 0 12px;font-size:13px;color:#cbd5f5;">
-                  يمكنك استخدام البيانات التالية لتسجيل الدخول إلى حسابك:
-                </p>
-                <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:13px;color:#e2e8f0;">
-                  <tr>
-                    <td style="padding:8px 0;width:120px;color:#94a3b8;">اسم المستخدم</td>
-                    <td style="padding:8px 0;font-family:monospace;color:#22d3ee;">{username}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;width:120px;color:#94a3b8;">كلمة المرور الجديدة</td>
-                    <td style="padding:8px 0;font-family:monospace;color:#f97316;">{password_plain}</td>
-                  </tr>
-                </table>
-                <p style="margin:12px 0 0;font-size:12px;color:#f97316;">
-                  ننصحك بتغيير كلمة المرور بعد تسجيل الدخول للحفاظ على خصوصية حسابك.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 24px 24px 24px;">
-                <table role="presentation" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td>
-                      <a href="https://edutech-egy.com/techday/login"
-                         style="display:inline-block;padding:10px 18px;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#6366f1);color:#020617;font-size:13px;font-weight:600;text-decoration:none;">
-                        تسجيل الدخول الآن
-                      </a>
-                    </td>
-                  </tr>
-                </table>
-                <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;">
-                  إذا واجهت أي مشكلة في تسجيل الدخول يمكنك التواصل مع فريق الدعم.
-                </p>
-                <p style="margin:4px 0 0;font-size:12px;color:#64748b;">
-                  تحياتنا،<br>
-                  EduTech Egypt System
-                </p>
-              </td>
+              <td style="padding:8px 0;font-size:13px;color:#94a3b8;">كلمة المرور الجديدة</td>
+              <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#f97316;font-weight:700;">{password_plain}</td>
             </tr>
           </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
-"""
-    try:
-        message = EmailMultiAlternatives(
-            subject,
-            text_body,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-        )
-        message.attach_alternative(html_body, 'text/html')
-        message.send(fail_silently=False)
-        messages.success(request, 'تم إرسال بيانات الدخول الجديدة إلى بريد الطالب الإلكتروني.')
-    except Exception as e:
-        messages.error(request, f'تم تحديث كلمة مرور الطالب، لكن تعذّر إرسال البريد الإلكتروني: {e}')
+        </div>
+        <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;text-align:center;">
+          <p class="td-email-text-main" style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:700;">🎫 رمز الـ QR الخاص بحضورك</p>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={student.student_id}" alt="QR Code" style="display:block;margin:0 auto;border-radius:12px;border:4px solid #ffffff;box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+          <p class="td-email-text-muted" style="margin:12px 0 0;font-size:12px;color:#94a3b8;">يمكنك استخدام هذا الكود لتسجيل حضورك في الفعالية بسرعة وسهولة.</p>
+        </div>
+    """
+    footer_extra = f"""
+        <a href="https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/" 
+           style="display:inline-block;padding:14px 32px;border-radius:999px;background:linear-gradient(135deg,#06b6d4,#6366f1);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 10px 25px rgba(99,102,241,0.4);">
+          🚀 دخول المنصة الآن
+        </a>
+        <p style="margin:20px 0 0;font-size:12px;color:#f97316;text-align:center;">
+          ⚠️ ننصحك بتغيير كلمة المرور بعد تسجيل الدخول للحفاظ على خصوصية حسابك.
+        </p>
+    """
+
+    html_body = get_styled_email_html(
+        subject=subject,
+        preview_text="تحديث بيانات دخولك لفعالية Tech Day + QR للحضور",
+        title=f"🔄 تحديث بيانات الدخول",
+        main_text=f"مرحبًا {name}، تم تحديث بيانات الدخول الخاصة بحسابك.",
+        content_blocks_html=content_blocks,
+        footer_extra_html=footer_extra
+    )
+    message = EmailMultiAlternatives(
+        subject,
+        text_body,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+    )
+    message.attach_alternative(html_body, 'text/html')
+    send_email_async(message, 'إرسال بيانات دخول طالب يدويًا')
+    messages.success(request, 'تم إرسال بيانات الدخول الجديدة إلى بريد الطالب الإلكتروني (قد يستغرق الأمر لحظات).')
     return redirect('dashboard:admin_students_list')
 
 
@@ -358,11 +488,264 @@ def admin_student_delete(request, pk):
         return HttpResponseForbidden()
     student = get_object_or_404(Student, pk=pk)
     if request.method == 'POST':
+        user = student.user
+        user_to_delete = None
+        if user and user.role == User.Roles.STUDENT and not user.is_staff and not user.is_superuser:
+            user_to_delete = user
         student.delete()
+        if user_to_delete:
+            user_to_delete.delete()
         AdminLog.objects.create(action=f'تم حذف الطالب {student.name}')
         messages.success(request, 'تم حذف الطالب')
         return redirect('dashboard:admin_students_list')
     return render(request, 'dashboard/admin_student_delete_confirm.html', {'student': student})
+
+
+@login_required
+def admin_registrations_list(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    registrations = StudentRegistration.objects.select_related('student', 'approved_by').all()
+    return render(
+        request,
+        'dashboard/admin_registrations_list.html',
+        {'registrations': registrations},
+    )
+
+
+@login_required
+def admin_registration_detail(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    registration = get_object_or_404(StudentRegistration, pk=pk)
+    groups = Group.objects.all()
+    if request.method == 'POST':
+        action = request.POST.get('action') or ''
+        if action == 'approve' and registration.status == StudentRegistration.Status.PENDING:
+            group_id = request.POST.get('group') or ''
+            group = Group.objects.filter(id=group_id).first() if group_id else None
+            from django.utils.crypto import get_random_string
+
+            student_id = None
+            for _ in range(10):
+                candidate = get_random_string(6, allowed_chars='0123456789')
+                if not Student.objects.filter(student_id=candidate).exists():
+                    student_id = candidate
+                    break
+            if not student_id:
+                messages.error(request, 'تعذّر توليد رقم فريد للطالب. حاول مرة أخرى.')
+                return redirect('dashboard:admin_registration_detail', pk=registration.pk)
+            email = registration.email or ''
+            user = None
+            password_plain = None
+            if email:
+                username = f'student_{student_id}'
+                if User.objects.filter(email__iexact=email).exists():
+                    messages.error(
+                        request,
+                        'هذا البريد الإلكتروني مرتبط بالفعل بحساب آخر، لا يمكن إنشاء حساب جديد بنفس البريد.',
+                    )
+                    return redirect('dashboard:admin_registration_detail', pk=registration.pk)
+                user, created = User.objects.get_or_create(
+                    username=username,
+                    defaults={'role': User.Roles.STUDENT, 'email': email},
+                )
+                from django.utils.crypto import get_random_string as get_random_password
+
+                password_plain = get_random_password(10)
+                user.set_password(password_plain)
+                user.email = email
+                user.save()
+            student = Student.objects.create(
+                name=registration.full_name_ar,
+                student_id=student_id,
+                group=group,
+                school=registration.school,
+                education_admin=registration.education_admin,
+                grade=registration.grade,
+                email=registration.email,
+                user=user,
+            )
+            registration.status = StudentRegistration.Status.APPROVED
+            registration.student = student
+            registration.approved_by = request.user
+            registration.approved_at = timezone.localtime()
+            registration.save()
+            AdminLog.objects.create(
+                action=f'تمت الموافقة على طلب تسجيل الطالب {registration.full_name_ar}',
+            )
+            if password_plain and email:
+                event = EventSettings.get_solo()
+                whatsapp_block_text = ""
+                whatsapp_block_html = ""
+                if event.whatsapp_group_link:
+                    whatsapp_block_text = f"رابط مجموعة الواتساب للفعالية:\n{event.whatsapp_group_link}\n\n"
+                    whatsapp_block_html = f"""
+                      <tr>
+                        <td style="padding:12px 0 0 0;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-radius:16px;background-color:#020617;border:1px solid #25d366;">
+                            <tr>
+                              <td style="padding:14px 16px;text-align:center;">
+                                <p style="margin:0 0 10px;font-size:13px;color:#e5e7eb;font-weight:600;">
+                                  💬 مجموعة الواتساب الرسمية
+                                </p>
+                                <a href="{event.whatsapp_group_link}"
+                                   style="display:inline-block;padding:10px 18px;border-radius:999px;background-color:#25d366;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;">
+                                  الانضمام لمجموعة الواتساب
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    """
+
+                name = student.name
+                username = user.username
+                subject = 'تم قبول طلب تسجيلك في فعالية Tech Day – EduTech Egypt'
+                text_body = (
+                    f'مرحبًا {name},\n\n'
+                    f'تم قبول طلب تسجيلك للمشاركة في فعالية Tech Day – الفريق التقني بالقليوبية.\n\n'
+                    f'تم إنشاء حساب لك على نظام متابعة الفعالية، ويمكنك استخدام البيانات التالية لتسجيل الدخول:\n\n'
+                    f'اسم المستخدم: {username}\n'
+                    f'كلمة المرور: {password_plain}\n\n'
+                    f'رابط تسجيل الدخول: https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/\n\n'
+                    f'{whatsapp_block_text}'
+                    f'يمكنك أيضًا استخدام رمز الـ QR المرفق في هذه الرسالة لتسجيل حضورك.\n\n'
+                    f'ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول للحفاظ على خصوصية حسابك.\n\n'
+                    f'في حال واجهت أي مشكلة في تسجيل الدخول يمكنك التواصل مع فريق الدعم.\n\n'
+                    f'تحياتنا،\n'
+                    f'EduTech Egypt System'
+                )
+                content_blocks = f"""
+                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+                      <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">🔐 بيانات الدخول إلى حسابك</p>
+                      <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                        <tr>
+                          <td style="padding:8px 0;font-size:13px;color:#94a3b8;width:120px;">اسم المستخدم</td>
+                          <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#22d3ee;font-weight:700;">{username}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:8px 0;font-size:13px;color:#94a3b8;">كلمة المرور</td>
+                          <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#f97316;font-weight:700;">{password_plain}</td>
+                        </tr>
+                      </table>
+                    </div>
+                    {whatsapp_block_html}
+                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;text-align:center;">
+                      <p class="td-email-text-main" style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:700;">🎫 رمز الـ QR الخاص بحضورك</p>
+                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={student_id}" alt="QR Code" style="display:block;margin:0 auto;border-radius:12px;border:4px solid #ffffff;box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                      <p class="td-email-text-muted" style="margin:12px 0 0;font-size:12px;color:#94a3b8;">برجاء إظهار هذا الكود عند بوابة الحضور لتسجيل دخولك.</p>
+                    </div>
+                """
+                footer_extra = f"""
+                    <a href="https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/" 
+                       style="display:inline-block;padding:14px 32px;border-radius:999px;background:linear-gradient(135deg,#06b6d4,#6366f1);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 10px 25px rgba(99,102,241,0.4);">
+                      🚀 دخول المنصة الآن
+                    </a>
+                """
+                
+                html_body = get_styled_email_html(
+                    subject=subject,
+                    preview_text="تم قبول طلب تسجيلك في فعالية Tech Day + بيانات الدخول",
+                    title=f"🎉 مرحبًا {name}",
+                    main_text="تم قبول طلب تسجيلك للمشاركة في فعالية <b>Tech Day</b> بالقليوبية.",
+                    content_blocks_html=content_blocks,
+                    footer_extra_html=footer_extra
+                )
+                
+                message = EmailMultiAlternatives(
+                    subject,
+                    text_body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                )
+                message.attach_alternative(html_body, 'text/html')
+                send_email_async(message, 'إرسال بيانات دخول لطالب تمت الموافقة على تسجيله')
+                messages.success(
+                    request,
+                    'تمت الموافقة على طلب التسجيل، سيتم إرسال بيانات الدخول إلى بريد الطالب الإلكتروني.',
+                )
+            else:
+                messages.success(
+                    request,
+                    'تمت الموافقة على طلب التسجيل وإنشاء حساب الطالب (بدون بريد إلكتروني).',
+                )
+            return redirect('dashboard:admin_registrations_list')
+        elif action == 'reject' and registration.status == StudentRegistration.Status.PENDING:
+            rejection_reason = request.POST.get('rejection_reason', '').strip()
+            registration.status = StudentRegistration.Status.REJECTED
+            registration.approved_by = request.user
+            registration.approved_at = timezone.localtime()
+            registration.save()
+            AdminLog.objects.create(
+                action=f'تم رفض طلب تسجيل الطالب {registration.full_name_ar}',
+            )
+            email = registration.email or ''
+            if email:
+                name = registration.full_name_ar
+                subject = 'نتيجة طلب التسجيل في فعالية Tech Day – EduTech Egypt'
+                reason_block = ''
+                if rejection_reason:
+                    reason_block = (
+                        f'سبب الرفض: {rejection_reason}\n\n'
+                    )
+                text_body = (
+                    f'مرحبًا {name},\n\n'
+                    f'نشكر لك اهتمامك بالمشاركة في فعالية Tech Day – الفريق التقني بالقليوبية.\n\n'
+                    f'نود إبلاغك بأن طلب تسجيلك لم يتم قبوله في الوقت الحالي.\n\n'
+                    f'{reason_block}'
+                    f'هذا القرار لا يقلل من تقديرنا لك، ونتطلع لمشاركتك في فعاليات أخرى مستقبلًا بإذن الله.\n\n'
+                    f'في حال كان لديك أي استفسار يمكنك التواصل مع فريق EDU-TECH في إدارتك التعليمية أو عبر منسق الفعالية.\n\n'
+                    f'تحياتنا،\n'
+                    f'EduTech Egypt System'
+                )
+                
+                content_blocks = ""
+                if rejection_reason:
+                    content_blocks = f"""
+                        <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+                          <p class="td-email-text-main" style="margin:0 0 10px;font-size:14px;color:#fca5a5;font-weight:700;">📝 سبب عدم القبول:</p>
+                          <p class="td-email-text-main" style="margin:0;font-size:14px;color:#e5e7eb;line-height:1.6;">{rejection_reason}</p>
+                        </div>
+                    """
+                
+                html_body = get_styled_email_html(
+                    subject=subject,
+                    preview_text="بخصوص طلب تسجيلك في فعالية Tech Day",
+                    title="📝 نتيجة طلب التسجيل",
+                    main_text=f"مرحبًا {name}، نشكرك على اهتمامك بالانضمام إلينا.",
+                    content_blocks_html=content_blocks + f"""
+                        <p class="td-email-text-main" style="margin:0;font-size:14px;color:#cbd5f5;text-align:center;">
+                          نود إبلاغك بأن طلب تسجيلك لم يتم قبوله في الوقت الحالي.<br>
+                          نتطلع لرؤيتك في فعالياتنا القادمة.
+                        </p>
+                    """
+                )
+                
+                message = EmailMultiAlternatives(
+                    subject,
+                    text_body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                )
+                message.attach_alternative(html_body, 'text/html')
+                send_email_async(message, 'إرسال نتيجة رفض طلب تسجيل')
+                messages.success(
+                    request,
+                    'تم رفض طلب التسجيل، سيتم إرسال بريد للطالب بنتيجة الطلب.',
+                )
+            else:
+                messages.success(request, 'تم رفض طلب التسجيل.')
+            return redirect('dashboard:admin_registrations_list')
+        else:
+            messages.error(request, 'لا يمكن تنفيذ العملية على هذا الطلب.')
+            return redirect('dashboard:admin_registrations_list')
+    return render(
+        request,
+        'dashboard/admin_registration_detail.html',
+        {'registration': registration, 'groups': groups},
+    )
 
 
 @login_required
@@ -378,6 +761,56 @@ def admin_student_transfer(request, pk):
         student.group = group
         student.save()
         AdminLog.objects.create(action=f'تم نقل الطالب {student.name} من مجموعة {old_group} إلى {group}')
+        if group and group != old_group and student.email:
+            group_students = Student.objects.filter(group=group).order_by('name')
+            lines = [s.name for s in group_students]
+            group_list_text = '\n'.join(lines)
+            subject = 'تم نقلك إلى مجموعة جديدة في Tech Day – EduTech Egypt'
+            text_body = (
+                f'مرحبًا {student.name},\n\n'
+                f'تم نقلك إلى مجموعة جديدة في فعالية Tech Day – الفريق التقني بالقليوبية.\n\n'
+                f'المجموعة الحالية: {group.name} ({group.code})\n\n'
+                f'زملاؤك في المجموعة:\n'
+                f'{group_list_text}\n\n'
+                f'نتمنى لك تجربة مميزة وممتعة مع فريقك.\n\n'
+                f'تحياتنا،\n'
+                f'EduTech Egypt System'
+            )
+            group_items_html = ''.join(
+                f"<li style='margin:2px 0;'>{s.name}</li>" for s in group_students
+            )
+            
+            content_blocks = f"""
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;text-align:center;">
+                  <p class="td-email-text-main" style="margin:0 0 10px;font-size:14px;color:#94a3b8;">مجموعتك الجديدة:</p>
+                  <div class="td-group-badge" style="display:inline-block;padding:8px 20px;border-radius:12px;background-color:#1e293b;color:#ffffff;font-size:18px;font-weight:800;border:1px solid {group.color};">
+                    {group.name} ({group.code})
+                  </div>
+                </div>
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
+                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">👥 زملاؤك في المجموعة:</p>
+                  <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
+                    {group_items_html}
+                  </ul>
+                </div>
+            """
+            
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text=f"تم نقلك لمجموعة جديدة: {group.name}",
+                title="🔄 تغيير المجموعة",
+                main_text=f"مرحبًا {student.name}، تم تحديث مجموعتك في الفعالية.",
+                content_blocks_html=content_blocks
+            )
+            
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [student.email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إشعار بنقل طالب إلى مجموعة جديدة')
         messages.success(request, 'تم نقل الطالب بنجاح')
         return redirect('dashboard:admin_students_list')
     return render(request, 'dashboard/admin_student_transfer.html', {'student': student, 'groups': groups})
@@ -399,8 +832,9 @@ def admin_group_create(request):
         name = request.POST.get('name') or ''
         code = request.POST.get('code') or ''
         color = request.POST.get('color') or ''
+        level = request.POST.get('level') or Group.Level.PRIMARY
         max_students = int(request.POST.get('max_students') or 0) or 25
-        group = Group.objects.create(name=name, code=code, color=color, max_students=max_students)
+        group = Group.objects.create(name=name, code=code, color=color, max_students=max_students, level=level)
         AdminLog.objects.create(action=f'تم إنشاء المجموعة {group}')
         messages.success(request, 'تم إنشاء المجموعة بنجاح')
         return redirect('dashboard:admin_groups')
@@ -416,6 +850,7 @@ def admin_group_update(request, pk):
         group.name = request.POST.get('name') or group.name
         group.code = request.POST.get('code') or group.code
         group.color = request.POST.get('color') or group.color
+        group.level = request.POST.get('level') or group.level
         group.max_students = int(request.POST.get('max_students') or group.max_students)
         group.save()
         AdminLog.objects.create(action=f'تم تعديل المجموعة {group}')
@@ -428,17 +863,236 @@ def admin_group_update(request, pk):
 def admin_groups_redistribute(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
-    groups = list(Group.objects.all())
-    students = list(Student.objects.all())
-    if groups and students:
-        index = 0
-        for student in students:
-            student.group = groups[index % len(groups)]
-            student.save()
-            index += 1
-        AdminLog.objects.create(action='تم إعادة توزيع الطلاب على المجموعات')
-        messages.success(request, 'تم إعادة توزيع الطلاب على المجموعات')
+    
+    primary_groups = list(Group.objects.filter(level=Group.Level.PRIMARY))
+    prep_sec_groups = list(Group.objects.filter(level=Group.Level.PREP_SEC))
+    
+    # تصنيف الطلاب
+    all_students = list(Student.objects.all())
+    primary_students = []
+    prep_sec_students = []
+    other_students = []
+    
+    for s in all_students:
+        grade = (s.grade or '').lower()
+        if 'prim' in grade:
+            primary_students.append(s)
+        elif 'prep' in grade or 'sec' in grade:
+            prep_sec_students.append(s)
+        else:
+            # طلاب بدون مرحلة محددة، سنعتبرهم مع الإعدادي والثانوي مؤقتاً أو حسب المتوفر
+            other_students.append(s)
+            
+    # إذا لم توجد مجموعات من نوع معين، ندمج المجموعات المتاحة
+    if not primary_groups:
+        prep_sec_students.extend(primary_students)
+        primary_students = []
+        primary_groups = prep_sec_groups
+    elif not prep_sec_groups:
+        primary_students.extend(prep_sec_students)
+        prep_sec_students = []
+        prep_sec_groups = primary_groups
+        
+    # دمج الطلاب غير المصنفين مع المرحلة الأكبر
+    prep_sec_students.extend(other_students)
+    
+    assignments = [] # قائمة بـ (student, group)
+    
+    # توزيع الابتدائي
+    if primary_students and primary_groups:
+        total_primary_capacity = sum(g.max_students for g in primary_groups)
+        
+        # إذا زاد عدد الطلاب الابتدائي عن سعة مجموعاتهم
+        if len(primary_students) > total_primary_capacity:
+            excess_count = len(primary_students) - total_primary_capacity
+            # نقل الزيادة لطلاب الإعدادي والثانوي
+            prep_sec_students.extend(primary_students[-excess_count:])
+            primary_students = primary_students[:-excess_count]
+            
+        # توزيع الطلاب الابتدائي المتبقين بالتساوي على مجموعات الابتدائي
+        for i, s in enumerate(primary_students):
+            g = primary_groups[i % len(primary_groups)]
+            assignments.append((s, g))
+            
+    # توزيع الإعدادي والثانوي (مع أي زيادة من الابتدائي)
+    if prep_sec_students and prep_sec_groups:
+        for i, s in enumerate(prep_sec_students):
+            g = prep_sec_groups[i % len(prep_sec_groups)]
+            assignments.append((s, g))
+    elif prep_sec_students and primary_groups:
+        # حالة طارئة: لا توجد مجموعات إعدادي/ثانوي، نوزعهم على الابتدائي
+        for i, s in enumerate(prep_sec_students):
+            g = primary_groups[i % len(primary_groups)]
+            assignments.append((s, g))
+
+    # تنفيذ التحديثات وإرسال الإيميلات
+    with transaction.atomic():
+        for student, new_group in assignments:
+            old_group = student.group
+            student.group = new_group
+            student.save(update_fields=['group'])
+            
+            if new_group != old_group and student.email:
+                # إرسال إيميل التحديث (نفس المنطق السابق)
+                group_students = Student.objects.filter(group=new_group).order_by('name')
+                group_list_text = '\n'.join([s.name for s in group_students])
+                subject = 'تحديث مجموعتك بعد إعادة التوزيع في Tech Day – EduTech Egypt'
+                
+                group_items_html = ''.join(
+                    f"<li style='margin:2px 0;'>{s.name}</li>" for s in group_students
+                )
+                
+                content_blocks = f"""
+                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;text-align:center;">
+                      <p class="td-email-text-main" style="margin:0 0 10px;font-size:14px;color:#94a3b8;">مجموعتك الحالية بعد التوزيع:</p>
+                      <div class="td-group-badge" style="display:inline-block;padding:8px 20px;border-radius:12px;background-color:#1e293b;color:#ffffff;font-size:18px;font-weight:800;border:1px solid {new_group.color};">
+                        {new_group.name} ({new_group.code})
+                      </div>
+                    </div>
+                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
+                      <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">👥 زملاؤك في المجموعة الجديدة:</p>
+                      <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
+                        {group_items_html}
+                      </ul>
+                    </div>
+                """
+                
+                html_body = get_styled_email_html(
+                    subject=subject,
+                    preview_text=f"إعادة توزيع المجموعات: مجموعتك هي {new_group.name}",
+                    title="🔄 إعادة توزيع المجموعات",
+                    main_text=f"مرحبًا {student.name}، تم تحديث بيانات مجموعتك في الفعالية.",
+                    content_blocks_html=content_blocks
+                )
+                
+                message = EmailMultiAlternatives(
+                    subject,
+                    f'مرحبًا {student.name},\n\nتم إعادة توزيعك للمجموعة: {new_group.name}\n\nزملاؤك:\n{group_list_text}',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [student.email],
+                )
+                message.attach_alternative(html_body, 'text/html')
+                send_email_async(message, 'إشعار إعادة توزيع الطلاب على المجموعات')
+
+    AdminLog.objects.create(action=f'تم إعادة توزيع {len(assignments)} طالب حسب المراحل الدراسية')
+    messages.success(request, f'تم إعادة توزيع {len(assignments)} طالب حسب المراحل الدراسية بنجاح')
     return redirect('dashboard:admin_groups')
+
+
+@login_required
+def admin_send_location_email(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    event = EventSettings.get_solo()
+    if not event.location_name or not event.location_link:
+        messages.error(request, 'يرجى ضبط مكان الفعالية ورابط الموقع أولاً في الإعدادات.')
+        return redirect('dashboard:admin_event_settings')
+    
+    students = Student.objects.filter(email__isnull=False).exclude(email='')
+    if not students.exists():
+        messages.error(request, 'لا يوجد طلاب لديهم بريد إلكتروني مسجل.')
+        return redirect('dashboard:admin_dashboard')
+    
+    count = 0
+    
+    for student in students:
+        subject = f'تأكيد حضور فعالية {event.name} - الموقع والموعد'
+        name = student.name
+        location = event.location_name
+        map_link = event.location_link
+        arrival_time = event.arrival_time_text or (event.start_datetime.strftime('%I:%M %p') if event.start_datetime else '8:00 AM')
+        date_str = event.start_datetime.strftime('%Y-%m-%d') if event.start_datetime else 'يوم الفعالية'
+        whatsapp_link = event.whatsapp_group_link
+
+        text_body = (
+            f'مرحبًا {name},\n\n'
+            f'نؤكد حضورك لفعالية {event.name}.\n\n'
+            f'📅 التاريخ: {date_str}\n'
+            f'⏰ وقت الحضور المتوقع: {arrival_time}\n'
+            f'📍 المكان: {location}\n'
+            f'🗺️ رابط الموقع (Google Maps): {map_link}\n'
+        )
+        
+        if whatsapp_link:
+            text_body += f'💬 رابط مجموعة الواتساب: {whatsapp_link}\n'
+            
+        text_body += (
+            f'\nنرجو الالتزام بموعد الحضور لضمان استفادة قصوى من كافة فقرات اليوم.\n\n'
+            f'نتطلع لرؤيتك.\n\n'
+            f'تحياتنا،\n'
+            f'EduTech Egypt System'
+        )
+
+        whatsapp_section = ""
+        if whatsapp_link:
+            whatsapp_section = f"""
+            <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#020617;border:1px solid #25d366;text-align:center;margin-top:20px;">
+              <p style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:600;">💬 انضم لمجموعة الواتساب الرسمية:</p>
+              <a href="{whatsapp_link}" 
+                 style="display:inline-block;padding:12px 24px;border-radius:999px;background-color:#25d366;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">
+                الانضمام لمجموعة الواتساب
+              </a>
+            </div>
+            """
+
+        content_blocks = f"""
+            <div class="td-email-box" style="padding:24px;border-radius:24px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+              <p class="td-email-text-main" style="margin:0 0 20px;font-size:15px;color:#22d3ee;font-weight:700;text-align:center;">📍 تفاصيل الحضور والموقع</p>
+              
+              <div style="background:#1e293b;border-radius:16px;padding:16px;margin-bottom:16px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="direction:rtl;text-align:right;">
+                  <tr>
+                    <td style="padding:8px 0;font-size:13px;color:#94a3b8;width:100px;">📅 التاريخ</td>
+                    <td style="padding:8px 0;font-size:14px;color:#e5e7eb;font-weight:600;">{date_str}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;font-size:13px;color:#94a3b8;">⏰ وقت الحضور</td>
+                    <td style="padding:8px 0;font-size:14px;color:#f97316;font-weight:700;">{arrival_time}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;font-size:13px;color:#94a3b8;">📍 المكان</td>
+                    <td style="padding:8px 0;font-size:14px;color:#e5e7eb;font-weight:600;">{location}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="text-align:center;">
+                <a href="{map_link}" 
+                   style="display:inline-block;padding:14px 32px;border-radius:999px;background-color:#22d3ee;color:#0f172a;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 10px 25px rgba(34,211,238,0.3);">
+                  🗺️ فتح الموقع على الخريطة
+                </a>
+              </div>
+            </div>
+
+            {whatsapp_section}
+            
+            <p style="text-align:center;font-size:12px;color:#64748b;margin-top:24px;">
+              نرجو الالتزام بموعد الحضور لضمان استفادة قصوى من كافة فقرات اليوم.
+            </p>
+        """
+        
+        html_body = get_styled_email_html(
+            subject=subject,
+            preview_text=f"تأكيد حضور فعالية {event.name}",
+            title="✅ تأكيد حضور الفعالية",
+            main_text=f"مرحبًا {name}، يسعدنا تأكيد حضورك لفعالية <b>{event.name}</b>.",
+            content_blocks_html=content_blocks
+        )
+
+        message = EmailMultiAlternatives(
+            subject,
+            text_body,
+            settings.DEFAULT_FROM_EMAIL,
+            [student.email],
+        )
+        message.attach_alternative(html_body, 'text/html')
+        send_email_async(message, 'إرسال إيميل تأكيد الموقع والموعد')
+        count += 1
+
+    AdminLog.objects.create(action=f'تم البدء في إرسال تأكيدات الحضور لـ {count} طالب')
+    messages.success(request, f'جاري إرسال تأكيدات الحضور والموقع لـ {count} طالب في الخلفية.')
+    return redirect('dashboard:admin_dashboard')
 
 
 @login_required
@@ -467,6 +1121,64 @@ def admin_workshop_create(request):
             status=status,
         )
         AdminLog.objects.create(action=f'تم إنشاء الورشة {workshop.title}')
+        if supervisor and supervisor.email:
+            subject = 'تعيينك كمشرف ورشة في فعالية Tech Day – EduTech Egypt'
+            name = supervisor.get_full_name() or supervisor.username
+            text_body = (
+                f'مرحبًا {name},\n\n'
+                f'تم تعيينك كمشرف للورشة التالية في فعالية Tech Day – الفريق التقني بالقليوبية:\n\n'
+                f'اسم الورشة: {workshop.title}\n'
+                f'القاعة: {workshop.room}\n'
+                f'حالة الورشة: {workshop.get_status_display()}\n\n'
+                f'نرجو التواجد في القاعة قبل بدء الورشة بوقت كافٍ ومتابعة حضور الطلاب وتعليماتهم.\n\n'
+                f'شكرًا لمشاركتك معنا.\n\n'
+                f'تحياتنا،\n'
+                f'EduTech Egypt System'
+            )
+            content_blocks = f"""
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#22d3ee;font-weight:700;">📋 تفاصيل الورشة:</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;width:120px;">اسم الورشة</td>
+                      <td style="padding:8px 0;font-size:14px;color:#e5e7eb;font-weight:700;">{workshop.title}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;">القاعة</td>
+                      <td style="padding:8px 0;font-size:14px;color:#e5e7eb;">{workshop.room}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;">حالة الورشة</td>
+                      <td style="padding:8px 0;font-size:14px;color:#e5e7eb;">{workshop.get_status_display()}</td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
+                  <p class="td-email-text-main" style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:700;">📌 تعليمات المشرف:</p>
+                  <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
+                    <li>نرجو التواجد في القاعة المحددة قبل بدء الورشة بوقت كافٍ.</li>
+                    <li>متابعة حضور الطلاب بدقة من خلال لوحة تحكم المشرف.</li>
+                    <li>توجيه الطلاب ومساعدتهم خلال الأنشطة العملية.</li>
+                  </ul>
+                </div>
+            """
+            
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text=f"تم تعيينك مشرفاً لورشة: {workshop.title}",
+                title="👨‍🏫 إشراف ورشة جديدة",
+                main_text=f"مرحبًا {name}، يسعدنا انضمامك كأحد مشرفي ورش Tech Day.",
+                content_blocks_html=content_blocks
+            )
+            
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [supervisor.email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إشعار تعيين مشرف على ورشة')
         messages.success(request, 'تم إنشاء الورشة بنجاح')
         return redirect('dashboard:admin_workshops')
     return render(
@@ -483,13 +1195,73 @@ def admin_workshop_update(request, pk):
     workshop = get_object_or_404(Workshop, pk=pk)
     supervisors = User.objects.filter(role=User.Roles.SUPERVISOR)
     if request.method == 'POST':
+        old_supervisor = workshop.supervisor
         workshop.title = request.POST.get('title') or workshop.title
         workshop.room = request.POST.get('room') or workshop.room
         supervisor_id = request.POST.get('supervisor') or ''
-        workshop.supervisor = supervisors.filter(id=supervisor_id).first() if supervisor_id else None
+        new_supervisor = supervisors.filter(id=supervisor_id).first() if supervisor_id else None
+        workshop.supervisor = new_supervisor
         workshop.status = request.POST.get('status') or workshop.status
         workshop.save()
         AdminLog.objects.create(action=f'تم تعديل الورشة {workshop.title}')
+        if new_supervisor and new_supervisor != old_supervisor and new_supervisor.email:
+            subject = 'تعيينك أو تحديث إشرافك على ورشة في Tech Day – EduTech Egypt'
+            name = new_supervisor.get_full_name() or new_supervisor.username
+            text_body = (
+                f'مرحبًا {name},\n\n'
+                f'تم تعيينك أو تحديث إشرافك على الورشة التالية في فعالية Tech Day – الفريق التقني بالقليوبية:\n\n'
+                f'اسم الورشة: {workshop.title}\n'
+                f'القاعة: {workshop.room}\n'
+                f'حالة الورشة: {workshop.get_status_display()}\n\n'
+                f'نرجو التواجد في القاعة قبل بدء الورشة بوقت كافٍ ومتابعة حضور الطلاب وتعليماتهم.\n\n'
+                f'شكرًا لمشاركتك معنا.\n\n'
+                f'تحياتنا،\n'
+                f'EduTech Egypt System'
+            )
+            content_blocks = f"""
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#22d3ee;font-weight:700;">📋 تفاصيل الورشة المحدثة:</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;width:120px;">اسم الورشة</td>
+                      <td style="padding:8px 0;font-size:14px;color:#e5e7eb;font-weight:700;">{workshop.title}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;">القاعة</td>
+                      <td style="padding:8px 0;font-size:14px;color:#e5e7eb;">{workshop.room}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;">حالة الورشة</td>
+                      <td style="padding:8px 0;font-size:14px;color:#e5e7eb;">{workshop.get_status_display()}</td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
+                  <p class="td-email-text-main" style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:700;">📌 تعليمات المشرف:</p>
+                  <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
+                    <li>نرجو التواجد في القاعة المحددة قبل بدء الورشة بوقت كافٍ.</li>
+                    <li>متابعة حضور الطلاب بدقة من خلال لوحة تحكم المشرف.</li>
+                    <li>توجيه الطلاب ومساعدتهم خلال الأنشطة العملية.</li>
+                  </ul>
+                </div>
+            """
+            
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text=f"تحديث بيانات إشرافك لورشة: {workshop.title}",
+                title="👨‍🏫 تحديث بيانات الإشراف",
+                main_text=f"مرحبًا {name}، تم تحديث بيانات الورشة التي تشرف عليها.",
+                content_blocks_html=content_blocks
+            )
+            
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [new_supervisor.email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إشعار تحديث إشراف على ورشة')
         messages.success(request, 'تم تعديل الورشة')
         return redirect('dashboard:admin_workshops')
     return render(
@@ -531,7 +1303,10 @@ def admin_supervisor_create(request):
     if request.method == 'POST':
         first_name = request.POST.get('first_name') or ''
         last_name = request.POST.get('last_name') or ''
-        email = request.POST.get('email') or ''
+        email = (request.POST.get('email') or '').strip()
+        if email and User.objects.filter(email__iexact=email).exists():
+            messages.error(request, 'هذا البريد الإلكتروني مستخدم بالفعل لحساب آخر، يرجى إدخال بريد مختلف.')
+            return render(request, 'dashboard/admin_supervisor_form.html')
         username_base = ''
         if email and '@' in email:
             username_base = email.split('@', 1)[0]
@@ -564,98 +1339,68 @@ def admin_supervisor_create(request):
                 f'يمكنك استخدام البيانات التالية لتسجيل الدخول:\n\n'
                 f'اسم المستخدم: {username}\n'
                 f'كلمة المرور: {password_plain}\n\n'
-                f'رابط تسجيل الدخول: https://edutech-egy.com/techday/login\n\n'
+                f'رابط تسجيل الدخول: https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/\n\n'
                 f'ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول للحفاظ على خصوصية حسابك.\n\n'
                 f'في حال واجهت أي مشكلة في تسجيل الدخول يمكنك التواصل مع فريق الدعم.\n\n'
                 f'تحياتنا،\n'
                 f'EduTech Egypt System'
             )
-            html_body = f"""
-<!DOCTYPE html>
-<html lang="ar">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>{subject}</title>
-  </head>
-  <body style="margin:0;padding:0;background-color:#0f172a;direction:rtl;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td align="center" style="padding:24px 16px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background-color:#020617;border-radius:16px;border:1px solid #1e293b;">
-            <tr>
-              <td style="padding:24px 24px 16px 24px;border-bottom:1px solid #1e293b;">
-                <h1 style="margin:0;font-size:20px;color:#e2e8f0;">مرحبًا {name}</h1>
-                <p style="margin:8px 0 0;font-size:13px;color:#94a3b8;">
-                  تم إنشاء حساب لك كمشرف ورشة على نظام متابعة فعالية Tech Day – الفريق التقني بالقليوبية.
+            
+            content_blocks = f"""
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">🔐 بيانات الدخول إلى حسابك</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;width:120px;">اسم المستخدم</td>
+                      <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#22d3ee;font-weight:700;">{username}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;">كلمة المرور</td>
+                      <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#f97316;font-weight:700;">{password_plain}</td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
+                  <p class="td-email-text-main" style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:700;">🚀 البدء في العمل</p>
+                  <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
+                    <li>سجل دخولك للمنصة باستخدام البيانات أعلاه.</li>
+                    <li>تأكد من الورش الموكلة إليك في جدول الورش.</li>
+                    <li>قم بفتح صفحة الورشة عند البدء لتسجيل حضور الطلاب.</li>
+                  </ul>
+                </div>
+            """
+            
+            footer_extra = f"""
+                <a href="https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/" 
+                   style="display:inline-block;padding:14px 32px;border-radius:999px;background:linear-gradient(135deg,#06b6d4,#6366f1);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 10px 25px rgba(99,102,241,0.4);">
+                  🚀 دخول لوحة التحكم
+                </a>
+                <p style="margin:20px 0 0;font-size:12px;color:#f97316;text-align:center;">
+                  ⚠️ ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول للحفاظ على خصوصية حسابك.
                 </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 24px 8px 24px;">
-                <p style="margin:0 0 12px;font-size:13px;color:#cbd5f5;">
-                  يمكنك استخدام البيانات التالية لتسجيل الدخول إلى حسابك:
-                </p>
-                <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:13px;color:#e2e8f0%;">
-                  <tr>
-                    <td style="padding:8px 0;width:120px;color:#94a3b8;">اسم المستخدم</td>
-                    <td style="padding:8px 0;font-family:monospace;color:#22d3ee;">{username}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;width:120px;color:#94a3b8;">كلمة المرور</td>
-                    <td style="padding:8px 0;font-family:monospace;color:#f97316;">{password_plain}</td>
-                  </tr>
-                </table>
-                <p style="margin:12px 0 0;font-size:12px;color:#f97316;">
-                  ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول للحفاظ على خصوصية حسابك.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 24px 24px 24px;">
-                <table role="presentation" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td>
-                      <a href="https://edutech-egy.com/techday/login"
-                         style="display:inline-block;padding:10px 18px;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#6366f1);color:#020617;font-size:13px;font-weight:600;text-decoration:none;">
-                        تسجيل الدخول الآن
-                      </a>
-                    </td>
-                  </tr>
-                </table>
-                <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;">
-                  إذا واجهت أي مشكلة في تسجيل الدخول يمكنك التواصل مع فريق الدعم.
-                </p>
-                <p style="margin:4px 0 0;font-size:12px;color:#64748b;">
-                  تحياتنا،<br>
-                  EduTech Egypt System
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
-"""
-            try:
-                message = EmailMultiAlternatives(
-                    subject,
-                    text_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                )
-                message.attach_alternative(html_body, 'text/html')
-                message.send(fail_silently=False)
-                messages.success(
-                    request,
-                    'تم إنشاء المشرف بنجاح، وتم إرسال بيانات الدخول إلى بريده الإلكتروني.',
-                )
-            except Exception as e:
-                messages.error(
-                    request,
-                    f'تم إنشاء المشرف، لكن تعذّر إرسال البريد الإلكتروني: {e}',
-                )
+            """
+            
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text="بيانات دخولك لمنصة Tech Day كمشرف ورشة",
+                title=f"👋 مرحبًا {name}",
+                main_text="👨‍🏫 تم إنشاء حساب لك كمشرف ورشة على نظام متابعة فعالية <b>Tech Day</b>.",
+                content_blocks_html=content_blocks,
+                footer_extra_html=footer_extra
+            )
+            
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إرسال بيانات دخول لمشرف جديد')
+            messages.success(
+                request,
+                'تم إنشاء المشرف بنجاح، سيتم إرسال بيانات الدخول إلى بريده الإلكتروني.',
+            )
         else:
             messages.success(request, 'تم إنشاء المشرف بنجاح.')
         return redirect('dashboard:admin_supervisors')
@@ -668,14 +1413,163 @@ def admin_supervisor_update(request, pk):
         return HttpResponseForbidden()
     supervisor = get_object_or_404(User, pk=pk, role=User.Roles.SUPERVISOR)
     if request.method == 'POST':
-        supervisor.first_name = request.POST.get('first_name') or supervisor.first_name
-        supervisor.last_name = request.POST.get('last_name') or supervisor.last_name
-        supervisor.email = request.POST.get('email') or supervisor.email
+        new_first_name = request.POST.get('first_name') or supervisor.first_name
+        new_last_name = request.POST.get('last_name') or supervisor.last_name
+        new_email = (request.POST.get('email') or '').strip()
+        if new_email and User.objects.filter(email__iexact=new_email).exclude(id=supervisor.id).exists():
+            messages.error(request, 'هذا البريد الإلكتروني مستخدم بالفعل لحساب آخر، يرجى إدخال بريد مختلف.')
+            return render(request, 'dashboard/admin_supervisor_form.html', {'supervisor': supervisor})
+        supervisor.first_name = new_first_name
+        supervisor.last_name = new_last_name
+        supervisor.email = new_email or supervisor.email
         supervisor.save()
         AdminLog.objects.create(action=f'تم تعديل بيانات المشرف {supervisor.get_full_name() or supervisor.username}')
         messages.success(request, 'تم تعديل بيانات المشرف')
         return redirect('dashboard:admin_supervisors')
     return render(request, 'dashboard/admin_supervisor_form.html', {'supervisor': supervisor})
+
+
+@login_required
+def admin_volunteers(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    volunteers = User.objects.filter(role=User.Roles.VOLUNTEER)
+    return render(request, 'dashboard/admin_volunteers.html', {'volunteers': volunteers})
+
+
+@login_required
+def admin_volunteer_create(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name') or ''
+        last_name = request.POST.get('last_name') or ''
+        email = (request.POST.get('email') or '').strip()
+        if email and User.objects.filter(email__iexact=email).exists():
+            messages.error(request, 'هذا البريد الإلكتروني مستخدم بالفعل لحساب آخر، يرجى إدخال بريد مختلف.')
+            return render(request, 'dashboard/admin_volunteer_form.html')
+        username_base = ''
+        if email and '@' in email:
+            username_base = email.split('@', 1)[0]
+        if not username_base:
+            username_base = 'volunteer'
+        username = username_base
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            suffix += 1
+            username = f'{username_base}{suffix}'
+        from django.utils.crypto import get_random_string
+
+        password_plain = get_random_string(10)
+        user = User(
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            role=User.Roles.VOLUNTEER,
+        )
+        user.set_password(password_plain)
+        user.save()
+        AdminLog.objects.create(action=f'تم إنشاء متطوع جديد: {user.get_full_name() or user.username}')
+        if email:
+            subject = 'بيانات حسابك كمتطوع في نظام Tech Day – EduTech Egypt'
+            name = user.get_full_name() or username
+            text_body = (
+                f'مرحبًا {name},\n\n'
+                f'تم إنشاء حساب لك كمتطوع على نظام Tech Day – الفريق التقني بالقليوبية.\n\n'
+                f'يمكنك استخدام البيانات التالية لتسجيل الدخول:\n\n'
+                f'اسم المستخدم: {username}\n'
+                f'كلمة المرور: {password_plain}\n\n'
+                f'رابط تسجيل الدخول: https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/\n\n'
+                f'ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول للحفاظ على خصوصية حسابك.\n\n'
+                f'في حال واجهت أي مشكلة في تسجيل الدخول يمكنك التواصل مع فريق الدعم.\n\n'
+                f'تحياتنا،\n'
+                f'EduTech Egypt System'
+            )
+            
+            content_blocks = f"""
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">🔐 بيانات الدخول إلى حسابك</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;width:120px;">اسم المستخدم</td>
+                      <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#22d3ee;font-weight:700;">{username}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;font-size:13px;color:#94a3b8;">كلمة المرور</td>
+                      <td style="padding:8px 0;font-size:14px;font-family:monospace;color:#f97316;font-weight:700;">{password_plain}</td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
+                  <p class="td-email-text-main" style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:700;">🚀 البدء في العمل</p>
+                  <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
+                    <li>سجل دخولك للمنصة باستخدام البيانات أعلاه.</li>
+                    <li>تأكد من مهامك في لوحة تحكم المتطوع.</li>
+                    <li>استخدم الماسح الضوئي لتسجيل حضور الطلاب في الورش.</li>
+                  </ul>
+                </div>
+            """
+            
+            footer_extra = f"""
+                <a href="https://td.edutech-egy.com/%D8%AD%D8%B3%D8%A7%D8%A8/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%AF%D8%AE%D9%88%D9%84/" 
+                   style="display:inline-block;padding:14px 32px;border-radius:999px;background:linear-gradient(135deg,#06b6d4,#6366f1);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 10px 25px rgba(99,102,241,0.4);">
+                  🚀 دخول لوحة التحكم
+                </a>
+                <p style="margin:20px 0 0;font-size:12px;color:#f97316;text-align:center;">
+                  ⚠️ ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول للحفاظ على خصوصية حسابك.
+                </p>
+            """
+            
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text="بيانات دخولك لمنصة Tech Day كمتطوع",
+                title=f"👋 مرحبًا {name}",
+                main_text="🤝 تم إنشاء حساب لك كمتطوع على نظام متابعة فعالية <b>Tech Day</b>.",
+                content_blocks_html=content_blocks,
+                footer_extra_html=footer_extra
+            )
+            
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إرسال بيانات دخول لمتطوع جديد')
+            messages.success(
+                request,
+                'تم إنشاء المتطوع بنجاح، سيتم إرسال بيانات الدخول إلى بريده الإلكتروني.',
+            )
+        else:
+            messages.success(request, 'تم إنشاء المتطوع بنجاح.')
+        return redirect('dashboard:admin_volunteers')
+    return render(request, 'dashboard/admin_volunteer_form.html')
+
+
+@login_required
+def admin_volunteer_update(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    volunteer = get_object_or_404(User, pk=pk, role=User.Roles.VOLUNTEER)
+    if request.method == 'POST':
+        new_first_name = request.POST.get('first_name') or volunteer.first_name
+        new_last_name = request.POST.get('last_name') or volunteer.last_name
+        new_email = (request.POST.get('email') or '').strip()
+        if new_email and User.objects.filter(email__iexact=new_email).exclude(id=volunteer.id).exists():
+            messages.error(request, 'هذا البريد الإلكتروني مستخدم بالفعل لحساب آخر، يرجى إدخال بريد مختلف.')
+            return render(request, 'dashboard/admin_volunteer_form.html', {'volunteer': volunteer})
+        volunteer.first_name = new_first_name
+        volunteer.last_name = new_last_name
+        volunteer.email = new_email or volunteer.email
+        volunteer.save()
+        AdminLog.objects.create(
+            action=f'تم تعديل بيانات المتطوع {volunteer.get_full_name() or volunteer.username}'
+        )
+        messages.success(request, 'تم تعديل بيانات المتطوع')
+        return redirect('dashboard:admin_volunteers')
+    return render(request, 'dashboard/admin_volunteer_form.html', {'volunteer': volunteer})
 
 
 @login_required
@@ -690,6 +1584,120 @@ def admin_schedule(request):
         'dashboard/admin_schedule.html',
         {'sessions': sessions, 'periods': periods, 'groups': groups},
     )
+
+
+@login_required
+def admin_schedule_random_assign(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return redirect('dashboard:admin_schedule')
+    workshops = list(Workshop.objects.all())
+    groups = list(Group.objects.all())
+    if not workshops or not groups:
+        messages.error(request, 'يجب إضافة الورش والمجموعات أولًا قبل التوزيع التلقائي.')
+        return redirect('dashboard:admin_schedule')
+    WorkshopSession.objects.all().delete()
+    
+    # الفترات التي يتم فيها توزيع ورش فعلياً
+    workshop_periods = ['9:40-10:25', '10:35-11:20', '12:00-12:45', '12:55-1:40']
+    
+    period_time_map = {
+        '9:00-9:40': (time(9, 0), time(9, 40)),
+        '9:40-10:25': (time(9, 40), time(10, 25)),
+        '10:25-10:35': (time(10, 25), time(10, 35)),
+        '10:35-11:20': (time(10, 35), time(11, 20)),
+        '11:20-12:00': (time(11, 20), time(12, 0)),
+        '12:00-12:45': (time(12, 0), time(12, 45)),
+        '12:45-12:55': (time(12, 45), time(12, 55)),
+        '12:55-1:40': (time(12, 55), time(13, 40)),
+        '1:40-2:00': (time(13, 40), time(14, 0)),
+    }
+    
+    groups_sorted = sorted(groups, key=lambda g: g.code)
+    for period_index, period_value in enumerate(workshop_periods):
+        start_time_value, end_time_value = period_time_map.get(period_value, (time(9, 0), time(10, 0)))
+        for index, group in enumerate(groups_sorted):
+            workshop = workshops[(index + period_index) % len(workshops)]
+            WorkshopSession.objects.create(
+                workshop=workshop,
+                group=group,
+                period=period_value,
+                start_time=start_time_value,
+                end_time=end_time_value,
+            )
+    
+    AdminLog.objects.create(action='تم إنشاء جدول الورش تلقائيًا للفترات التعليمية')
+    messages.success(request, 'تم توزيع المجموعات على الورش التعليمية تلقائيًا.')
+    return redirect('dashboard:admin_schedule')
+
+
+@login_required
+def admin_session_create(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    workshops = Workshop.objects.all()
+    groups = Group.objects.all()
+    session = WorkshopSession()
+    group_id_initial = request.GET.get('group') or ''
+    period_initial = request.GET.get('period') or ''
+    if group_id_initial:
+        session.group = groups.filter(id=group_id_initial).first()
+    if period_initial:
+        session.period = period_initial
+    if request.method == 'POST':
+        workshop_id = request.POST.get('workshop') or ''
+        group_id = request.POST.get('group') or ''
+        period = request.POST.get('period') or ''
+        start_time = request.POST.get('start_time') or ''
+        end_time = request.POST.get('end_time') or ''
+        workshop = workshops.filter(id=workshop_id).first()
+        group = groups.filter(id=group_id).first()
+        session.workshop = workshop or session.workshop
+        session.group = group or session.group
+        session.period = period or session.period
+        session.start_time = start_time or session.start_time
+        session.end_time = end_time or session.end_time
+        if not workshop or not group or not period or not start_time or not end_time:
+            messages.error(request, 'يرجى ملء جميع الحقول المطلوبة قبل حفظ الجلسة.')
+        else:
+            existing_session, created = WorkshopSession.objects.get_or_create(
+                group=group,
+                period=period,
+                defaults={
+                    'workshop': workshop,
+                    'start_time': start_time,
+                    'end_time': end_time,
+                },
+            )
+            if not created:
+                existing_session.workshop = workshop
+                existing_session.start_time = start_time
+                existing_session.end_time = end_time
+                existing_session.save()
+            AdminLog.objects.create(
+                action='تم إنشاء جلسة جديدة في الجدول الزمني'
+                if created
+                else 'تم تعديل جلسة في الجدول الزمني'
+            )
+            messages.success(request, 'تم حفظ الجلسة في الجدول الزمني.')
+            return redirect('dashboard:admin_schedule')
+    return render(
+        request,
+        'dashboard/admin_session_form.html',
+        {'session': session, 'workshops': workshops, 'groups': groups},
+    )
+
+
+@login_required
+def admin_session_delete(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    session = get_object_or_404(WorkshopSession, pk=pk)
+    AdminLog.objects.create(action=f'تم حذف جلسة: {session}')
+    session.delete()
+    messages.success(request, 'تم حذف الجلسة من الجدول بنجاح.')
+    return redirect('dashboard:admin_schedule')
 
 
 @login_required
@@ -750,11 +1758,192 @@ def admin_notifications(request):
 
 
 @login_required
+def admin_vip_invites(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    event = EventSettings.get_solo()
+    if not event.start_datetime or not event.location_name:
+        messages.error(request, 'يرجى ضبط موعد ومكان الفعالية أولًا من إعدادات الفعالية قبل إرسال دعوات VIP.')
+        invites = VIPInvite.objects.all()[:20]
+        return render(
+            request,
+            'dashboard/admin_vip_invites.html',
+            {'invites': invites},
+        )
+    if request.method == 'POST':
+        name = (request.POST.get('name') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        title = (request.POST.get('title') or '').strip()
+        vip_time = (request.POST.get('vip_time') or '').strip()
+        if not name or not email or not title or not vip_time:
+            messages.error(request, 'يرجى إدخال الاسم والبريد الإلكتروني والوظيفة أو الصفة ووقت حضور الضيف.')
+            invites = VIPInvite.objects.all()[:20]
+            return render(
+                request,
+                'dashboard/admin_vip_invites.html',
+                {'invites': invites},
+            )
+        greeting_name = f'السيد الأستاذ {name}'
+        event_dt = timezone.localtime(event.start_datetime)
+        event_date = event_dt.strftime('%Y-%m-%d')
+        weekday_index = event_dt.weekday()
+        weekday_map = {
+            0: 'الاثنين',
+            1: 'الثلاثاء',
+            2: 'الأربعاء',
+            3: 'الخميس',
+            4: 'الجمعة',
+            5: 'السبت',
+            6: 'الأحد',
+        }
+        event_day = weekday_map.get(weekday_index, '')
+        subject = 'دعوة خاصة لحضور فعالية Tech Day – EduTech Egypt'
+        text_body_lines = [
+            greeting_name,
+            title,
+            '',
+            'يسرنا دعوتكم لحضور فعالية Tech Day، ضمن أنشطة الفريق التقني بتعليم القليوبية.',
+            '',
+            'هذه الفعالية مخصصة لطلاب المدارس، وتهدف إلى تعريفهم بالمجالات التقنية الحديثة، مع تقديم أنشطة وفعاليات ممتعة ومفيدة تشجع الطلاب على الابتكار والتعلم التفاعلي في المجال التقني.',
+            '',
+            'حضوركم الكريم سيشكل دعمًا معنويًا كبيرًا ويترك أثرًا إيجابيًا مباشرًا على الطلاب ويحفزهم على المشاركة والتفاعل.',
+            '',
+            f'وذلك يوم {event_day} الموافق {event_date}',
+            f'في تمام الساعة {vip_time}',
+            f'ب{event.location_name}.',
+        ]
+        if event.location_link:
+            text_body_lines.append(f'رابط موقع الفعالية على الخريطة: {event.location_link}')
+        text_body_lines.extend(
+            [
+                '',
+                'وتفضلوا بقبول فائق الاحترام والتقدير ،،،',
+                '',
+                'مقدمه لسيادتكم',
+                'مدير مديرية التربية والتعليم بمحافظة القليوبية',
+            ]
+        )
+        text_body = '\n'.join(text_body_lines)
+        
+        content_blocks = f"""
+            <div class="td-email-box" style="padding:24px;border-radius:24px;background-color:#0f172a;border:1px solid #1e293b;">
+              <p class="td-email-text-main" style="margin:0 0 16px;font-size:15px;color:#e5e7eb;line-height:1.8;">
+                يسرنا دعوتكم لحضور فعالية <b>Tech Day</b>، ضمن أنشطة الفريق التقني بتعليم القليوبية.
+              </p>
+              <p class="td-email-text-main" style="margin:0 0 16px;font-size:14px;color:#cbd5f5;line-height:1.6;">
+                تهدف هذه الفعالية إلى تعريف الطلاب بالمجالات التقنية الحديثة عبر أنشطة ممتعة ومفيدة تشجع على الابتكار والتعلم التفاعلي.
+              </p>
+              <div style="margin:20px 0;padding:16px;border-radius:16px;background-color:#020617;border:1px solid #1e293b;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td style="padding:6px 0;font-size:13px;color:#94a3b8;width:100px;">📅 الموعد</td>
+                    <td style="padding:6px 0;font-size:14px;color:#e5e7eb;font-weight:700;">يوم {event_day} الموافق {event_date}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 0;font-size:13px;color:#94a3b8;">🕒 الوقت</td>
+                    <td style="padding:6px 0;font-size:14px;color:#e5e7eb;font-weight:700;">في تمام الساعة {vip_time}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 0;font-size:13px;color:#94a3b8;">📍 المكان</td>
+                    <td style="padding:6px 0;font-size:14px;color:#e5e7eb;font-weight:700;">{event.location_name}</td>
+                  </tr>
+                </table>
+                {f'<p style="margin:12px 0 0;text-align:center;"><a href="{event.location_link}" target="_blank" style="display:inline-block;padding:8px 16px;border-radius:999px;background-color:#1e293b;color:#22d3ee;font-size:12px;text-decoration:none;border:1px solid #22d3ee;">📍 فتح الموقع على الخريطة</a></p>' if event.location_link else ''}
+              </div>
+              <p class="td-email-text-main" style="margin:0;font-size:14px;color:#cbd5f5;line-height:1.6;">
+                حضوركم الكريم يشكل دعمًا معنويًا كبيرًا ويترك أثرًا إيجابيًا مباشرًا على الطلاب ويحفزهم على المشاركة والتفاعل.
+              </p>
+            </div>
+        """
+        
+        footer_extra = f"""
+            <div style="margin-top:20px;text-align:center;">
+              <p style="margin:0;font-size:13px;color:#cbd5f5;">وتفضلوا بقبول فائق الاحترام والتقدير ،،،</p>
+              <p style="margin:10px 0 0;font-size:12px;color:#94a3b8;">
+                مقدمه لسيادتكم<br>
+                <b style="color:#e5e7eb;">مدير مديرية التربية والتعليم بمحافظة القليوبية</b>
+              </p>
+            </div>
+        """
+        
+        html_body = get_styled_email_html(
+            subject=subject,
+            preview_text=f"دعوة تشريف لحضور فعالية Tech Day - {name}",
+            title="✨ دعوة خاصة",
+            main_text=f"{greeting_name}<br><small style='color:#94a3b8;'>{title}</small>",
+            content_blocks_html=content_blocks,
+            footer_extra_html=footer_extra
+        )
+        
+        invite = VIPInvite.objects.create(
+            name=name,
+            email=email,
+            title=title,
+            sent_at=timezone.now(),
+        )
+        message = EmailMultiAlternatives(
+            subject,
+            text_body,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+        )
+        message.attach_alternative(html_body, 'text/html')
+        send_email_async(message, f'إرسال دعوة VIP إلى {invite.name}')
+        AdminLog.objects.create(action=f'تم جدولة إرسال دعوة VIP إلى {invite.name}')
+        messages.success(request, 'تم جدولة إرسال الدعوة بنجاح، سيتم إرسالها إلى بريد الضيف.')
+        return redirect('dashboard:admin_vip_invites')
+    invites = VIPInvite.objects.all()[:20]
+    return render(
+        request,
+        'dashboard/admin_vip_invites.html',
+        {'invites': invites},
+    )
+
+
+@login_required
+def admin_factory_reset(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return redirect('dashboard:admin_dashboard')
+    with transaction.atomic():
+        Attendance.objects.all().delete()
+        WorkshopSession.objects.all().delete()
+        Workshop.objects.all().delete()
+        StudentRegistration.objects.all().delete()
+        Student.objects.all().delete()
+        Group.objects.all().delete()
+        Notification.objects.all().delete()
+        VIPInvite.objects.all().delete()
+        AdminLog.objects.all().delete()
+        event = EventSettings.get_solo()
+        event.name = 'Tech Day'
+        event.start_datetime = None
+        event.location_name = ''
+        event.location_link = ''
+        event.is_finished = False
+        event.save()
+    AdminLog.objects.create(action='تم تنفيذ إعادة ضبط المصنع للنظام (حذف جميع البيانات التشغيلية)')
+    messages.success(request, 'تم مسح جميع البيانات وإعادة ضبط النظام بنجاح.')
+    return redirect('dashboard:admin_dashboard')
+
+@login_required
 def admin_reports(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     total_students = Student.objects.count()
     total_attendance = Student.objects.filter(checked_in=True).count()
+    education_admins = Student.objects.annotate(
+        admin_clean=Trim('education_admin')
+    ).exclude(
+        admin_clean__isnull=True
+    ).exclude(
+        admin_clean=''
+    ).values_list(
+        'admin_clean', flat=True
+    ).distinct().order_by('admin_clean')
+    
+    # إحصائيات المجموعات حسب النقاط والحضور
     by_group = (
         Group.objects.annotate(
             present_count=Count(
@@ -763,28 +1952,173 @@ def admin_reports(request):
                 distinct=True,
             )
         )
-        .values('name', 'code', 'present_count')
-        .order_by('-present_count')
+        .values('name', 'code', 'present_count', 'points')
+        .order_by('-points')
     )
+    
+    # إحصائيات الورش حسب الحضور والتقييم
     by_workshop = (
         Workshop.objects.annotate(
             present_count=Count(
                 'sessions__attendance_records',
                 filter=Q(sessions__attendance_records__status=Attendance.Status.PRESENT),
-            )
+            ),
+            avg_rating=Avg('feedbacks__rating')
         )
-        .values('title', 'present_count')
-        .order_by('-present_count')
+        .values('title', 'present_count', 'avg_rating')
+        .order_by('-avg_rating')
     )
-    most_attended = by_workshop[0] if by_workshop else None
+    
+    # أفضل الطلاب حسب النقاط
+    top_students = Student.objects.order_by('-points')[:10]
+    
+    most_attended = by_workshop.order_by('-present_count').first() if by_workshop else None
+    
     context = {
         'total_students': total_students,
         'total_attendance': total_attendance,
         'by_group': by_group,
         'by_workshop': by_workshop,
+        'top_students': top_students,
         'most_attended': most_attended,
+        'education_admins': education_admins,
     }
     return render(request, 'dashboard/admin_reports.html', context)
+
+@login_required
+def admin_statistics(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    # 1. إحصائيات عامة
+    total_students = Student.objects.count()
+    total_checked_in = Student.objects.filter(checked_in=True).count()
+    attendance_rate = (total_checked_in / total_students * 100) if total_students > 0 else 0
+    
+    # 2. إحصائيات حسب الإدارة التعليمية
+    stats_by_admin = Student.objects.values('education_admin').annotate(
+        count=Count('id'),
+        checked_in_count=Count('id', filter=Q(checked_in=True))
+    ).order_by('-count')
+    
+    # 3. إحصائيات حسب السنة الدراسية
+    grade_map = {
+        '4-prim': 'الرابع الابتدائي',
+        '5-prim': 'الخامس الابتدائي',
+        '6-prim': 'السادس الابتدائي',
+        '1-prep': 'الأول الإعدادي',
+        '2-prep': 'الثاني الإعدادي',
+        '3-prep': 'الثالث الإعدادي',
+        '1-sec': 'الأول الثانوي',
+        '2-sec': 'الثاني الثانوي',
+        '3-sec': 'الثالث الثانوي',
+    }
+    stats_by_grade_raw = Student.objects.values('grade').annotate(count=Count('id')).order_by('grade')
+    stats_by_grade = []
+    for item in stats_by_grade_raw:
+        stats_by_grade.append({
+            'name': grade_map.get(item['grade'], item['grade'] or 'غير محدد'),
+            'count': item['count']
+        })
+    
+    # 4. إحصائيات الحضور حسب المجموعات
+    stats_by_group = Group.objects.annotate(
+        total=Count('students'),
+        checked_in=Count('students', filter=Q(students__checked_in=True))
+    ).order_by('-checked_in')
+    
+    # 5. توزيع النقاط (أعلى 5 طلاب)
+    top_points_students = Student.objects.order_by('-points')[:5]
+    
+    # 6. إحصائيات طلبات التسجيل
+    reg_stats = StudentRegistration.objects.values('status').annotate(count=Count('id'))
+    
+    context = {
+        'total_students': total_students,
+        'total_checked_in': total_checked_in,
+        'attendance_rate': round(attendance_rate, 1),
+        'stats_by_admin': stats_by_admin,
+        'stats_by_grade': stats_by_grade,
+        'stats_by_group': stats_by_group,
+        'top_points_students': top_points_students,
+        'reg_stats': reg_stats,
+    }
+    return render(request, 'dashboard/admin_statistics.html', context)
+
+@login_required
+def admin_volunteer_notes(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    today = timezone.localdate()
+    notes = VolunteerNote.objects.select_related('author').filter(
+        created_at__date=today,
+    )
+    return render(
+        request,
+        'dashboard/admin_volunteer_notes.html',
+        {
+            'notes': notes,
+            'today': today,
+        },
+    )
+
+
+@login_required
+def admin_student_violations(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method == 'POST':
+        violation_id = request.POST.get('violation_id') or ''
+        action = request.POST.get('action') or ''
+        if violation_id and action:
+            violation = get_object_or_404(StudentViolation.objects.select_related('student'), pk=violation_id)
+            student = violation.student
+            if action == 'blacklist' and student:
+                student.is_blacklisted = True
+                student.save()
+                violation.status = StudentViolation.Status.RESOLVED
+                violation.admin_action = 'إضافة الطالب إلى القائمة السوداء'
+                violation.handled_by = request.user
+                violation.handled_at = timezone.now()
+                violation.save()
+                AdminLog.objects.create(
+                    action=f'إضافة الطالب {student.name} ({student.student_id}) إلى القائمة السوداء بناءً على مخالفة متطوع'
+                )
+                messages.success(request, 'تم إضافة الطالب إلى القائمة السوداء وتحديث حالة المخالفة.')
+            elif action == 'resolve':
+                violation.status = StudentViolation.Status.RESOLVED
+                violation.admin_action = 'تمت مراجعة المخالفة بدون إضافة إلى القائمة السوداء'
+                violation.handled_by = request.user
+                violation.handled_at = timezone.now()
+                violation.save()
+                AdminLog.objects.create(
+                    action=f'تمت مراجعة مخالفة الطالب {student.name} ({student.student_id}) بدون إضافة إلى القائمة السوداء'
+                )
+                messages.success(request, 'تم تعليم المخالفة كمُعالَجة.')
+            elif action == 'ban_certificate' and student:
+                student.is_certificate_banned = True
+                student.save()
+                violation.status = StudentViolation.Status.RESOLVED
+                violation.admin_action = 'حرمان الطالب من الشهادة'
+                violation.handled_by = request.user
+                violation.handled_at = timezone.now()
+                violation.save()
+                AdminLog.objects.create(
+                    action=f'حرمان الطالب {student.name} ({student.student_id}) من الشهادة بناءً على مخالفة متطوع'
+                )
+                messages.success(request, 'تم حرمان الطالب من الشهادة بنجاح.')
+        return redirect('dashboard:admin_student_violations')
+    violations = (
+        StudentViolation.objects.select_related('student', 'reported_by')
+        .order_by('-created_at')
+    )
+    return render(
+        request,
+        'dashboard/admin_student_violations.html',
+        {
+            'violations': violations,
+        },
+    )
 
 
 @login_required
@@ -811,6 +2145,546 @@ def admin_reports_export_csv(request):
 
 
 @login_required
+def admin_export_students_by_admin(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    education_admin = (request.GET.get('education_admin') or '').strip()
+    if not education_admin:
+        return redirect('dashboard:admin_reports')
+    qs = (
+        Student.objects.filter(education_admin__iexact=education_admin)
+        .select_related('group', 'user')
+        .order_by('name')
+    )
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    filename = f"students_{education_admin}.csv".replace(' ', '_')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.write('\ufeff')
+    writer = csv.writer(response)
+    writer.writerow([
+        'الاسم',
+        'رقم الطالب',
+        'المجموعة',
+        'كود المجموعة',
+        'المدرسة',
+        'الإدارة التعليمية',
+        'البريد الإلكتروني',
+        'السنة الدراسية',
+        'تم تسجيل حضور الفعالية',
+        'وقت تسجيل الحضور',
+        'نقاط',
+        'في القائمة السوداء',
+        'محروم من الشهادة',
+        'تاريخ الإضافة',
+        'اسم المستخدم المرتبط',
+    ])
+    for s in qs:
+        group_name = s.group.name if s.group else ''
+        group_code = s.group.code if s.group else ''
+        username = s.user.username if s.user else ''
+        writer.writerow([
+            s.name or '',
+            s.student_id or '',
+            group_name,
+            group_code,
+            s.school or '',
+            s.education_admin or '',
+            s.email or '',
+            s.grade or '',
+            'نعم' if s.checked_in else 'لا',
+            s.checked_in_at.strftime('%Y-%m-%d %H:%M') if s.checked_in_at else '',
+            s.points,
+            'نعم' if s.is_blacklisted else 'لا',
+            'نعم' if s.is_certificate_banned else 'لا',
+            s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else '',
+            username,
+        ])
+    return response
+
+
+@login_required
+def admin_export_students_by_admin_excel(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    education_admin = (request.GET.get('education_admin') or '').strip()
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    except Exception:
+        messages.error(request, 'مكتبة openpyxl غير متوفرة. يرجى تثبيتها: pip install openpyxl')
+        return redirect('dashboard:admin_reports')
+    if not education_admin or education_admin == 'all':
+        admins = Student.objects.annotate(admin_clean=Trim('education_admin')).exclude(
+            admin_clean__isnull=True
+        ).exclude(
+            admin_clean=''
+        ).values_list('admin_clean', flat=True).distinct().order_by('admin_clean')
+    else:
+        admins = [education_admin]
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'بيانات الطلاب'
+    ws.sheet_view.rightToLeft = True
+    header = [
+        'الاسم',
+        'رقم الطالب',
+        'المجموعة',
+        'كود المجموعة',
+        'المدرسة',
+        'الإدارة التعليمية',
+        'البريد الإلكتروني',
+        'السنة الدراسية',
+        'تم تسجيل حضور الفعالية',
+        'وقت تسجيل الحضور',
+        'النقاط',
+        'في القائمة السوداء',
+        'محروم من الشهادة',
+        'تاريخ الإضافة',
+        'اسم المستخدم المرتبط',
+    ]
+    ws.append(['كشف الطلاب حسب الإدارة التعليمية'])
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(header))
+    ws['A1'].font = Font(bold=True, size=14, color='00FFFFFF')
+    ws['A1'].alignment = Alignment(horizontal='center')
+    ws['A1'].fill = PatternFill('solid', fgColor='00222D3A')
+    thin = Side(style='thin', color='0094a3b8')
+    ws.append(header)
+    for cell in ws[2]:
+        cell.font = Font(bold=True, color='00e5e7eb')
+        cell.fill = PatternFill('solid', fgColor='001e293b')
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    for admin_name in admins:
+        ws.append([f'الإدارة التعليمية: {admin_name}'])
+        ws.merge_cells(start_row=ws.max_row, start_column=1, end_row=ws.max_row, end_column=len(header))
+        row = ws.max_row
+        ws[f'A{row}'].font = Font(bold=True, color='000b1220')
+        ws[f'A{row}'].fill = PatternFill('solid', fgColor='000ea5e9')
+        ws[f'A{row}'].alignment = Alignment(horizontal='right')
+        students = (
+            Student.objects.filter(education_admin__iexact=admin_name)
+            .select_related('group', 'user')
+            .order_by('name')
+        )
+        for s in students:
+            group_name = s.group.name if s.group else ''
+            group_code = s.group.code if s.group else ''
+            username = s.user.username if s.user else ''
+            row_data = [
+                s.name or '',
+                s.student_id or '',
+                group_name,
+                group_code,
+                s.school or '',
+                s.education_admin or '',
+                s.email or '',
+                s.grade or '',
+                'نعم' if s.checked_in else 'لا',
+                s.checked_in_at.strftime('%Y-%m-%d %H:%M') if s.checked_in_at else '',
+                s.points,
+                'نعم' if s.is_blacklisted else 'لا',
+                'نعم' if s.is_certificate_banned else 'لا',
+                s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else '',
+                username,
+            ]
+            ws.append(row_data)
+            for c in ws[ws.max_row]:
+                c.alignment = Alignment(horizontal='right')
+                c.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    widths = [22, 16, 18, 14, 22, 22, 26, 14, 18, 20, 10, 16, 18, 18, 22]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[chr(64 + i)].width = w
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    response = HttpResponse(
+        buffer.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    safe_admin = (education_admin or 'all').replace(' ', '_')
+    response['Content-Disposition'] = f'attachment; filename="students_by_admin_{safe_admin}.xlsx"'
+    return response
+
+
+@login_required
+def admin_export_verification_pages(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return redirect('dashboard:admin_reports')
+    buffer = io.BytesIO()
+    from zipfile import ZipFile, ZIP_DEFLATED
+
+    event = EventSettings.get_solo()
+    students = Student.objects.exclude(student_id__isnull=True).exclude(student_id='').select_related('group')
+    with ZipFile(buffer, 'w', ZIP_DEFLATED) as zf:
+        for student in students:
+            attendance_qs = Attendance.objects.filter(
+                student=student,
+                status=Attendance.Status.PRESENT,
+            ).select_related('session__workshop')
+            present_count = attendance_qs.count()
+            attended_workshops = list(
+                attendance_qs.order_by('session__start_time')
+                .values_list('session__workshop__title', flat=True)
+                .distinct()
+            )
+            html_string = render_to_string(
+                'students/verify.html',
+                {
+                    'student': student,
+                    'event': event,
+                    'present_count': present_count,
+                    'attended_workshops': attended_workshops,
+                },
+            )
+            identifier = student.student_id or str(student.id)
+            filename = f'{identifier}.html'
+            zf.writestr(filename, html_string)
+    timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
+    zip_name = f'techday-verification-pages-{timestamp}.zip'
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{zip_name}"'
+    AdminLog.objects.create(
+        action=f'تم إنشاء ملف مضغوط يحتوي على صفحات تحقق الطلاب ({students.count()} ملف HTML)',
+    )
+    return response
+
+
+@login_required
+def admin_backup_page(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    return render(request, 'dashboard/admin_backup.html')
+
+
+@login_required
+def admin_backup_download(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return redirect('dashboard:admin_backup_page')
+    
+    backup_type = request.POST.get('type', 'json')
+    
+    if backup_type == 'db_file':
+        # تنزيل ملف قاعدة البيانات مباشرة
+        db_path = settings.DATABASES['default']['NAME']
+        if os.path.exists(db_path):
+            with open(db_path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='application/x-sqlite3')
+                timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
+                response['Content-Disposition'] = f'attachment; filename="techday-physical-db-{timestamp}.sqlite3"'
+                AdminLog.objects.create(action=f'تم تنزيل ملف قاعدة البيانات الفعلي (SQLite)')
+                return response
+        else:
+            messages.error(request, 'ملف قاعدة البيانات غير موجود.')
+            return redirect('dashboard:admin_backup_page')
+
+    # الخيار الافتراضي: JSON
+    buffer = io.StringIO()
+    try:
+        call_command(
+            'dumpdata',
+            natural_foreign=True,
+            natural_primary=True,
+            indent=2,
+            stdout=buffer,
+        )
+        data = buffer.getvalue()
+        
+        timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
+        filename = f'techday-backup-{timestamp}.json'
+        
+        response = HttpResponse(data, content_type='application/json; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        AdminLog.objects.create(action=f'تم إنشاء وتنزيل نسخة احتياطية بصيغة JSON ({filename})')
+        return response
+    except Exception as e:
+        AdminLog.objects.create(action=f'فشل إنشاء نسخة احتياطية: {e}')
+        messages.error(request, 'حدث خطأ أثناء إنشاء النسخة الاحتياطية.')
+        return redirect('dashboard:admin_backup_page')
+    finally:
+        buffer.close()
+
+
+@login_required
+def admin_backup_restore(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    if request.method == 'POST' and request.FILES.get('backup_file'):
+        backup_file = request.FILES['backup_file']
+        file_ext = os.path.splitext(backup_file.name)[1].lower()
+        
+        if file_ext not in ['.json', '.sqlite3']:
+            messages.error(request, 'يرجى رفع ملف بصيغة JSON أو SQLite3 فقط.')
+            return redirect('dashboard:admin_backup_page')
+        
+        try:
+            # Save the uploaded file temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
+                for chunk in backup_file.chunks():
+                    tmp.write(chunk)
+                tmp_path = tmp.name
+            
+            try:
+                if file_ext == '.json':
+                    # منطق استرجاع JSON (مع مسح البيانات وحماية الأدمن)
+                    # 1. مسح المستخدمين (ما عدا الأدمن)
+                    User.objects.exclude(Q(is_superuser=True) | Q(role='admin')).delete()
+                    Attendance.objects.all().delete()
+                    WorkshopFeedback.objects.all().delete()
+                    WorkshopSession.objects.all().delete()
+                    Workshop.objects.all().delete()
+                    Student.objects.all().delete()
+                    StudentRegistration.objects.all().delete()
+                    Group.objects.all().delete()
+                    VIPInvite.objects.all().delete()
+                    VolunteerNote.objects.all().delete()
+                    StudentViolation.objects.all().delete()
+                    Notification.objects.all().delete()
+                    FailedEmail.objects.all().delete()
+                    AdminLog.objects.all().delete()
+                    
+                    call_command('loaddata', tmp_path)
+                    AdminLog.objects.create(action=f'تم استرجاع البيانات بنجاح من ملف JSON: {backup_file.name}')
+                    messages.success(request, 'تم استرجاع بيانات JSON بنجاح.')
+                
+                elif file_ext == '.sqlite3':
+                    # منطق استرجاع ملف القاعدة الفعلي
+                    db_path = settings.DATABASES['default']['NAME']
+                    # إغلاق الاتصال الحالي لضمان سلامة الاستبدال
+                    from django.db import connections
+                    connections.close_all()
+                    
+                    # استبدال الملف
+                    shutil.copy2(tmp_path, db_path)
+                    messages.success(request, 'تم استبدال ملف قاعدة البيانات بنجاح. يرجى تسجيل الدخول مرة أخرى إذا لزم الأمر.')
+                    return redirect('dashboard:admin_dashboard')
+
+            except Exception as e:
+                AdminLog.objects.create(action=f'فشل استرجاع البيانات من {backup_file.name}: {e}')
+                messages.error(request, f'حدث خطأ أثناء استرجاع البيانات: {e}')
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+                    
+        except Exception as e:
+            messages.error(request, f'فشل التعامل مع الملف: {e}')
+            
+    return redirect('dashboard:admin_backup_page')
+
+
+@login_required
+def admin_send_whatsapp_link(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return redirect('dashboard:admin_event_settings')
+    event = EventSettings.get_solo()
+    if not event.whatsapp_group_link:
+        messages.error(request, 'يرجى إدخال رابط مجموعة الواتساب أولًا.')
+        return redirect('dashboard:admin_event_settings')
+    students = Student.objects.filter(email__isnull=False).exclude(email='')
+    if not students.exists():
+        messages.error(request, 'لا يوجد طلاب لديهم بريد إلكتروني مسجل لإرسال الرابط لهم.')
+        return redirect('dashboard:admin_event_settings')
+
+    def _job():
+        for student in students:
+            subject = f'رابط مجموعة واتساب فعالية {event.name}'
+            text_body = (
+                f'مرحبًا {student.name},\n\n'
+                f'ندعوك للانضمام لمجموعة الواتساب الخاصة بفعالية {event.name} لمتابعة آخر التحديثات والتعليمات:\n\n'
+                f'{event.whatsapp_group_link}\n\n'
+                f'نتطلع لرؤيتك قريبًا.\n\n'
+                f'تحياتنا،\n'
+                f'EduTech Egypt System'
+            )
+            
+            content_blocks = f"""
+                <div class="td-email-box" style="padding:24px;border-radius:24px;background-color:#0f172a;border:1px solid #1e293b;text-align:center;">
+                  <p class="td-email-text-main" style="margin:0 0 16px;font-size:15px;color:#e5e7eb;line-height:1.6;">
+                    يرجى الانضمام للمجموعة الرسمية لمتابعة آخر التحديثات والتعليمات الخاصة بالفعالية:
+                  </p>
+                  <div style="margin:20px 0;">
+                    <a href="{event.whatsapp_group_link}" 
+                       style="display:inline-block;padding:14px 32px;border-radius:999px;background-color:#25d366;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;box-shadow:0 10px 25px rgba(37,211,102,0.4);">
+                      🟢 الانضمام لمجموعة الواتساب
+                    </a>
+                  </div>
+                  <p class="td-email-text-muted" style="margin:16px 0 0;font-size:12px;color:#94a3b8;">
+                    إذا لم يعمل الزر، يمكنك استخدام الرابط المباشر:<br>
+                    <a href="{event.whatsapp_group_link}" style="color:#22d3ee;text-decoration:none;">{event.whatsapp_group_link}</a>
+                  </p>
+                </div>
+            """
+            
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text=f"دعوة للانضمام لمجموعة واتساب فعالية {event.name}",
+                title="💬 مجموعة الواتساب الرسمية",
+                main_text=f"مرحبًا {student.name}، ندعوك للبقاء على تواصل معنا.",
+                content_blocks_html=content_blocks
+            )
+            
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [student.email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إرسال رابط مجموعة الواتساب')
+        AdminLog.objects.create(action=f'تم إرسال رابط الواتساب لعدد {students.count()} طالب')
+
+    threading.Thread(target=_job, daemon=True).start()
+    messages.success(request, f'تم بدء عملية إرسال رابط الواتساب لـ {students.count()} طالب في الخلفية.')
+    return redirect('dashboard:admin_event_settings')
+
+
+@login_required
+def admin_send_certificates(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return redirect('dashboard:admin_reports')
+    try:
+        from weasyprint import HTML
+    except Exception as e:
+        AdminLog.objects.create(
+            action=f'فشل تحميل مكتبة توليد ملفات PDF (weasyprint): {e}',
+        )
+        messages.error(
+            request,
+            'مكتبة توليد ملفات PDF غير متوفرة بالكامل على الخادم. '
+            'برجاء مراجعة مسؤول الخادم لتثبيت التبعيات اللازمة.',
+        )
+        return redirect('dashboard:admin_reports')
+    event = EventSettings.get_solo()
+    if not event.is_finished:
+        messages.error(request, 'لا يمكن إصدار شهادات الحضور قبل إنهاء الفعالية.')
+        return redirect('dashboard:admin_reports')
+    total_checked_in = Student.objects.filter(checked_in=True).count()
+    students = (
+        Student.objects.filter(checked_in=True, email__isnull=False, is_certificate_banned=False)
+        .exclude(email='')
+        .select_related('group')
+    )
+    if not students.exists():
+        if total_checked_in:
+            messages.error(
+                request,
+                f'لم يتم إرسال أي شهادة حضور لأن جميع الطلاب الحاضرين ({total_checked_in}) لا يمتلكون بريدًا إلكترونيًا مسجلاً.',
+            )
+        else:
+            messages.error(request, 'لا يوجد طلاب تم تسجيل حضورهم لإرسال الشهادات.')
+        return redirect('dashboard:admin_reports')
+    student_ids = list(students.values_list('id', flat=True))
+    count = len(student_ids)
+    AdminLog.objects.create(
+        action=f'تم بدء عملية إرسال شهادات الحضور PDF في الخلفية لعدد {count} طالبًا.',
+    )
+
+    def _send_certificates_job(event_id, student_id_list):
+        from weasyprint import HTML
+        event_local = EventSettings.objects.get(pk=event_id)
+        sent_count_local = 0
+        skipped_count_local = 0
+        for student in Student.objects.filter(id__in=student_id_list).select_related('group'):
+            try:
+                attendance_qs = Attendance.objects.filter(
+                    student=student,
+                    status=Attendance.Status.PRESENT,
+                ).select_related('session__workshop')
+                present_count = attendance_qs.count()
+                attended_workshops = list(
+                    attendance_qs.order_by('session__start_time')
+                    .values_list('session__workshop__title', flat=True)
+                    .distinct()
+                )
+                student_identifier = student.student_id or student.id
+                qr_payload = f'https://verify.edutech-egy.com/td/{student_identifier}'
+                context = {
+                    'student': student,
+                    'event': event_local,
+                    'present_count': present_count,
+                    'attended_workshops': attended_workshops,
+                    'qr_payload': qr_payload,
+                }
+                html_string = render_to_string('students/certificate.html', context)
+                pdf_bytes = HTML(
+                    string=html_string,
+                    base_url=settings.SITE_BASE_URL,
+                ).write_pdf()
+                subject = 'شهادة تقدير – فعالية Tech Day – EduTech Egypt'
+                name = student.name
+                safe_name = ''.join(ch for ch in name if ch.isalnum() or ch in (' ', '-', '_')).strip() or f'Student-{student.id}'
+                filename = f'{safe_name}.pdf'
+                text_body = (
+                    f'مرحبًا {name},\n\n'
+                    f'مرفق مع هذه الرسالة شهادة تقدير لمشاركتك في فعالية Tech Day – الفريق التقني بالقليوبية.\n\n'
+                    f'تحياتنا،\n'
+                    f'EduTech Egypt System'
+                )
+                
+                content_blocks = f"""
+                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;text-align:center;">
+                      <p class="td-email-text-main" style="margin:0 0 10px;font-size:14px;color:#94a3b8;">لقد أتممت حضور:</p>
+                      <div style="font-size:24px;font-weight:800;color:#22d3ee;margin:5px 0;">{present_count} جلسة</div>
+                      <p class="td-email-text-muted" style="margin:5px 0 0;font-size:12px;color:#64748b;">خلال فعالية Tech Day</p>
+                    </div>
+                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;text-align:center;">
+                      <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">📜 شهادة التقدير</p>
+                      <p class="td-email-text-main" style="margin:0;font-size:13px;color:#cbd5f5;line-height:1.6;">
+                        تجد مرفقاً مع هذا البريد شهادة رسمية بصيغة PDF توثق مشاركتك وإنجازك.<br>
+                        نتمنى لك كل التوفيق في مسيرتك التقنية القادمة.
+                      </p>
+                    </div>
+                """
+                
+                html_body = get_styled_email_html(
+                    subject=subject,
+                    preview_text=f"شهادة تقديرك في فعالية Tech Day - {name}",
+                    title="🎓 مبارك النجاح والإنجاز",
+                    main_text=f"مرحبًا {name}، يسعدنا تسليمك شهادة مشاركتك في الفعالية.",
+                    content_blocks_html=content_blocks
+                )
+                
+                message = EmailMultiAlternatives(
+                    subject,
+                    text_body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [student.email],
+                )
+                message.attach_alternative(html_body, 'text/html')
+                message.attach(filename, pdf_bytes, 'application/pdf')
+                send_email_async(message, 'إرسال شهادة حضور PDF')
+                sent_count_local += 1
+            except Exception as e:
+                skipped_count_local += 1
+                AdminLog.objects.create(
+                    action=f'فشل إنشاء أو إرسال شهادة حضور للطالب {student.id} ({student.email}): {e}',
+                )
+        AdminLog.objects.create(
+            action=f'اكتملت عملية إرسال شهادات الحضور PDF لعدد {sent_count_local} طالبًا (تخطي {skipped_count_local})',
+        )
+
+    threading.Thread(
+        target=_send_certificates_job,
+        args=(event.id, student_ids),
+        daemon=True,
+    ).start()
+    messages.success(
+        request,
+        f'تم بدء عملية إرسال شهادات الحضور PDF في الخلفية لعدد {count} طالبًا. يمكنك متابعة السجلات من لوحة التحكم.',
+    )
+    return redirect('dashboard:admin_reports')
+
+
+@login_required
 def admin_public_screen(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
@@ -821,3 +2695,193 @@ def admin_public_screen(request):
         'dashboard/admin_public_screen.html',
         {'screen_url': screen_url, 'latest_notification': latest_notification},
     )
+
+
+@login_required
+def admin_logs(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    logs = AdminLog.objects.all()[:500]
+    return render(request, 'dashboard/admin_logs.html', {'logs': logs})
+
+
+@login_required
+def admin_custom_email(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    initial_to = ''
+    groups = Group.objects.all()
+    if request.method == 'POST':
+        fill_action = (request.POST.get('fill') or '').strip()
+        current_to = (request.POST.get('to') or '').strip()
+        
+        if fill_action:
+            # Parse existing emails while preserving order and casing
+            existing_list = [e.strip() for e in current_to.replace(';', ',').split(',') if e.strip()]
+            existing_lower = {e.lower() for e in existing_list}
+            new_emails = []
+
+            if fill_action == 'students':
+                emails_qs = Student.objects.filter(email__isnull=False).exclude(email='')
+                new_emails = list(emails_qs.values_list('email', flat=True))
+                msg_success = f'تم إضافة {len(new_emails)} طالبًا للقائمة.'
+            
+            elif fill_action == 'supervisors':
+                emails_qs = User.objects.filter(role=User.Roles.SUPERVISOR, email__isnull=False).exclude(email='')
+                new_emails = list(emails_qs.values_list('email', flat=True))
+                msg_success = f'تم إضافة {len(new_emails)} مشرفًا للقائمة.'
+            
+            elif fill_action == 'group':
+                group_id = request.POST.get('preset_group_id') or ''
+                if not group_id:
+                    messages.error(request, 'برجاء اختيار مجموعة أولاً.')
+                else:
+                    emails_qs = Student.objects.filter(group_id=group_id, email__isnull=False).exclude(email='')
+                    new_emails = list(emails_qs.values_list('email', flat=True))
+                    msg_success = f'تم إضافة {len(new_emails)} طالبًا من المجموعة.'
+            
+            elif fill_action == 'search_code':
+                code = (request.POST.get('student_code_search') or '').strip()
+                if not code:
+                    messages.error(request, 'برجاء إدخال كود الطالب.')
+                else:
+                    student = Student.objects.filter(student_id=code).first()
+                    if student:
+                        if student.email:
+                            new_emails = [student.email]
+                            msg_success = f'تم إضافة بريد الطالب: {student.name}'
+                        else:
+                            messages.warning(request, f'الطالب {student.name} ليس لديه بريد مسجل.')
+                    else:
+                        messages.error(request, f'لا يوجد طالب بالكود: {code}')
+
+            # Append only non-duplicates and maintain original order
+            added_count = 0
+            for email in new_emails:
+                clean_email = email.strip()
+                if clean_email.lower() not in existing_lower:
+                    existing_list.append(clean_email)
+                    existing_lower.add(clean_email.lower())
+                    added_count += 1
+            
+            initial_to = ', '.join(existing_list)
+            if new_emails and 'msg_success' in locals():
+                if added_count == 0 and len(new_emails) > 0:
+                    messages.info(request, 'هذه العناوين موجودة بالفعل في القائمة.')
+                else:
+                    messages.success(request, msg_success)
+        
+        else:
+            to_raw = current_to
+            subject = (request.POST.get('subject') or '').strip()
+            body = (request.POST.get('body') or '').strip()
+            recipients = [
+                part.strip()
+                for part in to_raw.replace(';', ',').split(',')
+                if part.strip()
+            ]
+            if not recipients or not subject or not body:
+                messages.error(request, 'برجاء إدخال عناوين البريد، العنوان، ونص الرسالة.')
+                initial_to = to_raw
+            else:
+                text_body = body
+                safe_body_html = body.replace('\n', '<br>')
+                
+                html_body = get_styled_email_html(
+                    subject=subject,
+                    preview_text=subject,
+                    title="📢 رسالة إدارية",
+                    main_text=f"إشعار رسمي من إدارة فعالية Tech Day بالقليوبية.",
+                    content_blocks_html=f"""
+                        <div class="td-email-box" style="padding:24px;border-radius:24px;background-color:#0f172a;border:1px solid #1e293b;">
+                          <p class="td-email-text-main" style="margin:0;font-size:15px;color:#e5e7eb;line-height:1.8;">
+                            {safe_body_html}
+                          </p>
+                        </div>
+                    """
+                )
+                
+                message = EmailMultiAlternatives(
+                    subject,
+                    text_body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    recipients,
+                )
+                message.attach_alternative(html_body, 'text/html')
+                attachment = request.FILES.get('attachment')
+                if attachment:
+                    content = attachment.read()
+                    content_type = attachment.content_type or 'application/octet-stream'
+                    message.attach(attachment.name, content, content_type)
+                send_email_async(message, 'إرسال بريد مخصص من لوحة التحكم')
+                AdminLog.objects.create(
+                    action=f'تم جدولة إرسال بريد مخصص إلى {len(recipients)} مستلم(ين).',
+                )
+                messages.success(
+                    request,
+                    f'تم جدولة إرسال البريد إلى {len(recipients)} مستلم(ين).',
+                )
+                return redirect('dashboard:admin_custom_email')
+    context = {
+        'DEFAULT_FROM_EMAIL': settings.DEFAULT_FROM_EMAIL,
+        'groups': groups,
+        'initial_to': initial_to,
+        'subject': request.POST.get('subject', ''),
+        'body': request.POST.get('body', ''),
+    }
+    return render(request, 'dashboard/admin_custom_email.html', context)
+
+
+@login_required
+def admin_failed_emails_list(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    failed_emails = FailedEmail.objects.all().order_by('-created_at')
+    return render(request, 'dashboard/admin_failed_emails.html', {'failed_emails': failed_emails})
+
+
+@login_required
+def admin_failed_email_retry(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    failed_email = get_object_or_404(FailedEmail, pk=pk)
+    
+    try:
+        # إنشاء الرسالة من البيانات المخزنة
+        message = EmailMultiAlternatives(
+            failed_email.subject,
+            failed_email.body_text,
+            settings.DEFAULT_FROM_EMAIL,
+            failed_email.recipient.split(','),
+        )
+        if failed_email.body_html:
+            message.attach_alternative(failed_email.body_html, 'text/html')
+        
+        # محاولة الإرسال
+        message.send(fail_silently=False)
+        
+        # في حال النجاح، حذف السجل من قاعدة البيانات
+        AdminLog.objects.create(action=f'تم إعادة إرسال البريد بنجاح إلى {failed_email.recipient}')
+        failed_email.delete()
+        messages.success(request, 'تم إعادة إرسال البريد بنجاح.')
+    except Exception as e:
+        failed_email.retry_count += 1
+        failed_email.error_message = str(e)
+        failed_email.save()
+        messages.error(request, f'فشل الإرسال مرة أخرى: {e}')
+    
+    return redirect('dashboard:admin_failed_emails_list')
+
+
+@login_required
+def admin_failed_email_delete(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    failed_email = get_object_or_404(FailedEmail, pk=pk)
+    failed_email.delete()
+    messages.success(request, 'تم حذف سجل البريد الفاشل.')
+    return redirect('dashboard:admin_failed_emails_list')
+

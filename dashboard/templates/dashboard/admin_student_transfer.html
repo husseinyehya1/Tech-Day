@@ -3,57 +3,121 @@
 {% block title %}نقل طالب لمجموعة أخرى - لوحة التحكم{% endblock %}
 
 {% block page %}
-<div class="max-w-xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-        <div>
-            <h1 class="text-xl font-semibold">نقل الطالب لمجموعة أخرى</h1>
-            <p class="text-sm text-slate-400">
-                اختيار مجموعة جديدة للطالب مع الاحتفاظ بسجلات الحضور.
-            </p>
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-violet-500/10 text-violet-400">
+                <i data-lucide="move" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">نقل الطالب لمجموعة أخرى</h1>
+                <p class="text-sm text-slate-400 font-medium">تغيير المجموعة التنظيمية مع الحفاظ على البيانات</p>
+            </div>
         </div>
         <a href="{% url 'dashboard:admin_students_list' %}"
-           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
-            رجوع لقائمة الطلاب
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للقائمة</span>
         </a>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2 text-sm text-slate-300">
-        <div>الطالب: <span class="font-semibold">{{ student.name }}</span></div>
-        <div>
-            المجموعة الحالية:
-            {% if student.group %}
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style="background-color: {{ student.group.color }}20; color: {{ student.group.color }};">
-                    {{ student.group.name }} ({{ student.group.code }})
-                </span>
-            {% else %}
-                <span class="text-xs text-slate-500">غير محدد</span>
-            {% endif %}
+    <!-- Student Info Card -->
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
+                <i data-lucide="user" class="w-8 h-8"></i>
+            </div>
+            <div class="space-y-1">
+                <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">الطالب الحالي</div>
+                <h2 class="text-xl font-black text-slate-100">{{ student.name }}</h2>
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-400">
+                    <i data-lucide="hash" class="w-3 h-3 text-cyan-500"></i>
+                    <span class="font-mono">{{ student.student_id }}</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+    <form method="post" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
         {% csrf_token %}
-        <div class="space-y-1">
-            <label class="text-sm" for="group">المجموعة الجديدة</label>
-            <select id="group" name="group" required
-                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                {% for group in groups %}
-                <option value="{{ group.id }}" {% if student.group_id == group.id %}selected{% endif %}>
-                    {{ group.name }} ({{ group.code }})
-                </option>
-                {% endfor %}
-            </select>
+        
+        <div class="p-8 space-y-10">
+            <!-- Visual Transfer Guide -->
+            <div class="flex items-center justify-between gap-4">
+                <!-- Current Group -->
+                <div class="flex-1 p-6 rounded-2xl bg-slate-950/50 border border-slate-800 text-center space-y-3 relative overflow-hidden group">
+                    <div class="absolute -top-6 -right-6 w-16 h-16 bg-slate-800 rounded-full blur-2xl opacity-20"></div>
+                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">المجموعة الحالية</div>
+                    <div class="flex flex-col items-center gap-2">
+                        {% if student.group %}
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black" style="background-color: {{ student.group.color }}20; color: {{ student.group.color }};">
+                                {{ student.group.code }}
+                            </div>
+                            <div class="text-sm font-bold text-slate-200">{{ student.group.name }}</div>
+                        {% else %}
+                            <div class="w-12 h-12 rounded-xl bg-slate-800/50 flex items-center justify-center text-slate-600">
+                                <i data-lucide="slash" class="w-6 h-6"></i>
+                            </div>
+                            <div class="text-sm font-bold text-slate-500 italic">غير محدد</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="flex flex-col items-center gap-2 text-violet-500/50">
+                    <div class="w-10 h-px bg-gradient-to-l from-violet-500/50 to-transparent"></div>
+                    <i data-lucide="chevrons-left" class="w-6 h-6 animate-pulse"></i>
+                    <div class="w-10 h-px bg-gradient-to-l from-violet-500/50 to-transparent"></div>
+                </div>
+
+                <!-- New Group Selection -->
+                <div class="flex-1 p-6 rounded-2xl bg-violet-500/5 border-2 border-violet-500/20 text-center space-y-3 relative overflow-hidden">
+                    <div class="absolute -bottom-6 -left-6 w-16 h-16 bg-violet-500/10 rounded-full blur-2xl opacity-50"></div>
+                    <div class="text-[10px] font-black text-violet-400 uppercase tracking-widest">المجموعة الجديدة</div>
+                    
+                    <div class="relative group">
+                        <select id="group" name="group" required
+                                class="w-full py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm text-center appearance-none cursor-pointer">
+                            {% for group in groups %}
+                            <option value="{{ group.id }}" {% if student.group_id == group.id %}selected{% endif %}>
+                                {{ group.name }} ({{ group.code }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-hover:text-violet-400 pointer-events-none transition-colors"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warning Note -->
+            <div class="flex gap-4 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+                <div class="p-2 rounded-xl bg-amber-500/10 text-amber-500 h-fit">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-amber-500 mb-1">تنبيه هام</h4>
+                    <p class="text-[11px] text-slate-400 leading-relaxed font-medium">
+                        عند نقل الطالب إلى مجموعة جديدة، سيتم الاحتفاظ بكافة سجلات الحضور والنقاط السابقة. 
+                        تأكد من اختيار المجموعة الصحيحة لتجنب أي تعارض في جداول الورش القادمة.
+                    </p>
+                </div>
+            </div>
         </div>
-        <div class="flex items-center justify-end gap-3 pt-2">
-            <a href="{% url 'dashboard:admin_students_list' %}"
-               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
-                إلغاء
-            </a>
-            <button type="submit"
-                    class="inline-flex items-center px-4 py-2 rounded-xl bg-violet-500 hover:bg-violet-400 text-slate-950 text-sm font-semibold">
-                نقل الطالب
-            </button>
+
+        <!-- Form Footer -->
+        <div class="p-6 bg-slate-950/50 border-t border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3 mr-auto">
+                <a href="{% url 'dashboard:admin_students_list' %}"
+                   class="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+                    إلغاء
+                </a>
+                <button type="submit"
+                        class="px-8 py-3 rounded-2xl bg-violet-500 hover:bg-violet-400 text-slate-950 font-black text-sm shadow-xl shadow-violet-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    تأكيد عملية النقل
+                </button>
+            </div>
         </div>
     </form>
 </div>

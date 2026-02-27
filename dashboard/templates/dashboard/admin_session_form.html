@@ -1,82 +1,134 @@
 {% extends "dashboard/base_admin.html" %}
 
-{% block title %}تعديل جلسة في الجدول - لوحة التحكم{% endblock %}
+{% block title %}{% if session.id %}تعديل جلسة في الجدول - لوحة التحكم{% else %}إضافة جلسة للجدول - لوحة التحكم{% endif %}{% endblock %}
 
 {% block page %}
-<div class="max-w-xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-        <div>
-            <h1 class="text-xl font-semibold">تعديل جلسة ورشة</h1>
-            <p class="text-sm text-slate-400">
-                تغيير الورشة أو المجموعة أو الفترة الزمنية.
-            </p>
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="{% if session.id %}edit-3{% else %}plus-circle{% endif %}" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">
+                    {% if session.id %}تعديل جلسة ورشة{% else %}إضافة جلسة للجدول{% endif %}
+                </h1>
+                <p class="text-sm text-slate-400 font-medium">ربط الورش بالمجموعات وتحديد الفترات الزمنية</p>
+            </div>
         </div>
         <a href="{% url 'dashboard:admin_schedule' %}"
-           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
-            رجوع للجدول
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للجدول</span>
         </a>
     </div>
 
-    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+    <form method="post" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
         {% csrf_token %}
-        <div class="space-y-1">
-            <label class="text-sm" for="workshop">الورشة</label>
-            <select id="workshop" name="workshop"
-                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                {% for w in workshops %}
-                <option value="{{ w.id }}" {% if session.workshop_id == w.id %}selected{% endif %}>
-                    {{ w.title }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="space-y-1">
-            <label class="text-sm" for="group">المجموعة</label>
-            <select id="group" name="group"
-                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                {% for g in groups %}
-                <option value="{{ g.id }}" {% if session.group_id == g.id %}selected{% endif %}>
-                    {{ g.name }} ({{ g.code }})
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="grid gap-4 md:grid-cols-2">
-            <div class="space-y-1">
-                <label class="text-sm" for="period">الفترة الزمنية</label>
-                <select id="period" name="period"
-                        class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                    {% for value,label in session.PERIOD_CHOICES %}
-                    <option value="{{ value }}" {% if session.period == value %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
+        
+        <div class="p-6 space-y-8">
+            <!-- Session Connection -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 text-cyan-400 mb-2">
+                    <i data-lucide="link-2" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">الربط والتنظيم</h3>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="workshop">الورشة التعليمية</label>
+                        <div class="relative group">
+                            <i data-lucide="monitor-play" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors pointer-events-none"></i>
+                            <select id="workshop" name="workshop" required
+                                    class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm appearance-none cursor-pointer">
+                                {% for w in workshops %}
+                                <option value="{{ w.id }}" {% if session.workshop_id == w.id %}selected{% endif %}>
+                                    {{ w.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <i data-lucide="chevron-down" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-hover:text-cyan-400 pointer-events-none transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="group">المجموعة المستهدفة</label>
+                        <div class="relative group">
+                            <i data-lucide="layers" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors pointer-events-none"></i>
+                            <select id="group" name="group" required
+                                    class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm appearance-none cursor-pointer">
+                                {% for g in groups %}
+                                <option value="{{ g.id }}" {% if session.group_id == g.id %}selected{% endif %}>
+                                    {{ g.name }} ({{ g.code }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <i data-lucide="chevron-down" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-hover:text-cyan-400 pointer-events-none transition-colors"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="space-y-1">
-                <label class="text-sm" for="start_time">الوقت من</label>
-                <input id="start_time" name="start_time" type="time"
-                       value="{{ session.start_time|time:'H:i' }}"
-                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+
+            <!-- Timing Details -->
+            <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                <div class="flex items-center gap-2 text-amber-400 mb-2">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">التوقيت والفترة</h3>
+                </div>
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="period">الفترة الزمنية</label>
+                        <div class="relative group">
+                            <i data-lucide="calendar-range" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors pointer-events-none"></i>
+                            <select id="period" name="period" required
+                                    class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm appearance-none cursor-pointer">
+                                {% for value,label in session.PERIOD_CHOICES %}
+                                <option value="{{ value }}" {% if session.period == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <i data-lucide="chevron-down" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-hover:text-amber-400 pointer-events-none transition-colors"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="grid gap-6 md:grid-cols-2">
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-500 mr-2" for="start_time">وقت البدء الفعلي</label>
+                            <div class="relative group">
+                                <i data-lucide="play-circle" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors"></i>
+                                <input id="start_time" name="start_time" type="time" required
+                                       value="{{ session.start_time|time:'H:i' }}"
+                                       class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm font-mono">
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-500 mr-2" for="end_time">وقت الانتهاء الفعلي</label>
+                            <div class="relative group">
+                                <i data-lucide="stop-circle" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors"></i>
+                                <input id="end_time" name="end_time" type="time" required
+                                       value="{{ session.end_time|time:'H:i' }}"
+                                       class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm font-mono">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="space-y-1">
-            <label class="text-sm" for="end_time">الوقت إلى</label>
-            <input id="end_time" name="end_time" type="time"
-                   value="{{ session.end_time|time:'H:i' }}"
-                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-        </div>
-        <div class="flex items-center justify-end gap-3 pt-2">
-            <a href="{% url 'dashboard:admin_schedule' %}"
-               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
-                إلغاء
-            </a>
-            <button type="submit"
-                    class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
-                حفظ
-            </button>
+
+        <!-- Form Footer -->
+        <div class="p-6 bg-slate-950/50 border-t border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3 mr-auto">
+                <a href="{% url 'dashboard:admin_schedule' %}"
+                   class="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+                    إلغاء
+                </a>
+                <button type="submit"
+                        class="px-8 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    {% if session.id %}حفظ التعديلات{% else %}إضافة الجلسة للجدول{% endif %}
+                </button>
+            </div>
         </div>
     </form>
 </div>
 {% endblock %}
-

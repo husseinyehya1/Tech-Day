@@ -3,70 +3,112 @@
 {% block title %}{% if workshop %}تعديل ورشة{% else %}إضافة ورشة جديدة{% endif %} - لوحة التحكم{% endblock %}
 
 {% block page %}
-<div class="max-w-xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-        <div>
-            <h1 class="text-xl font-semibold">
-                {% if workshop %}تعديل بيانات الورشة{% else %}إضافة ورشة جديدة{% endif %}
-            </h1>
-            <p class="text-sm text-slate-400">
-                {% if workshop %}
-                    تعديل اسم الورشة والقاعة والمشرف وحالة الورشة.
-                {% else %}
-                    إضافة ورشة جديدة وتحديد القاعة والمشرف وحالة الورشة.
-                {% endif %}
-            </p>
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="{% if workshop %}monitor-play{% else %}plus-circle{% endif %}" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">
+                    {% if workshop %}تعديل بيانات الورشة{% else %}إضافة ورشة جديدة{% endif %}
+                </h1>
+                <p class="text-sm text-slate-400 font-medium">تحديد عنوان الورشة، القاعة، والمشرف المسئول</p>
+            </div>
         </div>
         <a href="{% url 'dashboard:admin_workshops' %}"
-           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
-            رجوع لقائمة الورش
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للقائمة</span>
         </a>
     </div>
 
-    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+    <form method="post" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
         {% csrf_token %}
-        <div class="space-y-1">
-            <label class="text-sm" for="title">اسم الورشة</label>
-            <input id="title" name="title" type="text" required
-                   value="{{ workshop.title|default_if_none:'' }}"
-                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        
+        <div class="p-6 space-y-8">
+            <!-- Workshop Identity -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 text-cyan-400 mb-2">
+                    <i data-lucide="info" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">معلومات الورشة</h3>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2 md:col-span-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="title">عنوان الورشة</label>
+                        <div class="relative group">
+                            <i data-lucide="type" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                            <input id="title" name="title" type="text" required
+                                   value="{{ workshop.title|default_if_none:'' }}"
+                                   placeholder="مثال: مقدمة في الذكاء الاصطناعي..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="room">القاعة / المكان</label>
+                        <div class="relative group">
+                            <i data-lucide="door-open" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                            <input id="room" name="room" type="text" required
+                                   value="{{ workshop.room|default_if_none:'' }}"
+                                   placeholder="اسم القاعة..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="supervisor">المشرف المسئول</label>
+                        <div class="relative group">
+                            <i data-lucide="user-check" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors pointer-events-none"></i>
+                            <select id="supervisor" name="supervisor"
+                                    class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm appearance-none cursor-pointer">
+                                <option value="">بدون مشرف</option>
+                                {% for sup in supervisors %}
+                                <option value="{{ sup.id }}" {% if workshop and workshop.supervisor_id == sup.id %}selected{% endif %}>
+                                    {{ sup.get_full_name|default:sup.username }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <i data-lucide="chevron-down" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-hover:text-cyan-400 pointer-events-none transition-colors"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration -->
+            <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                <div class="flex items-center gap-2 text-amber-400 mb-2">
+                    <i data-lucide="activity" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">الحالة التشغيلية</h3>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 mr-2" for="status">حالة الورشة الحالية</label>
+                    <div class="relative group">
+                        <i data-lucide="refresh-cw" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors pointer-events-none"></i>
+                        <select id="status" name="status" required
+                                class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm appearance-none cursor-pointer">
+                            <option value="upcoming" {% if not workshop or workshop.status == 'upcoming' %}selected{% endif %}>قادمة</option>
+                            <option value="active" {% if workshop and workshop.status == 'active' %}selected{% endif %}>نشطة الآن</option>
+                            <option value="finished" {% if workshop and workshop.status == 'finished' %}selected{% endif %}>منتهية</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-hover:text-amber-400 pointer-events-none transition-colors"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="space-y-1">
-            <label class="text-sm" for="room">القاعة</label>
-            <input id="room" name="room" type="text" required
-                   value="{{ workshop.room|default_if_none:'' }}"
-                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-        </div>
-        <div class="space-y-1">
-            <label class="text-sm" for="supervisor">المشرف</label>
-            <select id="supervisor" name="supervisor"
-                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                <option value="">بدون</option>
-                {% for sup in supervisors %}
-                <option value="{{ sup.id }}" {% if workshop and workshop.supervisor_id == sup.id %}selected{% endif %}>
-                    {{ sup.get_full_name|default:sup.username }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="space-y-1">
-            <label class="text-sm" for="status">الحالة</label>
-            <select id="status" name="status"
-                    class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                <option value="upcoming" {% if not workshop or workshop.status == 'upcoming' %}selected{% endif %}>قادمة</option>
-                <option value="active" {% if workshop and workshop.status == 'active' %}selected{% endif %}>نشطة</option>
-                <option value="finished" {% if workshop and workshop.status == 'finished' %}selected{% endif %}>منتهية</option>
-            </select>
-        </div>
-        <div class="flex items-center justify-end gap-3 pt-2">
-            <a href="{% url 'dashboard:admin_workshops' %}"
-               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
-                إلغاء
-            </a>
-            <button type="submit"
-                    class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
-                {% if workshop %}حفظ التعديلات{% else %}حفظ الورشة{% endif %}
-            </button>
+
+        <!-- Form Footer -->
+        <div class="p-6 bg-slate-950/50 border-t border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3 mr-auto">
+                <a href="{% url 'dashboard:admin_workshops' %}"
+                   class="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+                    إلغاء
+                </a>
+                <button type="submit"
+                        class="px-8 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    {% if workshop %}حفظ كافة التعديلات{% else %}إنشاء الورشة الآن{% endif %}
+                </button>
+            </div>
         </div>
     </form>
 </div>

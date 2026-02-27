@@ -3,58 +3,103 @@
 {% block title %}{% if supervisor %}تعديل مشرف{% else %}إضافة مشرف جديد{% endif %} - لوحة التحكم{% endblock %}
 
 {% block page %}
-<div class="max-w-xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-        <div>
-            <h1 class="text-xl font-semibold">
-                {% if supervisor %}تعديل بيانات المشرف{% else %}إضافة مشرف جديد{% endif %}
-            </h1>
-            <p class="text-sm text-slate-400">
-                {% if supervisor %}
-                    تعديل بيانات مشرف الورشة.
-                {% else %}
-                    إضافة مشرف ورشة جديد مع إنشاء حساب في النظام.
-                {% endif %}
-            </p>
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="{% if supervisor %}user-cog{% else %}user-plus{% endif %}" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">
+                    {% if supervisor %}تعديل بيانات المشرف{% else %}إضافة مشرف جديد{% endif %}
+                </h1>
+                <p class="text-sm text-slate-400 font-medium">إدارة بيانات حساب مشرف الورشة وصلاحياته</p>
+            </div>
         </div>
         <a href="{% url 'dashboard:admin_supervisors' %}"
-           class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
-            رجوع لقائمة المشرفين
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للقائمة</span>
         </a>
     </div>
 
-    <form method="post" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+    <form method="post" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
         {% csrf_token %}
-        <div class="grid gap-4 md:grid-cols-2">
-            <div class="space-y-1">
-                <label class="text-sm" for="first_name">الاسم الأول</label>
-                <input id="first_name" name="first_name" type="text" required
-                       value="{{ supervisor.first_name|default_if_none:'' }}"
-                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        
+        <div class="p-6 space-y-8">
+            <!-- Basic Information -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 text-cyan-400 mb-2">
+                    <i data-lucide="info" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">المعلومات الشخصية</h3>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="first_name">الاسم الأول</label>
+                        <div class="relative group">
+                            <i data-lucide="user" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                            <input id="first_name" name="first_name" type="text" required
+                                   value="{{ supervisor.first_name|default_if_none:'' }}"
+                                   placeholder="الاسم الأول..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="last_name">اسم العائلة</label>
+                        <div class="relative group">
+                            <i data-lucide="users" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                            <input id="last_name" name="last_name" type="text"
+                                   value="{{ supervisor.last_name|default_if_none:'' }}"
+                                   placeholder="اسم العائلة..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="space-y-1">
-                <label class="text-sm" for="last_name">اسم العائلة</label>
-                <input id="last_name" name="last_name" type="text"
-                       value="{{ supervisor.last_name|default_if_none:'' }}"
-                       class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+
+            <!-- Contact & Credentials -->
+            <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                <div class="flex items-center gap-2 text-violet-400 mb-2">
+                    <i data-lucide="mail" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">بيانات الحساب والتواصل</h3>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 mr-2" for="email">البريد الإلكتروني</label>
+                    <div class="relative group">
+                        <i data-lucide="at-sign" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                        <input id="email" name="email" type="email" required
+                               value="{{ supervisor.email|default_if_none:'' }}"
+                               placeholder="example@email.com"
+                               class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm">
+                    </div>
+                </div>
+                
+                {% if not supervisor %}
+                <div class="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex gap-3">
+                    <i data-lucide="zap" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5"></i>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        <span class="text-amber-500 font-black">ملاحظة:</span> 
+                        سيتم إنشاء اسم مستخدم وكلمة مرور تلقائياً للمشرف الجديد، وسيصل إليه بريد إلكتروني يحتوي على بيانات الدخول فور الحفظ.
+                    </p>
+                </div>
+                {% endif %}
             </div>
-        </div>
-        <div class="space-y-1">
-            <label class="text-sm" for="email">البريد الإلكتروني</label>
-            <input id="email" name="email" type="email" required
-                   value="{{ supervisor.email|default_if_none:'' }}"
-                   class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-2">
-            <a href="{% url 'dashboard:admin_supervisors' %}"
-               class="inline-flex items-center px-3 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800">
-                إلغاء
-            </a>
-            <button type="submit"
-                    class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
-                {% if supervisor %}حفظ التعديلات{% else %}حفظ المشرف{% endif %}
-            </button>
+        <!-- Form Footer -->
+        <div class="p-6 bg-slate-950/50 border-t border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3 mr-auto">
+                <a href="{% url 'dashboard:admin_supervisors' %}"
+                   class="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+                    إلغاء
+                </a>
+                <button type="submit"
+                        class="px-8 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    {% if supervisor %}حفظ كافة التعديلات{% else %}إنشاء حساب المشرف{% endif %}
+                </button>
+            </div>
         </div>
     </form>
 </div>

@@ -3,85 +3,242 @@
 {% block title %}التقارير والإحصائيات - لوحة التحكم{% endblock %}
 
 {% block page %}
-<div class="space-y-4">
-    <div class="flex flex-col md:flex-row items-center justify-between gap-3">
-        <div>
-            <h1 class="text-xl font-semibold">التقارير والإحصائيات</h1>
-            <p class="text-sm text-slate-400">
-                نظرة سريعة على أعداد الحضور حسب المجموعات والورش.
-            </p>
+<div class="max-w-7xl mx-auto space-y-8">
+    <!-- Header & Action Section -->
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem]">
+        <div class="flex items-center gap-5">
+            <div class="p-4 rounded-3xl bg-emerald-500/10 text-emerald-400 shadow-2xl shadow-emerald-500/10">
+                <i data-lucide="bar-chart-3" class="w-10 h-10"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-black text-slate-100 tracking-tight">التقارير والإحصائيات الذكية</h1>
+                <p class="text-sm text-slate-400 font-medium mt-1">تحليل شامل للحضور، الأداء، وتوزيع الشهادات الرقمية</p>
+            </div>
         </div>
-        <div class="flex items-center gap-2">
-            <a href="{% url 'dashboard:admin_reports_export_csv' %}"
-               class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold">
-                تصدير CSV
-            </a>
+        
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Export Group -->
+            <div class="flex items-center gap-2 p-2 rounded-2xl bg-slate-950/50 border border-slate-800">
+                <form method="get" action="{% url 'dashboard:admin_export_students_by_admin_excel' %}" class="flex items-center gap-2">
+                    <div class="relative group">
+                        <i data-lucide="building-2" class="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 group-focus-within:text-cyan-400 transition-colors pointer-events-none"></i>
+                        <select name="education_admin"
+                                class="pr-9 pl-8 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 appearance-none cursor-pointer">
+                            <option value="all">كل الإدارات</option>
+                            {% for admin_name in education_admins %}
+                                <option value="{{ admin_name }}">{{ admin_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600"></i>
+                    </div>
+                    <button type="submit" title="تصدير Excel"
+                            class="p-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all active:scale-95">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                    </button>
+                </form>
+                <div class="w-px h-6 bg-slate-800 mx-1"></div>
+                <a href="{% url 'dashboard:admin_reports_export_csv' %}" title="تصدير CSV عام"
+                   class="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 transition-all">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </a>
+            </div>
+
+            <!-- Certificates Action -->
+            <form method="post" action="{% url 'dashboard:admin_send_certificates' %}" class="contents">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-rose-500 hover:bg-rose-400 text-slate-950 text-sm font-black transition-all shadow-xl shadow-rose-500/20 active:scale-95 group">
+                    <i data-lucide="award" class="w-4 h-4 group-hover:rotate-12 transition-transform"></i>
+                    <span>بث الشهادات (PDF)</span>
+                </button>
+            </form>
+
+            <!-- Verification Pages -->
+            <form method="post" action="{% url 'dashboard:admin_export_verification_pages' %}" class="contents">
+                {% csrf_token %}
+                <button type="submit" title="صفحات التحقق"
+                        class="p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                </button>
+            </form>
         </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-3">
-        <div class="rounded-2xl bg-emerald-500/10 border border-emerald-500/40 p-4">
-            <div class="text-xs text-emerald-300 mb-1">عدد الطلاب المسجلين</div>
-            <div class="text-3xl font-bold">{{ total_students }}</div>
+    <!-- Quick Stats Grid -->
+    <div class="grid gap-6 md:grid-cols-3">
+        <div class="group relative p-8 rounded-[2rem] bg-slate-900/40 backdrop-blur-xl border border-slate-800 hover:border-emerald-500/30 transition-all duration-500 shadow-2xl overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors"></div>
+            <div class="relative z-10 flex items-center justify-between mb-6">
+                <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
+                    <i data-lucide="users-2" class="w-6 h-6"></i>
+                </div>
+                <span class="text-[10px] font-black text-emerald-500/50 uppercase tracking-widest">المسجلون</span>
+            </div>
+            <div class="relative z-10">
+                <div class="text-4xl font-black text-slate-100 mb-1">{{ total_students }}</div>
+                <p class="text-xs font-bold text-slate-500">إجمالي عدد الطلاب في النظام</p>
+            </div>
         </div>
-        <div class="rounded-2xl bg-cyan-500/10 border border-cyan-500/40 p-4">
-            <div class="text-xs text-cyan-300 mb-1">إجمالي عمليات تسجيل الحضور</div>
-            <div class="text-3xl font-bold">{{ total_attendance }}</div>
+
+        <div class="group relative p-8 rounded-[2rem] bg-slate-900/40 backdrop-blur-xl border border-slate-800 hover:border-cyan-500/30 transition-all duration-500 shadow-2xl overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl group-hover:bg-cyan-500/10 transition-colors"></div>
+            <div class="relative z-10 flex items-center justify-between mb-6">
+                <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                    <i data-lucide="check-square" class="w-6 h-6"></i>
+                </div>
+                <span class="text-[10px] font-black text-cyan-500/50 uppercase tracking-widest">الحضور</span>
+            </div>
+            <div class="relative z-10">
+                <div class="text-4xl font-black text-slate-100 mb-1">{{ total_attendance }}</div>
+                <p class="text-xs font-bold text-slate-500">عمليات تسجيل الحضور الموثقة</p>
+            </div>
         </div>
-        <div class="rounded-2xl bg-violet-500/10 border border-violet-500/40 p-4">
-            <div class="text-xs text-violet-300 mb-1">أكثر ورشة حضوراً</div>
-            <div class="text-base font-semibold mt-1">
-                {% if most_attended %}
-                    {{ most_attended.title }} ({{ most_attended.present_count }} حضور)
-                {% else %}
-                    لا توجد بيانات بعد
-                {% endif %}
+
+        <div class="group relative p-8 rounded-[2rem] bg-slate-900/40 backdrop-blur-xl border border-slate-800 hover:border-violet-500/30 transition-all duration-500 shadow-2xl overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-32 h-32 bg-violet-500/5 rounded-full blur-3xl group-hover:bg-violet-500/10 transition-colors"></div>
+            <div class="relative z-10 flex items-center justify-between mb-6">
+                <div class="p-3 rounded-2xl bg-violet-500/10 text-violet-400">
+                    <i data-lucide="flame" class="w-6 h-6"></i>
+                </div>
+                <span class="text-[10px] font-black text-violet-500/50 uppercase tracking-widest">الأكثر طلباً</span>
+            </div>
+            <div class="relative z-10">
+                <div class="text-lg font-black text-slate-100 mb-1 line-clamp-1">
+                    {% if most_attended %}{{ most_attended.title }}{% else %}لا بيانات{% endif %}
+                </div>
+                <p class="text-xs font-bold text-slate-500">الورشة ذات أعلى معدل حضور</p>
             </div>
         </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-            <h2 class="text-lg font-semibold mb-3">الحضور حسب المجموعة</h2>
-            <div class="space-y-2 text-sm">
+    <!-- Analytical Sections -->
+    <div class="grid gap-8 lg:grid-cols-2">
+        <!-- Groups Honor Board -->
+        <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-8 border-b border-slate-800 bg-slate-800/20 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+                        <i data-lucide="trophy" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-slate-100">لوحة شرف المجموعات</h2>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">ترتيب الأداء والنقاط</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
                 {% for item in by_group %}
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <div>{{ item.name }} ({{ item.code }})</div>
-                        <div class="text-xs text-slate-300">{{ item.present_count }} حضور</div>
+                <div class="group/row flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sm font-black text-slate-400 group-hover/row:text-amber-400 transition-colors">
+                            {{ forloop.counter }}
+                        </div>
+                        <div>
+                            <div class="text-sm font-black text-slate-100">{{ item.name }}</div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="px-2 py-0.5 rounded-lg bg-slate-900 text-[9px] font-mono font-bold text-slate-500">كود: {{ item.code }}</span>
+                                <span class="text-[10px] font-bold text-slate-600">{{ item.present_count }} حضور</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                        {% with pct=item.present_count|floatformat:0 %}
-                        <div class="h-full bg-emerald-500" style="width: {{ pct }}%;"></div>
-                        {% endwith %}
+                    <div class="flex items-center gap-2">
+                        <div class="text-right">
+                            <div class="text-sm font-black text-cyan-400">{{ item.points }}</div>
+                            <div class="text-[9px] font-bold text-slate-600 uppercase">نقطة</div>
+                        </div>
+                        <i data-lucide="chevron-left" class="w-4 h-4 text-slate-800 group-hover/row:translate-x-1 transition-transform"></i>
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-slate-400 text-sm">لا توجد بيانات بعد.</div>
+                <div class="py-12 text-center text-slate-600 font-bold text-xs italic">لا توجد بيانات مجموعات حالياً</div>
                 {% endfor %}
             </div>
         </div>
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-            <h2 class="text-lg font-semibold mb-3">الحضور حسب الورشة</h2>
-            <div class="space-y-2 text-sm">
-                {% for item in by_workshop %}
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <div>{{ item.title }}</div>
-                        <div class="text-xs text-slate-300">{{ item.present_count }} حضور</div>
+
+        <!-- Top Students -->
+        <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-8 border-b border-slate-800 bg-slate-800/20 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400">
+                        <i data-lucide="star" class="w-5 h-5"></i>
                     </div>
-                    <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                        {% with pct=item.present_count|floatformat:0 %}
-                        <div class="h-full bg-cyan-500" style="width: {{ pct }}%;"></div>
-                        {% endwith %}
+                    <div>
+                        <h2 class="text-lg font-black text-slate-100">نخبة الطلاب</h2>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">أعلى 10 طلاب تفاعلاً</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+                {% for student in top_students %}
+                <div class="group/row flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-cyan-500/30 transition-all">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full border-2 border-slate-800 p-0.5 group-hover/row:border-cyan-500/50 transition-colors">
+                            <div class="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-xs font-black text-cyan-400">
+                                {{ forloop.counter }}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-sm font-black text-slate-100">{{ student.name }}</div>
+                            <div class="text-[10px] font-bold text-slate-500 mt-0.5">{{ student.student_id }} | {{ student.group.name|default:"بدون مجموعة" }}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="px-3 py-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-400">
+                            <span class="text-xs font-black">{{ student.points }}</span>
+                            <span class="text-[9px] font-bold uppercase ml-1 opacity-50">PTS</span>
+                        </div>
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-slate-400 text-sm">لا توجد بيانات بعد.</div>
+                <div class="py-12 text-center text-slate-600 font-bold text-xs italic">لا توجد بيانات طلاب حالياً</div>
                 {% endfor %}
+            </div>
+        </div>
+
+        <!-- Workshops Feedback Analysis -->
+        <div class="lg:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-8 border-b border-slate-800 bg-slate-800/20 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 rounded-xl bg-violet-500/10 text-violet-400">
+                        <i data-lucide="message-square" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-slate-100">تحليل جودة الورش</h2>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">تقييمات الطلاب ومستوى الرضا</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-8">
+                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {% for item in by_workshop %}
+                    <div class="p-5 rounded-[2rem] bg-slate-950 border border-slate-800 hover:border-violet-500/30 transition-all duration-500 group/workshop">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="p-2.5 rounded-2xl bg-slate-900 text-slate-400 group-hover/workshop:bg-violet-500 group-hover/workshop:text-slate-950 transition-all">
+                                <i data-lucide="monitor-play" class="w-5 h-5"></i>
+                            </div>
+                            <div class="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/5 border border-amber-500/10 text-amber-400">
+                                <i data-lucide="star" class="w-3 h-3 fill-current"></i>
+                                <span class="text-xs font-black">{{ item.avg_rating|default:"0"|floatformat:1 }}</span>
+                            </div>
+                        </div>
+                        <h3 class="text-sm font-black text-slate-100 line-clamp-1 mb-4">{{ item.title }}</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="p-3 rounded-2xl bg-slate-900/50 border border-slate-800/50 text-center">
+                                <div class="text-[9px] font-bold text-slate-500 uppercase mb-1">حضور</div>
+                                <div class="text-xs font-black text-slate-200">{{ item.present_count }}</div>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-slate-900/50 border border-slate-800/50 text-center">
+                                <div class="text-[9px] font-bold text-slate-500 uppercase mb-1">تقييمات</div>
+                                <div class="text-xs font-black text-slate-200">{{ item.feedbacks__count|default:"0" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-full py-12 text-center text-slate-600 font-bold text-xs italic">لا توجد تقييمات مسجلة للورش</div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
-
