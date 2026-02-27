@@ -31,24 +31,26 @@ def public_screen_view(request):
         full_name_ar = (request.POST.get('full_name_ar') or '').strip()
         full_name_en = (request.POST.get('full_name_en') or '').strip()
         email = (request.POST.get('email') or '').strip()
+        phone_number = (request.POST.get('phone_number') or '').strip()
         school = (request.POST.get('school') or '').strip()
         education_admin = (request.POST.get('education_admin') or '').strip()
         grade = (request.POST.get('grade') or '').strip()
         interests = (request.POST.get('interests') or '').strip()
-        if not full_name_ar or not full_name_en or not email or not school or not education_admin or not grade:
+        if not full_name_ar or not full_name_en or not email or not phone_number or not school or not education_admin or not grade:
             messages.error(request, 'يرجى ملء جميع الحقول المطلوبة في نموذج التسجيل.')
             return redirect('public_screen:public_screen')
         existing_pending = StudentRegistration.objects.filter(
-            email__iexact=email,
+            Q(email__iexact=email) | Q(phone_number=phone_number),
             status=StudentRegistration.Status.PENDING,
         ).exists()
         if existing_pending:
-            messages.info(request, 'طلب التسجيل لهذا البريد الإلكتروني قيد المراجعة بالفعل.')
+            messages.info(request, 'طلب التسجيل لهذا البريد أو رقم الهاتف قيد المراجعة بالفعل.')
             return redirect('public_screen:public_screen')
         registration = StudentRegistration.objects.create(
             full_name_ar=full_name_ar,
             full_name_en=full_name_en,
             email=email,
+            phone_number=phone_number,
             school=school,
             education_admin=education_admin,
             grade=grade,

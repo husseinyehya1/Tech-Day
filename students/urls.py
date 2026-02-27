@@ -9,4 +9,5 @@ urlpatterns = [
     path('<int:pk>/send-certificate/', views.send_certificate_email, name='send_certificate_email'),
     path('verify/<str:identifier>/', views.student_verify, name='verify'),
     path('certificate/<str:student_id>/', views.student_certificate, name='certificate'),
+    path('تحديث-رقم-الهاتف/', views.update_phone_view, name='update_phone'),
 ]

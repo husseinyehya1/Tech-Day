@@ -126,6 +126,30 @@ def student_detail(request, pk):
     return render(request, 'students/detail.html', context)
 
 
+@login_required
+def update_phone_view(request):
+    # الحصول على ملف الطالب
+    student = getattr(request.user, 'student_profile', None)
+    if not student:
+        return redirect('dashboard:admin_dashboard')
+    
+    # إذا كان لديه رقم هاتف بالفعل، يوجهه للرئيسية
+    if student.phone_number:
+        return redirect('students:detail', pk=student.pk)
+        
+    if request.method == 'POST':
+        phone_number = request.POST.get('phone_number', '').strip()
+        if phone_number:
+            student.phone_number = phone_number
+            student.save()
+            messages.success(request, 'تم تحديث رقم هاتفك بنجاح، أهلاً بك!')
+            return redirect('students:detail', pk=student.pk)
+        else:
+            messages.error(request, 'يرجى إدخال رقم هاتف صحيح.')
+            
+    return render(request, 'students/update_phone.html', {'student': student})
+
+
 def student_verify(request, identifier):
     student = (
         Student.objects.filter(student_id=identifier).select_related('group').first()
