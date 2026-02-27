@@ -136,14 +136,26 @@
                     <i data-lucide="mail" class="w-4 h-4"></i>
                     <h3 class="text-xs font-black uppercase tracking-widest">التواصل والحساب</h3>
                 </div>
-                <div class="space-y-2">
-                    <label class="text-xs font-bold text-slate-500 mr-2" for="email">البريد الإلكتروني</label>
-                    <div class="relative group">
-                        <i data-lucide="at-sign" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
-                        <input id="email" name="email" type="email"
-                               value="{{ student.email|default_if_none:'' }}"
-                               placeholder="example@email.com"
-                               class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm">
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="email">البريد الإلكتروني</label>
+                        <div class="relative group">
+                            <i data-lucide="at-sign" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                            <input id="email" name="email" type="email"
+                                   value="{{ student.email|default_if_none:'' }}"
+                                   placeholder="example@email.com"
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="phone_number">رقم الهاتف</label>
+                        <div class="relative group">
+                            <i data-lucide="phone" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                            <input id="phone_number" name="phone_number" type="tel"
+                                   value="{{ student.phone_number|default_if_none:'' }}"
+                                   placeholder="01xxxxxxxxx"
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm">
+                        </div>
                     </div>
                 </div>
             </div>

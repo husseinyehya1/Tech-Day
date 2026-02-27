@@ -151,6 +151,7 @@ def admin_student_create(request):
         education_admin = request.POST.get('education_admin') or ''
         grade = request.POST.get('grade') or ''
         email = (request.POST.get('email') or '').strip()
+        phone_number = (request.POST.get('phone_number') or '').strip()
         group = Group.objects.filter(id=group_id).first() if group_id else None
         if student_id and Student.objects.filter(student_id=student_id).exists():
             messages.error(request, 'رقم الطالب الذي أدخلته مستخدم بالفعل لطالب آخر.')
@@ -201,6 +202,7 @@ def admin_student_create(request):
             education_admin=education_admin,
             grade=grade,
             email=email,
+            phone_number=phone_number,
             user=user,
             is_blacklisted=request.POST.get('is_blacklisted') == 'on',
             is_certificate_banned=request.POST.get('is_certificate_banned') == 'on',
@@ -311,6 +313,7 @@ def admin_student_update(request, pk):
         new_school = request.POST.get('school') or ''
         new_education_admin = request.POST.get('education_admin') or student.education_admin
         new_email = (request.POST.get('email') or '').strip()
+        new_phone = (request.POST.get('phone_number') or '').strip()
         if new_email and User.objects.filter(email__iexact=new_email).exclude(id=student.user_id).exists():
             messages.error(request, 'هذا البريد الإلكتروني مستخدم بالفعل لحساب آخر، يرجى إدخال بريد مختلف.')
             return render(
@@ -324,6 +327,7 @@ def admin_student_update(request, pk):
         student.education_admin = new_education_admin
         student.grade = request.POST.get('grade') or student.grade
         student.email = new_email or student.email
+        student.phone_number = new_phone or student.phone_number
         student.is_blacklisted = request.POST.get('is_blacklisted') == 'on'
         student.is_certificate_banned = request.POST.get('is_certificate_banned') == 'on'
         group = Group.objects.filter(id=group_id).first() if group_id else None
@@ -564,6 +568,7 @@ def admin_registration_detail(request, pk):
                 education_admin=registration.education_admin,
                 grade=registration.grade,
                 email=registration.email,
+                phone_number=registration.phone_number,
                 user=user,
             )
             registration.status = StudentRegistration.Status.APPROVED
