@@ -7,6 +7,7 @@ class User(AbstractUser):
         ADMIN = 'admin', 'مدير النظام'
         SUPERVISOR = 'supervisor', 'مشرف الورشة'
         STUDENT = 'student', 'طالب'
+        VOLUNTEER = 'volunteer', 'متطوع'
 
     role = models.CharField(
         max_length=20,
@@ -27,3 +28,6 @@ class User(AbstractUser):
 
     def is_student(self):
         return self.role == self.Roles.STUDENT
+
+    def is_volunteer(self):
+        return self.role == self.Roles.VOLUNTEER

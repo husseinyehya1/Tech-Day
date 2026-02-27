@@ -4,11 +4,17 @@
 
 {% block content %}
 <div class="min-h-[60vh] flex items-center justify-center">
-    <div class="w-full max-w-md bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
-        <h1 class="text-2xl font-bold mb-2 text-center">تسجيل الدخول</h1>
-        <p class="text-sm text-slate-400 mb-6 text-center">
-            اختر حساب المشرف أو الإدارة للدخول إلى لوحة التحكم
-        </p>
+    <div class="w-full max-w-md bg-slate-950/80 border border-slate-800/80 rounded-2xl p-6 shadow-[0_18px_45px_rgba(15,23,42,0.9)] space-y-5">
+        <div class="space-y-2 text-center">
+            <div class="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-[11px] font-medium text-cyan-200">
+                <span class="inline-block h-1.5 w-1.5 rounded-full bg-cyan-400"></span>
+                <span>تسجيل الدخول إلى حساب Tech Day</span>
+            </div>
+            <h1 class="text-2xl font-bold mt-1">تسجيل الدخول</h1>
+            <p class="text-sm text-slate-400">
+                استخدم البريد الإلكتروني أو اسم المستخدم مع كلمة المرور المرسلة لك على البريد.
+            </p>
+        </div>
         {% if error %}
         <div class="mb-4 rounded-xl border border-rose-700/70 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
             {{ error }}
@@ -17,8 +23,9 @@
         <form method="post" class="space-y-4">
             {% csrf_token %}
             <div>
-                <label class="block text-sm mb-1" for="username">اسم المستخدم</label>
+                <label class="block text-sm mb-1" for="username">البريد الإلكتروني أو اسم المستخدم</label>
                 <input id="username" name="username" type="text" required
+                       placeholder="example@email.com أو student_123456"
                        class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
             </div>
             <div>
