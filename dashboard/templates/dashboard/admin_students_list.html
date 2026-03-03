@@ -1,0 +1,195 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}إدارة الطلاب - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="users" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">إدارة الطلاب</h1>
+                <p class="text-sm text-slate-400 font-medium">إضافة، تعديل، وحذف بيانات الطلاب وربطهم بالمجموعات</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'dashboard:admin_registrations_list' %}"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+                <i data-lucide="clipboard-list" class="w-4 h-4 text-slate-400"></i>
+                <span>طلبات التسجيل</span>
+            </a>
+            <a href="{% url 'dashboard:admin_student_create' %}"
+               class="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-black transition-all shadow-lg shadow-cyan-500/20">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                <span>إضافة طالب</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 rounded-3xl">
+        <form method="get" class="grid gap-4 md:grid-cols-12 items-end">
+            <div class="md:col-span-6 space-y-2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mr-2">البحث الذكي</label>
+                <div class="relative group">
+                    <i data-lucide="search" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                    <input type="text" name="q" value="{{ request.GET.q }}"
+                           placeholder="ابحث بالاسم، رقم الطالب، أو المدرسة..."
+                           class="w-full pr-11 pl-4 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                </div>
+            </div>
+            <div class="md:col-span-4 space-y-2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mr-2">تصفية بالمجموعة</label>
+                <div class="relative group">
+                    <i data-lucide="layers" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors pointer-events-none"></i>
+                    <select name="group"
+                            class="w-full pr-11 pl-4 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm appearance-none">
+                        <option value="">كل المجموعات</option>
+                        {% for group in groups %}
+                        <option value="{{ group.id }}" {% if request.GET.group == group.id|stringformat:"s" %}selected{% endif %}>
+                            {{ group.name }} ({{ group.code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="md:col-span-2">
+                <button type="submit"
+                        class="w-full py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-bold transition-all border border-slate-700 flex items-center justify-center gap-2 group">
+                    <i data-lucide="filter" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
+                    تطبيق
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Students Table Card -->
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-right">
+                <thead class="bg-slate-800/30 text-slate-500 text-[10px] uppercase tracking-wider font-bold border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4">الطالب</th>
+                        <th class="px-6 py-4">رقم التعريف</th>
+                        <th class="px-6 py-4">المجموعة</th>
+                        <th class="px-6 py-4">المستوى التعليمي</th>
+                        <th class="px-6 py-4">بيانات الاتصال</th>
+                        <th class="px-6 py-4 text-center">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for student in students %}
+                    <tr class="hover:bg-slate-800/30 transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-cyan-500/10 group-hover:text-cyan-400 transition-colors">
+                                    <i data-lucide="user" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-100">{{ student.name }}</div>
+                                    <div class="text-[10px] text-slate-500 font-medium">{{ student.school|default:"-" }}</div>
+                                    <div class="flex gap-1 mt-1">
+                                        {% if student.is_blacklisted %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-400 text-[9px] font-black border border-rose-500/20">
+                                                <i data-lucide="shield-alert" class="w-3 h-3"></i>
+                                                قائمة سوداء
+                                            </span>
+                                        {% endif %}
+                                        {% if student.is_certificate_banned %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 text-[9px] font-black border border-amber-500/20">
+                                                <i data-lucide="ban" class="w-3 h-3"></i>
+                                                بدون شهادة
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-xl bg-slate-950 border border-slate-800 font-mono text-cyan-400 text-xs font-bold">{{ student.student_id }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if student.group %}
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-950 border border-slate-800 group/group">
+                                    <span class="w-2 h-2 rounded-full" style="background-color: {{ student.group.color }}"></span>
+                                    <span class="text-xs font-bold text-slate-300">{{ student.group.code }}</span>
+                                </div>
+                            {% else %}
+                                <span class="text-[10px] font-bold text-slate-600 italic">غير محدد</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-xs font-bold text-slate-300">
+                                {% if student.grade == '4-prim' %}رابع ابتدائي
+                                {% elif student.grade == '5-prim' %}خامس ابتدائي
+                                {% elif student.grade == '6-prim' %}سادس ابتدائي
+                                {% elif student.grade == '1-prep' %}أول إعدادي
+                                {% elif student.grade == '2-prep' %}ثاني إعدادي
+                                {% elif student.grade == '3-prep' %}ثالث إعدادي
+                                {% elif student.grade == '1-sec' %}أول ثانوي
+                                {% elif student.grade == '2-sec' %}ثاني ثانوي
+                                {% elif student.grade == '3-sec' %}ثالث ثانوي
+                                {% else %}{{ student.grade|default:"-" }}
+                                {% endif %}
+                            </div>
+                            <div class="text-[10px] text-slate-500">{{ student.education_admin|default:"-" }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2 text-[11px] text-slate-400">
+                                    <i data-lucide="mail" class="w-3 h-3"></i>
+                                    {{ student.email|default:"-" }}
+                                </div>
+                                <div class="flex items-center gap-2 text-[11px] text-slate-400">
+                                    <i data-lucide="calendar" class="w-3 h-3"></i>
+                                    {{ student.created_at|date:"Y-m-d" }}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="{% url 'students:detail' student.pk %}" title="عرض QR"
+                                   class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all border border-slate-700">
+                                    <i data-lucide="qr-code" class="w-4 h-4"></i>
+                                </a>
+                                <a href="{% url 'dashboard:admin_student_update' student.pk %}" title="تعديل"
+                                   class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 transition-all border border-slate-700">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </a>
+                                <a href="{% url 'dashboard:admin_student_transfer' student.pk %}" title="نقل مجموعة"
+                                   class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-violet-500/10 hover:text-violet-400 transition-all border border-slate-700">
+                                    <i data-lucide="move" class="w-4 h-4"></i>
+                                </a>
+                                <form method="post" action="{% url 'dashboard:admin_student_send_credentials' student.pk %}" class="contents">
+                                    {% csrf_token %}
+                                    <button type="submit" title="إرسال بيانات الدخول"
+                                            class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400 transition-all border border-slate-700">
+                                        <i data-lucide="send" class="w-4 h-4"></i>
+                                    </button>
+                                </form>
+                                <a href="{% url 'dashboard:admin_student_delete' student.pk %}" title="حذف"
+                                   class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-all border border-slate-700">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center space-y-3">
+                            <div class="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto text-slate-600">
+                                <i data-lucide="users-2" class="w-8 h-8"></i>
+                            </div>
+                            <div class="text-slate-500 font-bold">لا يوجد طلاب مطابقين للبحث</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

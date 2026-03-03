@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة المتطوع - Tech Day{% endblock %}
+
+{% block content %}
+<!-- SOS Volunteer Modal -->
+<div id="sos-modal-volunteer" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
+    <div class="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-xl p-8 shadow-[0_0_80px_rgba(244,63,94,0.15)] animate-in zoom-in-95 duration-300">
+        <div class="flex items-center gap-5 mb-8">
+            <div class="p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20 text-rose-500">
+                <i data-lucide="alert-triangle" class="w-10 h-10"></i>
+            </div>
+            <div>
+                <h3 class="text-3xl font-black text-white tracking-tight">نداء استغاثة (SOS)</h3>
+                <p class="text-sm text-slate-400 font-bold">طلب دعم فوري من إدارة الفعالية</p>
+            </div>
+        </div>
+
+        <form id="sos-form-volunteer" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Toggle Mode -->
+            <div class="grid grid-cols-2 gap-3 p-1.5 bg-slate-950 rounded-2xl border border-slate-800">
+                <button type="button" id="sos-mode-general" class="py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-rose-500 text-white shadow-lg shadow-rose-500/20">
+                    مشكلة عامة
+                </button>
+                <button type="button" id="sos-mode-student" class="py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-200">
+                    مشكلة طالب
+                </button>
+            </div>
+
+            <!-- Manual Location (Shown in General Mode) -->
+            <div id="sos-location-group" class="space-y-3">
+                <div class="flex items-center gap-2 px-1">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-cyan-400"></i>
+                    <label class="text-sm font-black text-slate-200 uppercase tracking-widest">حدد مكانك الحالي</label>
+                </div>
+                <input type="text" name="location_manual" placeholder="مثال: بجوار البوابة الرئيسية، قاعة 3..."
+                       class="w-full px-5 py-4 rounded-2xl bg-slate-950/50 border border-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all placeholder:text-slate-700 font-bold">
+            </div>
+
+            <!-- Student Search (Shown in Student Mode) -->
+            <div id="sos-student-group" class="space-y-3 hidden">
+                <div class="flex items-center gap-2 px-1">
+                    <i data-lucide="user" class="w-4 h-4 text-cyan-400"></i>
+                    <label class="text-sm font-black text-slate-200 uppercase tracking-widest">البحث عن الطالب</label>
+                </div>
+                <div class="relative group/sos-search">
+                    <input type="text" id="sos_student_name_search"
+                           class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-5 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all placeholder:text-slate-700 font-bold"
+                           placeholder="اكتب اسم الطالب...">
+                    <input type="hidden" name="student_id" id="sos_student_id">
+                    <div id="sos_search_results" class="absolute z-50 left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hidden shadow-2xl max-h-48 overflow-y-auto custom-scrollbar"></div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex items-center gap-2 px-1">
+                    <i data-lucide="message-square" class="w-4 h-4 text-rose-500"></i>
+                    <label class="text-sm font-black text-slate-200 uppercase tracking-widest">ما هي المشكلة؟</label>
+                </div>
+                <textarea name="message" required rows="4" placeholder="اكتب تفاصيل المشكلة هنا..."
+                          class="w-full px-5 py-4 rounded-2xl bg-slate-950/50 border border-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all placeholder:text-slate-700 font-bold"></textarea>
+            </div>
+
+            <div class="flex gap-4 pt-4">
+                <button type="button" id="close-sos-volunteer" class="flex-1 py-5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-black text-xs transition-all border border-slate-700 active:scale-95">
+                    إلغاء
+                </button>
+                <button type="submit" class="flex-[2] py-5 bg-rose-500 hover:bg-rose-400 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-rose-500/20 active:scale-95">
+                    إرسال النداء الآن
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="max-w-4xl mx-auto space-y-8 pb-12">
+    <!-- Welcome Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1">
+            <h1 class="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                <span class="text-cyan-400">مرحباً،</span>
+                {{ request.user.first_name|default:request.user.username }}
+            </h1>
+            <p class="text-slate-400 text-sm mr-1">لوحة التحكم الميدانية - سجل الحضور وتابع ملاحظاتك بسهولة.</p>
+        </div>
+        <div class="flex items-center gap-3 bg-slate-900/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-slate-800/50">
+            <div class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
+            <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Volunteer Active</span>
+        </div>
+    </div>
+
+    <!-- Quick Action Cards (Mobile Focused) -->
+    <div class="grid gap-4 sm:grid-cols-2">
+        <!-- Main QR Scan -->
+        <a href="{% url 'attendance:scan_qr' %}"
+           class="group relative overflow-hidden bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-6 rounded-[2rem] hover:border-cyan-500/30 transition-all duration-500 flex items-center gap-5">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-all"></div>
+            <div class="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 group-hover:scale-110 transition-transform">
+                <i data-lucide="qr-code" class="w-8 h-8 text-cyan-400"></i>
+            </div>
+            <div>
+                <div class="text-lg font-black text-white">تسجيل حضور عام</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">المسح السريع (QR)</div>
+            </div>
+        </a>
+
+        <!-- Workshop Schedule -->
+        <a href="{% url 'attendance:volunteer_schedule' %}"
+           class="group relative overflow-hidden bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-6 rounded-[2rem] hover:border-indigo-500/30 transition-all duration-500 flex items-center gap-5">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-all"></div>
+            <div class="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 group-hover:scale-110 transition-transform">
+                <i data-lucide="calendar-check" class="w-8 h-8 text-indigo-400"></i>
+            </div>
+            <div>
+                <div class="text-lg font-black text-white">حضور الورش</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">الجدول الزمني</div>
+            </div>
+        </a>
+
+        <!-- SOS Emergency Button -->
+        <button id="sos-btn-volunteer"
+           class="sm:col-span-2 group relative overflow-hidden bg-rose-500/10 backdrop-blur-xl border border-rose-500/20 p-6 rounded-[2rem] hover:bg-rose-500 hover:border-rose-400 transition-all duration-500 flex items-center justify-center gap-5">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all"></div>
+            <div class="p-4 bg-rose-500/20 rounded-2xl border border-rose-500/30 group-hover:scale-110 group-hover:bg-white/20 transition-all">
+                <i data-lucide="alert-triangle" class="w-8 h-8 text-rose-500 group-hover:text-white"></i>
+            </div>
+            <div class="text-right">
+                <div class="text-xl font-black text-rose-500 group-hover:text-white transition-colors tracking-tight">إرسال نداء استغاثة (SOS)</div>
+                <div class="text-[10px] text-rose-500/60 group-hover:text-white/60 font-black uppercase tracking-[0.2em] mt-1">Emergency Alert System</div>
+            </div>
+        </button>
+    </div>
+
+    <div class="grid gap-8 lg:grid-cols-5">
+        <!-- Violation Form (3/5) -->
+        <div class="lg:col-span-3 space-y-6">
+            <div class="relative group">
+                <div class="absolute -inset-1 bg-gradient-to-r from-rose-500/10 to-orange-500/10 rounded-[2.5rem] blur-xl opacity-50"></div>
+                <div class="relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-[2.5rem] p-8 space-y-8">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                            <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-400"></i>
+                        </div>
+                        <h2 class="text-xl font-black text-white tracking-tight">تسجيل مخالفة على طالب</h2>
+                    </div>
+
+                    <form method="post" action="{% url 'attendance:volunteer_report_violation' %}" class="space-y-6">
+                        {% csrf_token %}
+                        <div class="grid gap-6 md:grid-cols-2">
+                            <!-- Student Search by Name -->
+                            <div class="space-y-4">
+                                <div class="flex items-center gap-2 px-1">
+                                    <i data-lucide="search" class="w-4 h-4 text-cyan-400"></i>
+                                    <label class="text-sm font-black text-slate-200 uppercase tracking-widest">بحث باسم الطالب</label>
+                                </div>
+                                <div class="relative group/search">
+                                    <input type="text" id="student_name_search"
+                                           class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-5 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder:text-slate-600"
+                                           placeholder="اكتب اسم الطالب للبحث...">
+                                    <!-- Search Results Dropdown -->
+                                    <div id="search_results" class="absolute z-50 left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hidden shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                                        <!-- Results will be injected here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Student ID Field -->
+                            <div class="space-y-4">
+                                <div class="flex items-center gap-2 px-1">
+                                    <i data-lucide="user-minus" class="w-4 h-4 text-rose-400"></i>
+                                    <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="student_id">رقم الطالب (ID)</label>
+                                </div>
+                                <input id="student_id" name="student_id" type="text" required
+                                       class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-5 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all placeholder:text-slate-600"
+                                       placeholder="سيظهر الرقم هنا عند اختيار الاسم">
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-2 px-1">
+                                <i data-lucide="align-right" class="w-4 h-4 text-rose-400"></i>
+                                <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="reason">وصف المخالفة</label>
+                            </div>
+                            <textarea id="reason" name="reason" rows="4" required
+                                      class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-5 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all placeholder:text-slate-600"
+                                      placeholder="مثال: خروج متكرر، إزعاج مستمر، عدم الالتزام بالتعليمات..."></textarea>
+                        </div>
+
+                        <div class="flex items-center justify-end pt-2">
+                            <button type="submit"
+                                    class="group relative inline-flex items-center gap-3 px-8 py-4 bg-rose-500 hover:bg-rose-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)] hover:shadow-[0_0_30px_rgba(244,63,94,0.5)] hover:-translate-y-1 overflow-hidden w-full sm:w-auto justify-center">
+                                <span>إرسال البلاغ</span>
+                                <i data-lucide="send" class="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes & History (2/5) -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Notes Button -->
+            <a href="{% url 'attendance:volunteer_notes' %}"
+               class="group relative overflow-hidden bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-8 rounded-[2.5rem] hover:border-cyan-500/30 transition-all duration-500 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <div class="p-3 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 group-hover:scale-110 transition-transform">
+                        <i data-lucide="message-square-plus" class="w-6 h-6 text-cyan-400"></i>
+                    </div>
+                    <i data-lucide="arrow-left" class="w-5 h-5 text-slate-600 group-hover:-translate-x-2 transition-transform"></i>
+                </div>
+                <div>
+                    <div class="text-xl font-black text-white">ملاحظات اليوم</div>
+                    <p class="text-xs text-slate-500 mt-1 leading-relaxed">اكتب ملاحظاتك عن القاعات أو الطلاب ليتم مراجعتها من الإدارة.</p>
+                </div>
+            </a>
+
+            <!-- Recent Violations List -->
+            <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-[2.5rem] p-8 space-y-6">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-rose-500 rounded-full"></span>
+                        آخر بلاغاتك
+                    </h2>
+                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">{{ recent_violations|length }} سجل</span>
+                </div>
+
+                <div class="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                    {% for violation in recent_violations %}
+                    <div class="p-4 rounded-2xl bg-slate-950/40 border border-slate-800/50 hover:border-slate-700 transition-colors group">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-sm font-bold text-slate-100 group-hover:text-white transition-colors">
+                                {{ violation.student.name }}
+                            </div>
+                            <div class="text-[10px] font-mono text-slate-500">
+                                {{ violation.created_at|date:"H:i" }}
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed line-clamp-2 group-hover:text-slate-300 transition-colors mb-3">
+                            {{ violation.reason }}
+                        </p>
+                        <div class="flex items-center gap-2">
+                            {% if violation.status == "pending" %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase border border-amber-500/20">
+                                    <span class="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                                    قيد المراجعة
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[9px] font-black uppercase border border-emerald-500/20">
+                                    <i data-lucide="check" class="w-2.5 h-2.5"></i>
+                                    تمت المعالجة
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="flex flex-col items-center justify-center py-12 opacity-40">
+                        <i data-lucide="clipboard-list" class="w-12 h-12 text-slate-600 mb-3"></i>
+                        <p class="text-xs font-black uppercase tracking-widest">لا توجد بلاغات</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Violation Form Search
+    const searchInput = document.getElementById('student_name_search');
+    const resultsContainer = document.getElementById('search_results');
+    const studentIdInput = document.getElementById('student_id');
+    
+    if (searchInput && resultsContainer) {
+        let debounceTimer;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const query = this.value.trim();
+            if (query.length < 2) {
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+            debounceTimer = setTimeout(() => {
+                fetch(`{% url 'attendance:search_students' %}?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.students.length > 0) {
+                            resultsContainer.innerHTML = '';
+                            data.students.forEach(student => {
+                                const div = document.createElement('div');
+                                div.className = 'p-4 hover:bg-slate-800 cursor-pointer border-b border-slate-800/50 last:border-0 transition-colors group';
+                                div.innerHTML = `
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-bold text-slate-100 group-hover:text-cyan-400 transition-colors">${student.name}</span>
+                                            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${student.group}</span>
+                                        </div>
+                                        <span class="text-xs font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">${student.id}</span>
+                                    </div>
+                                `;
+                                div.addEventListener('click', () => {
+                                    searchInput.value = student.name;
+                                    studentIdInput.value = student.id;
+                                    resultsContainer.classList.add('hidden');
+                                });
+                                resultsContainer.appendChild(div);
+                            });
+                            resultsContainer.classList.remove('hidden');
+                        } else {
+                            resultsContainer.innerHTML = '<div class="p-4 text-xs text-slate-500 text-center">لا توجد نتائج</div>';
+                            resultsContainer.classList.remove('hidden');
+                        }
+                    });
+            }, 300);
+        });
+    }
+
+    // 2. SOS Modal Logic
+    const sosBtn = document.getElementById('sos-btn-volunteer');
+    const sosModal = document.getElementById('sos-modal-volunteer');
+    const closeSos = document.getElementById('close-sos-volunteer');
+    const sosForm = document.getElementById('sos-form-volunteer');
+    
+    if (sosBtn && sosModal) {
+        sosBtn.addEventListener('click', () => {
+            sosModal.classList.remove('hidden');
+            lucide.createIcons(); // Ensure icons in modal are rendered
+        });
+        if (closeSos) closeSos.addEventListener('click', () => sosModal.classList.add('hidden'));
+
+        const modeGeneral = document.getElementById('sos-mode-general');
+        const modeStudent = document.getElementById('sos-mode-student');
+        const locationGroup = document.getElementById('sos-location-group');
+        const studentGroup = document.getElementById('sos-student-group');
+        const sosStudentSearch = document.getElementById('sos_student_name_search');
+        const sosSearchResults = document.getElementById('sos_search_results');
+        const sosStudentId = document.getElementById('sos_student_id');
+
+        if (modeGeneral && modeStudent) {
+            modeGeneral.addEventListener('click', () => {
+                modeGeneral.className = 'py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-rose-500 text-white shadow-lg shadow-rose-500/20';
+                modeStudent.className = 'py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-200';
+                locationGroup.classList.remove('hidden');
+                studentGroup.classList.add('hidden');
+                sosStudentId.value = '';
+            });
+
+            modeStudent.addEventListener('click', () => {
+                modeStudent.className = 'py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-rose-500 text-white shadow-lg shadow-rose-500/20';
+                modeGeneral.className = 'py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-200';
+                studentGroup.classList.remove('hidden');
+                locationGroup.classList.add('hidden');
+            });
+        }
+
+        if (sosStudentSearch && sosSearchResults) {
+            let sosDebounce;
+            sosStudentSearch.addEventListener('input', function() {
+                clearTimeout(sosDebounce);
+                const query = this.value.trim();
+                if (query.length < 2) {
+                    sosSearchResults.classList.add('hidden');
+                    return;
+                }
+                sosDebounce = setTimeout(() => {
+                    fetch(`{% url 'attendance:search_students' %}?q=${encodeURIComponent(query)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success && data.students.length > 0) {
+                                sosSearchResults.innerHTML = '';
+                                data.students.forEach(s => {
+                                    const div = document.createElement('div');
+                                    div.className = 'p-4 hover:bg-slate-800 cursor-pointer border-b border-slate-800/50 last:border-0 transition-colors group';
+                                    div.innerHTML = `<div class="flex items-center justify-between"><div class="flex flex-col"><span class="text-sm font-bold text-slate-100 group-hover:text-rose-400">${s.name}</span><span class="text-[10px] text-slate-500 font-bold uppercase">${s.group}</span></div><span class="text-xs font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">${s.id}</span></div>`;
+                                    div.addEventListener('click', () => {
+                                        sosStudentSearch.value = s.name;
+                                        sosStudentId.value = s.id;
+                                        sosSearchResults.classList.add('hidden');
+                                    });
+                                    sosSearchResults.appendChild(div);
+                                });
+                                sosSearchResults.classList.remove('hidden');
+                            }
+                        });
+                }, 300);
+            });
+        }
+
+        if (sosForm) {
+            sosForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                fetch("{% url 'dashboard:supervisor_sos_send' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {'X-CSRFToken': formData.get('csrf_token')}
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('تم إرسال نداء الاستغاثة بنجاح.');
+                        sosModal.classList.add('hidden');
+                        sosForm.reset();
+                    } else {
+                        alert('خطأ: ' + (data.error || 'فشل الإرسال'));
+                    }
+                })
+                .catch(err => alert('حدث خطأ في الاتصال بالسيرفر.'));
+            });
+        }
+    }
+
+    // 3. Global Click Listener for Dropdowns
+    document.addEventListener('click', function(e) {
+        if (searchInput && resultsContainer && !searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.classList.add('hidden');
+        }
+        const sosStudentSearch = document.getElementById('sos_student_name_search');
+        const sosSearchResults = document.getElementById('sos_search_results');
+        if (sosStudentSearch && sosSearchResults && !sosStudentSearch.contains(e.target) && !sosSearchResults.contains(e.target)) {
+            sosSearchResults.classList.add('hidden');
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+}
+</style>
+{% endblock %}
+

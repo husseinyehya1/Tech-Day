@@ -1,0 +1,126 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}{% if group %}تعديل مجموعة{% else %}إضافة مجموعة جديدة{% endif %} - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-violet-500/10 text-violet-400">
+                <i data-lucide="{% if group %}layers{% else %}plus-circle{% endif %}" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">
+                    {% if group %}تعديل بيانات المجموعة{% else %}إضافة مجموعة جديدة{% endif %}
+                </h1>
+                <p class="text-sm text-slate-400 font-medium">تخصيص الهوية البصرية والقدرة الاستيعابية للمجموعة</p>
+            </div>
+        </div>
+        <a href="{% url 'dashboard:admin_groups' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للقائمة</span>
+        </a>
+    </div>
+
+    <form method="post" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        {% csrf_token %}
+        
+        <div class="p-6 space-y-8">
+            <!-- Group Identity -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 text-violet-400 mb-2">
+                    <i data-lucide="palette" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">هوية المجموعة</h3>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2 md:col-span-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="name">اسم المجموعة</label>
+                        <div class="relative group">
+                            <i data-lucide="tag" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                            <input id="name" name="name" type="text" required
+                                   value="{{ group.name|default_if_none:'' }}"
+                                   placeholder="مثال: عباقرة البرمجة..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="code">كود المجموعة (فريد)</label>
+                        <div class="relative group">
+                            <i data-lucide="hash" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                            <input id="code" name="code" type="text" required
+                                   value="{{ group.code|default_if_none:'' }}"
+                                   placeholder="A, B, C..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm uppercase font-mono">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="color">لون المجموعة (Hex)</label>
+                        <div class="flex gap-3">
+                            <div class="relative group flex-1">
+                                <i data-lucide="pipette" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                                <input id="color" name="color" type="text" placeholder="#6366f1"
+                                       value="{{ group.color|default_if_none:'#6366f1' }}"
+                                       oninput="document.getElementById('color-preview').style.backgroundColor = this.value"
+                                       class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm font-mono">
+                            </div>
+                            <div id="color-preview" 
+                                 style="background-color: {{ group.color|default:'#6366f1' }}"
+                                 class="w-12 h-12 rounded-2xl border-2 border-slate-800 shadow-xl shadow-slate-950/50 shrink-0 transition-colors duration-300">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration -->
+            <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                <div class="flex items-center gap-2 text-cyan-400 mb-2">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">الإعدادات والقدرة</h3>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="level">المرحلة الدراسية</label>
+                        <div class="relative group">
+                            <i data-lucide="graduation-cap" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors pointer-events-none"></i>
+                            <select id="level" name="level" required
+                                    class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm appearance-none cursor-pointer">
+                                <option value="primary" {% if group.level == 'primary' %}selected{% endif %}>المرحلة الابتدائية</option>
+                                <option value="prep_sec" {% if group.level == 'prep_sec' %}selected{% endif %}>المرحلة الإعدادية والثانوية</option>
+                            </select>
+                            <i data-lucide="chevron-down" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-hover:text-cyan-400 pointer-events-none transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="max_students">الحد الأقصى للطلاب</label>
+                        <div class="relative group">
+                            <i data-lucide="users" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                            <input id="max_students" name="max_students" type="number" min="1"
+                                   value="{{ group.max_students|default_if_none:'25' }}"
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Footer -->
+        <div class="p-6 bg-slate-950/50 border-t border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3 mr-auto">
+                <a href="{% url 'dashboard:admin_groups' %}"
+                   class="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+                    إلغاء
+                </a>
+                <button type="submit"
+                        class="px-8 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    {% if group %}حفظ التعديلات{% else %}إنشاء المجموعة الآن{% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

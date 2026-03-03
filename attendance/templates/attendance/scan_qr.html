@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}تسجيل الحضور بالـ QR - Tech Day{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="qr-code" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">ماسح الحضور الذكي</h1>
+                <p class="text-sm text-slate-400 font-medium">سجل حضور الطلاب بسرعة وسهولة عبر QR</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-2xl border border-slate-700/50">
+            {% if session %}
+                <div class="flex items-center gap-2 mr-2">
+                    <form action="{% url 'attendance:mark_all_group_present' session.id %}" method="POST" onsubmit="return confirm('هل أنت متأكد من تسجيل حضور {{ checked_in_not_present_count }} طالب من مجموعة ({{ session.group.code }})؟ (سيتم تسجيل الطلاب الذين سجلوا حضوراً للفعالية فقط)');">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                class="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-[11px] font-bold text-emerald-400 border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale"
+                                {% if checked_in_not_present_count == 0 %}disabled{% endif %}>
+                            <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                            تسجيل حضور المجموعة ({{ checked_in_not_present_count }})
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+            <div id="scanner-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 text-[11px] font-bold text-slate-500 transition-all">
+                <span class="w-2 h-2 rounded-full bg-slate-700 animate-pulse"></span>
+                <span id="scanner-text">جاري التحميل</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[1fr,350px]">
+        <!-- Scanner Viewport -->
+        <div class="space-y-4">
+            <div class="relative group">
+                <!-- Scanner Decoration -->
+                <div class="absolute -top-2 -left-2 w-8 h-8 border-t-4 border-l-4 border-cyan-500 rounded-tl-lg z-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <div class="absolute -top-2 -right-2 w-8 h-8 border-t-4 border-r-4 border-cyan-500 rounded-tr-lg z-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <div class="absolute -bottom-2 -left-2 w-8 h-8 border-b-4 border-l-4 border-cyan-500 rounded-bl-lg z-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <div class="absolute -bottom-2 -right-2 w-8 h-8 border-b-4 border-r-4 border-cyan-500 rounded-br-lg z-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                
+                <div id="reader" class="w-full aspect-square md:aspect-video rounded-3xl overflow-hidden bg-slate-950 border-2 border-slate-800 shadow-2xl shadow-cyan-500/5 relative">
+                    <!-- Custom Loading UI -->
+                    <div id="reader-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 z-20 transition-opacity duration-500">
+                        <div class="relative w-20 h-20 mb-4">
+                            <div class="absolute inset-0 border-4 border-cyan-500/20 rounded-full"></div>
+                            <div class="absolute inset-0 border-4 border-t-cyan-500 rounded-full animate-spin"></div>
+                            <i data-lucide="camera" class="absolute inset-0 m-auto w-8 h-8 text-cyan-500/50"></i>
+                        </div>
+                        <p class="text-slate-400 font-bold text-sm">جاري تفعيل الكاميرا...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manual Input Card -->
+            <div class="p-6 rounded-3xl bg-slate-900/40 border border-slate-800">
+                <div class="flex items-center gap-3 mb-4">
+                    <i data-lucide="keyboard" class="w-4 h-4 text-slate-500"></i>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500">الإدخال اليدوي</h3>
+                </div>
+                <div class="flex gap-2">
+                    <div class="relative flex-1 group">
+                        <i data-lucide="hash" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-cyan-400 transition-colors"></i>
+                        <input id="manual-id" type="text" placeholder="أدخل رقم الطالب هنا..."
+                               class="w-full pr-11 pl-4 py-3.5 rounded-2xl bg-slate-950 border border-slate-700 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold"
+                               autocomplete="off" inputmode="numeric">
+                    </div>
+                    <button id="manual-submit" class="px-6 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-lg shadow-cyan-500/20 transition-all active:scale-95 disabled:opacity-50">
+                        تسجيل
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Panel -->
+        <div class="space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 px-2">الحالة والنتائج</h3>
+            
+            <div id="status-container" class="space-y-4">
+                <!-- Result Success Card (Template) -->
+                <div id="result-card" class="hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div class="p-6 rounded-3xl bg-emerald-500/10 border-2 border-emerald-500/20 relative overflow-hidden group">
+                        <!-- Decorative bg -->
+                        <div class="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+                                    <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                                </div>
+                                <span id="res-time" class="text-[10px] font-mono font-bold text-emerald-500/60 bg-emerald-500/5 px-2 py-1 rounded-lg">12:30:45</span>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="text-[10px] font-bold text-emerald-500/50 uppercase tracking-widest mb-1">اسم الطالب</div>
+                                    <div id="res-student" class="text-xl font-black text-slate-100 leading-tight">--</div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4 pt-4 border-t border-emerald-500/10">
+                                    <div>
+                                        <div class="text-[10px] font-bold text-emerald-500/50 uppercase tracking-widest mb-1">المجموعة</div>
+                                        <div id="res-group" class="text-sm font-mono font-bold text-cyan-400">--</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-emerald-500/50 uppercase tracking-widest mb-1">الورشة</div>
+                                        <div id="res-workshop" class="text-sm font-bold text-slate-200 truncate">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Duplicate Card -->
+                <div id="duplicate-card" class="hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div class="p-6 rounded-3xl bg-amber-500/10 border-2 border-amber-500/20">
+                        <div class="flex items-center gap-3 mb-4 text-amber-400">
+                            <i data-lucide="copy" class="w-6 h-6"></i>
+                            <h4 class="font-black">حضور مكرر!</h4>
+                        </div>
+                        <p class="text-sm text-slate-300 font-medium mb-4">تم تسجيل حضور هذا الطالب مسبقاً في هذه الفعالية.</p>
+                        <div class="p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+                            <div class="text-[10px] font-bold text-amber-500/50 uppercase mb-1">اسم الطالب</div>
+                            <div id="dup-student" class="text-sm font-bold text-slate-100">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Card -->
+                <div id="error-card" class="hidden animate-in fade-in zoom-in duration-300">
+                    <div class="p-6 rounded-3xl bg-rose-500/10 border-2 border-rose-500/20 text-center">
+                        <div class="w-16 h-16 rounded-full bg-rose-500/20 flex items-center justify-center mx-auto mb-4 text-rose-500">
+                            <i data-lucide="x-circle" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="font-black text-rose-400 mb-2">خطأ في المسح</h4>
+                        <p id="error-text" class="text-sm text-slate-400 font-medium leading-relaxed">عذراً، لم يتم العثور على سجل لهذا الطالب في النظام.</p>
+                    </div>
+                </div>
+
+                <!-- Idle State -->
+                <div id="idle-card" class="p-8 rounded-3xl bg-slate-900/40 border border-slate-800 border-dashed text-center space-y-4">
+                    <div class="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto text-slate-600">
+                        <i data-lucide="scan" class="w-10 h-10 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-400">جاهز للمسح</h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">بانتظار مسح أول كود QR للبدء في معالجة البيانات</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pro Tips -->
+            <div class="p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
+                <div class="flex gap-3">
+                    <i data-lucide="lightbulb" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        <span class="text-cyan-400 font-bold">نصيحة:</span> 
+                        تأكد من وجود إضاءة كافية وحافظ على ثبات الكاميرا للحصول على أفضل سرعة مسح.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    var isSending = false;
+    var lastCode = null;
+    var lastCodeTime = 0;
+    var scannerInstance = null;
+
+    function updateScannerUI(status, colorClass, text) {
+        const indicator = document.getElementById("scanner-indicator");
+        const dot = indicator.querySelector('span:first-child');
+        const textEl = document.getElementById("scanner-text");
+        
+        indicator.className = `flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 text-[11px] font-bold ${colorClass} transition-all`;
+        dot.className = `w-2 h-2 rounded-full ${colorClass.replace('text-', 'bg-')} ${status === 'scanning' ? 'animate-pulse' : ''}`;
+        textEl.textContent = text;
+    }
+
+    function showCard(cardId) {
+        const cards = ['result-card', 'duplicate-card', 'error-card', 'idle-card'];
+        cards.forEach(id => {
+            const el = document.getElementById(id);
+            if (id === cardId) {
+                el.classList.remove('hidden');
+                // Re-trigger animation
+                el.style.animation = 'none';
+                el.offsetHeight; /* trigger reflow */
+                el.style.animation = null;
+            } else {
+                el.classList.add('hidden');
+            }
+        });
+    }
+
+    function playFeedback(type) {
+        // Here you can add sound effects if desired
+        if (window.navigator.vibrate) {
+            if (type === 'success') window.navigator.vibrate(100);
+            if (type === 'error') window.navigator.vibrate([100, 50, 100]);
+        }
+    }
+
+    function showResult(data) {
+        var now = new Date();
+        var timeStr = now.toLocaleTimeString("ar-EG", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+
+        if (data.is_already_checked_in) {
+            document.getElementById("dup-student").textContent = data.student || "مجهول";
+            showCard("duplicate-card");
+            playFeedback('error');
+        } else {
+            document.getElementById("res-time").textContent = timeStr;
+            document.getElementById("res-student").textContent = data.student || "--";
+            document.getElementById("res-group").textContent = data.group || "--";
+            document.getElementById("res-workshop").textContent = data.workshop || "--";
+            showCard("result-card");
+            playFeedback('success');
+            
+            // Auto-hide success after 5 seconds to show idle again, but only if no new results
+            // (Optional logic based on preference)
+        }
+    }
+
+    function showError(message) {
+        document.getElementById("error-text").textContent = message || "حدث خطأ غير متوقع";
+        showCard("error-card");
+        playFeedback('error');
+    }
+
+    function sendAttendance(studentId) {
+        if (!studentId || isSending) return;
+        
+        isSending = true;
+        updateScannerUI('sending', 'text-amber-400', 'جاري الإرسال...');
+        
+        const manualButton = document.getElementById("manual-submit");
+        manualButton.disabled = true;
+
+        fetch("{{ scan_url|default:request.path }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: new URLSearchParams({student_id: studentId}).toString(),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showResult(data);
+                updateScannerUI('scanning', 'text-emerald-400', 'جاهز للمسح');
+            } else {
+                showError(data.message);
+                updateScannerUI('scanning', 'text-emerald-400', 'جاهز للمسح');
+            }
+        })
+        .catch(() => {
+            showError("تعذر الاتصال بالخادم، يرجى التحقق من الإنترنت");
+            updateScannerUI('error', 'text-rose-500', 'خطأ في الاتصال');
+        })
+        .finally(() => {
+            isSending = false;
+            manualButton.disabled = false;
+        });
+    }
+
+    // Event Listeners
+    document.getElementById("manual-submit").addEventListener("click", function() {
+        const input = document.getElementById("manual-id");
+        const val = input.value.trim();
+        if (val) {
+            sendAttendance(val);
+            input.value = "";
+        }
+    });
+
+    document.getElementById("manual-id").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") document.getElementById("manual-submit").click();
+    });
+
+    // Initialize Scanner
+    if (window.Html5QrcodeScanner) {
+        const scanner = new Html5QrcodeScanner("reader", {
+            fps: 15,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            showTorchButtonIfSupported: true
+        });
+
+        scanner.render((decodedText) => {
+            var now = Date.now();
+            if (decodedText === lastCode && now - lastCodeTime < 4000) return;
+            
+            lastCode = decodedText;
+            lastCodeTime = now;
+            sendAttendance(decodedText);
+        });
+
+        // Hide placeholder when scanner starts
+        const observer = new MutationObserver((mutations) => {
+            if (document.querySelector('#reader video')) {
+                document.getElementById('reader-placeholder').classList.add('opacity-0', 'pointer-events-none');
+                updateScannerUI('scanning', 'text-emerald-400', 'جاهز للمسح');
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.getElementById('reader'), { childList: true, subtree: true });
+    } else {
+        updateScannerUI('error', 'text-rose-500', 'الكاميرا غير مدعومة');
+        document.getElementById('reader-placeholder').querySelector('p').textContent = "المتصفح لا يدعم الكاميرا";
+    }
+</script>
+
+<style>
+    /* Override html5-qrcode styles for better integration */
+    #reader { border: none !important; }
+    #reader img { display: none !important; }
+    #reader__dashboard_section_csr button {
+        background: #0f172a !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 12px !important;
+        padding: 8px 16px !important;
+        font-family: 'Cairo', sans-serif !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        cursor: pointer !important;
+    }
+    #reader__dashboard_section_csr button:hover {
+        background: #1e293b !important;
+    }
+    #reader__status_span { display: none !important; }
+    #reader video {
+        border-radius: 24px !important;
+        object-fit: cover !important;
+    }
+</style>
+{% endblock %}

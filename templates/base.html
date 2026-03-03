@@ -1,0 +1,457 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Tech Day - الفريق التقني بالقليوبية{% endblock %}</title>
+    <link rel="icon" type="image/webp" href="{% static 'tech-day.webp' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% if request.user.is_authenticated %}
+    <!-- Global Broadcast Overlay -->
+    <div id="broadcast-overlay" class="fixed top-0 left-0 right-0 z-[110] pointer-events-none"></div>
+    
+    <!-- Broadcast Audio Alert -->
+    <audio id="broadcast-audio" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const broadcastOverlay = document.getElementById('broadcast-overlay');
+            const broadcastAudio = document.getElementById('broadcast-audio');
+            let activeBroadcastIds = new Set();
+
+            function checkBroadcasts() {
+                fetch("{% url 'dashboard:user_broadcast_poll' %}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove expired broadcasts from UI
+                        const currentIds = new Set(data.broadcasts.map(b => b.id));
+                        activeBroadcastIds.forEach(id => {
+                            if (!currentIds.has(id)) {
+                                const el = document.getElementById(`broadcast-${id}`);
+                                if (el) el.remove();
+                                activeBroadcastIds.delete(id);
+                            }
+                        });
+
+                        // Show new broadcasts
+                        data.broadcasts.forEach(b => {
+                            if (!activeBroadcastIds.has(b.id)) {
+                                showBroadcast(b);
+                                activeBroadcastIds.add(b.id);
+                            }
+                        });
+                    }
+                })
+                .catch(err => console.error('Broadcast Polling Error:', err));
+            }
+
+            function showBroadcast(b) {
+                const card = document.createElement('div');
+                card.id = `broadcast-${b.id}`;
+                // Floating Card Style - more reliable on mobile
+                card.className = 'pointer-events-auto w-[calc(100vw-2rem)] max-w-2xl mx-auto my-3 text-white rounded-[1.5rem] shadow-2xl border-2 animate-in slide-in-from-top duration-500 relative z-[200] overflow-hidden';
+                
+                let bgColor = 'bg-slate-900/95 border-indigo-500/50';
+                let iconBg = 'bg-indigo-500';
+                let targetLabel = 'للجميع';
+                
+                if (b.type === 'students') {
+                    bgColor = 'bg-slate-900/95 border-cyan-500/50';
+                    iconBg = 'bg-cyan-500';
+                    targetLabel = 'للطلاب';
+                } else if (b.type === 'supervisors') {
+                    bgColor = 'bg-slate-900/95 border-violet-500/50';
+                    iconBg = 'bg-violet-500';
+                    targetLabel = 'للمشرفين';
+                } else if (b.type === 'volunteers') {
+                    bgColor = 'bg-slate-900/95 border-emerald-500/50';
+                    iconBg = 'bg-emerald-500';
+                    targetLabel = 'للمتطوعين';
+                }
+                
+                card.classList.add(...bgColor.split(' '));
+
+                card.innerHTML = `
+                    <div class="p-4 sm:p-5 flex items-start gap-4">
+                        <!-- Icon Column -->
+                        <div class="shrink-0 pt-1">
+                            <div class="p-2.5 ${iconBg} rounded-2xl border border-white/20 shadow-lg">
+                                <i data-lucide="megaphone" class="w-5 h-5 text-white animate-pulse"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Column -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 rounded-lg bg-white/10 text-[9px] sm:text-[10px] font-black uppercase tracking-wider border border-white/5 whitespace-nowrap">
+                                    إعلان ${targetLabel}
+                                </span>
+                                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                            </div>
+                            <div class="text-sm sm:text-base font-black text-slate-100 leading-relaxed break-words pr-2">
+                                ${b.message}
+                            </div>
+                        </div>
+
+                        <!-- Close Button Column - Integrated in Flex -->
+                        <div class="shrink-0">
+                            <button onclick="this.closest('.pointer-events-auto').remove()" 
+                                    class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all border border-slate-700 hover:border-slate-500 active:scale-95"
+                                    aria-label="إغلاق">
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Decorative progress bar at bottom -->
+                    <div class="h-1 w-full bg-slate-800">
+                        <div class="h-full ${iconBg} opacity-50 transition-all duration-1000" style="width: 100%"></div>
+                    </div>
+                `;
+                broadcastOverlay.appendChild(card);
+                lucide.createIcons();
+                broadcastAudio.play().catch(e => console.log('Broadcast audio failed:', e));
+            }
+
+            // Poll every 15 seconds
+            setInterval(checkBroadcasts, 15000);
+            checkBroadcasts();
+        });
+    </script>
+    {% endif %}
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'Tajawal', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="dark bg-slate-950 text-slate-50 font-sans min-h-screen flex flex-col">
+    <header class="border-b border-white/5 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-30 shadow-2xl shadow-black/20">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="h-10 w-10 rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <img src="{% static 'tech-day.webp' %}" alt="Tech Day" class="h-10 w-10 object-cover">
+                </div>
+                <div class="hidden xs:block">
+                    <div class="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Event Portal</div>
+                    <div class="text-lg font-black text-white leading-none">Tech Day</div>
+                </div>
+            </a>
+
+            <div class="flex items-center gap-2">
+                {% if request.user.is_authenticated %}
+                <!-- Mobile User Info (Condensed) -->
+                <div class="flex items-center gap-2 bg-slate-900/50 p-1 rounded-2xl border border-slate-800/50">
+                    <div class="hidden md:flex flex-col text-right px-3">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase">{{ request.user.username }}</span>
+                        <span class="text-xs font-black text-slate-200">{{ request.user.first_name|default:"المستخدم" }}</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-1">
+                        {% if request.user.is_superuser or request.user.is_staff or request.user.is_admin %}
+                        <a href="{% url 'dashboard:admin_dashboard' %}" title="لوحة التحكم"
+                           class="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 transition-all border border-cyan-500/20">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        </a>
+                        {% endif %}
+                        
+                        {% if request.user.role == 'supervisor' or request.user.is_admin %}
+                        <a href="{% url 'workshops:list' %}" title="لوحة المشرف"
+                           class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-slate-950 transition-all border border-indigo-500/20">
+                            <i data-lucide="book-open" class="w-4 h-4"></i>
+                        </a>
+                        {% endif %}
+                        
+                        {% if request.user.is_volunteer %}
+                        <a href="{% url 'attendance:volunteer_dashboard' %}" title="لوحة المتطوع"
+                           class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all border border-emerald-500/20">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        </a>
+                        {% endif %}
+
+                        <a href="{% url 'users:logout' %}" title="تسجيل الخروج"
+                           class="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-slate-950 transition-all border border-rose-500/20">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <a href="{% url 'users:login' %}"
+                   class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-cyan-500/20">
+                    <i data-lucide="log-in" class="w-4 h-4"></i>
+                    <span>دخول</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            {% if messages %}
+            <div class="mb-6 space-y-3">
+                {% for message in messages %}
+                <div class="p-4 rounded-2xl flex items-center justify-between {% if message.tags == 'error' %}bg-rose-500/10 text-rose-400 border border-rose-500/20{% elif message.tags == 'success' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% else %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% endif %}">
+                    <div class="flex items-center gap-3">
+                        {% if message.tags == 'error' %}
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% elif message.tags == 'success' %}
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% else %}
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% endif %}
+                        <span class="text-sm font-bold">{{ message }}</span>
+                    </div>
+                    <button onclick="this.parentElement.remove()" class="opacity-50 hover:opacity-100 transition-opacity">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <footer class="border-t border-slate-800 bg-slate-900 py-3 mt-4">
+        <div class="max-w-6xl mx-auto px-4 text-center text-sm text-slate-400">
+            من تنفيذ الفريق التقني بالقليوبية
+        </div>
+    </footer>
+
+    {% if request.user.is_authenticated and request.user.is_admin %}
+    <!-- SOS Notification Overlay -->
+    <div id="sos-overlay" class="fixed top-24 right-6 z-[100] w-full max-w-sm pointer-events-none space-y-4"></div>
+    
+    <!-- SOS Audio Alert (High Intensity Alarm) -->
+    <audio id="sos-audio" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sosOverlay = document.getElementById('sos-overlay');
+            const sosAudio = document.getElementById('sos-audio');
+            let seenSosIds = new Set();
+
+            // Request Browser Notification Permission
+            if ("Notification" in window) {
+                if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                    Notification.requestPermission();
+                }
+            }
+
+            function checkSOS() {
+                fetch("{% url 'dashboard:admin_sos_poll' %}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.requests.length > 0) {
+                        data.requests.forEach(req => {
+                            if (!seenSosIds.has(req.id)) {
+                                showSosNotification(req);
+                                seenSosIds.add(req.id);
+                            }
+                        });
+                    }
+                })
+                .catch(err => console.error('SOS Polling Error:', err));
+            }
+
+            function showSosNotification(req) {
+                // 1. Visual Notification (On-page Toast)
+                const toast = document.createElement('div');
+                toast.className = 'pointer-events-auto bg-slate-950 border-2 border-rose-500 rounded-3xl p-6 shadow-[0_0_50px_rgba(244,63,94,0.3)] animate-in slide-in-from-right-full duration-500 group relative overflow-hidden';
+                toast.innerHTML = `
+                    <div class="absolute inset-0 bg-rose-500/5 animate-pulse"></div>
+                    <div class="relative z-10 flex items-start gap-4">
+                        <div class="p-3 bg-rose-500/20 text-rose-500 rounded-2xl animate-bounce">
+                            <i data-lucide="alert-octagon" class="w-8 h-8"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="font-black text-rose-500 text-xl uppercase tracking-tighter">🚨 نداء استغاثة عاجل!</h4>
+                                <span class="text-[10px] font-mono text-slate-500">${req.time}</span>
+                            </div>
+                            <p class="text-white text-base font-black mb-3 leading-tight">${req.message}</p>
+                            ${req.student ? `<p class="text-amber-400 text-xs font-bold mb-3 border-b border-rose-500/20 pb-2">${req.student}</p>` : ''}
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-300 font-black">👤 ${req.supervisor}</span>
+                                <span class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-cyan-400 font-black">📍 ${req.workshop ? 'قاعة: ' + req.room : req.room} ${req.workshop ? '(' + req.workshop + ')' : ''}</span>
+                            </div>
+                            
+                            <!-- Admin Reply Input -->
+                            <div class="mb-3">
+                                <textarea id="sos-reply-${req.id}" placeholder="اكتب ردك السريع هنا..." 
+                                          class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-rose-500/50 transition-all resize-none"></textarea>
+                            </div>
+
+                            <button onclick="markSosSeen(${req.id}, this)" class="w-full py-3 bg-rose-500 hover:bg-rose-400 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-rose-500/20 active:scale-95">
+                                إرسال الرد وإيقاف الإنذار
+                            </button>
+                        </div>
+                    </div>
+                `;
+                sosOverlay.appendChild(toast);
+                lucide.createIcons();
+                
+                // 2. Audio Alert (Looping for urgency)
+                sosAudio.volume = 1.0;
+                sosAudio.loop = true;
+                sosAudio.play().catch(e => {
+                    console.log('Audio play failed (interaction required):', e);
+                    // If audio fails, we can show a small button to "Enable Audio Alerts"
+                });
+
+                // 3. System Push Notification (Works if tab is in background)
+                if ("Notification" in window && Notification.permission === "granted") {
+                    const systemNotif = new Notification("🚨 نداء استغاثة SOS!", {
+                        body: `${req.supervisor} في قاعة ${req.room}: ${req.message}`,
+                        icon: "/static/tech-day.webp",
+                        tag: "sos-" + req.id,
+                        requireInteraction: true // Keeps notification visible until clicked
+                    });
+                    systemNotif.onclick = function() {
+                        window.focus();
+                        this.close();
+                    };
+                }
+            }
+
+            window.markSosSeen = function(id, btn) {
+                const reply = document.getElementById(`sos-reply-${id}`).value;
+                const formData = new FormData();
+                formData.append('id', id);
+                formData.append('reply', reply);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch("{% url 'dashboard:admin_sos_mark_seen' %}", {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const toast = btn.closest('.animate-in');
+                        toast.classList.replace('slide-in-from-right-full', 'slide-out-to-right-full');
+                        setTimeout(() => toast.remove(), 500);
+                        
+                        // Stop audio if no more unread toasts
+                        if (sosOverlay.children.length <= 1) {
+                            sosAudio.pause();
+                            sosAudio.currentTime = 0;
+                        }
+                    }
+                });
+            };
+
+            // Poll every 5 seconds for higher frequency
+            setInterval(checkSOS, 5000);
+            checkSOS();
+        });
+    </script>
+    {% elif request.user.is_authenticated %}
+    <!-- SOS Reply Notification Overlay (For Supervisors/Volunteers) -->
+    <div id="sos-reply-overlay" class="fixed top-24 left-6 z-[100] w-full max-w-sm pointer-events-none space-y-4"></div>
+    
+    <!-- Reply Audio Alert -->
+    <audio id="reply-audio" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const replyOverlay = document.getElementById('sos-reply-overlay');
+            const replyAudio = document.getElementById('reply-audio');
+            let seenReplyIds = new Set();
+
+            function checkReplies() {
+                fetch("{% url 'dashboard:user_sos_poll_replies' %}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.replies.length > 0) {
+                        data.replies.forEach(reply => {
+                            if (!seenReplyIds.has(reply.id)) {
+                                showReplyNotification(reply);
+                                seenReplyIds.add(reply.id);
+                            }
+                        });
+                    }
+                })
+                .catch(err => console.error('Reply Polling Error:', err));
+            }
+
+            function showReplyNotification(reply) {
+                const toast = document.createElement('div');
+                toast.className = 'pointer-events-auto bg-slate-900 border-2 border-cyan-500 rounded-3xl p-6 shadow-2xl shadow-cyan-500/20 animate-in slide-in-from-left-full duration-500';
+                toast.innerHTML = `
+                    <div class="flex items-start gap-4">
+                        <div class="p-3 bg-cyan-500/20 text-cyan-400 rounded-2xl">
+                            <i data-lucide="message-square" class="w-6 h-6"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="font-black text-white text-lg">رد الإدارة</h4>
+                                <span class="text-[10px] font-mono text-slate-500">${reply.time}</span>
+                            </div>
+                            <p class="text-slate-300 text-sm font-bold mb-3">${reply.reply}</p>
+                            <div class="mb-4">
+                                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest block mb-1">بخصوص نداء:</span>
+                                <p class="text-[11px] text-slate-400 italic">"${reply.original_message}"</p>
+                            </div>
+                            <button onclick="markReplySeen(${reply.id}, this)" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-black transition-all">
+                                حسناً / إغلاق
+                            </button>
+                        </div>
+                    </div>
+                `;
+                replyOverlay.appendChild(toast);
+                lucide.createIcons();
+                replyAudio.play().catch(e => console.log('Reply audio failed:', e));
+            }
+
+            window.markReplySeen = function(id, btn) {
+                const formData = new FormData();
+                formData.append('id', id);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch("{% url 'dashboard:user_sos_mark_reply_seen' %}", {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const toast = btn.closest('.animate-in');
+                        toast.classList.replace('slide-in-from-left-full', 'slide-out-to-left-full');
+                        setTimeout(() => toast.remove(), 500);
+                    }
+                });
+            };
+
+            // Poll every 10 seconds
+            setInterval(checkReplies, 10000);
+            checkReplies();
+        });
+    </script>
+    {% endif %}
+
+    <script>
+        lucide.createIcons();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

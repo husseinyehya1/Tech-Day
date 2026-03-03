@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .header { background: #0f172a; color: #ffffff; padding: 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; color: #06b6d4; }
+        .content { padding: 40px; text-align: right; }
+        .content h2 { color: #0f172a; font-size: 20px; margin-bottom: 20px; }
+        .content p { font-size: 16px; margin-bottom: 15px; }
+        .button-container { text-align: center; margin: 30px 0; }
+        .button { background: #06b6d4; color: #ffffff; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: bold; display: inline-block; }
+        .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+        .note { font-size: 13px; color: #94a3b8; font-style: italic; margin-top: 20px; border-right: 3px solid #e2e8f0; padding-right: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Tech Day - EduTech Egypt</h1>
+        </div>
+        <div class="content">
+            <h2>مرحباً {{ student.name }}،</h2>
+            <p>تهانينا على مشاركتك الفعالة في حدث <strong>Tech Day</strong>.</p>
+            <p>بناءً على طلبك، نرسل لك رابط الوصول المباشر لشهادة الحضور والتقدير الخاصة بك.</p>
+            
+            <div class="button-container">
+                <a href="{{ site_url }}{% url 'students:certificate' student.student_id %}" class="button">عرض وتحميل الشهادة</a>
+            </div>
+            
+            <p>يمكنك أيضاً التحقق من صحة الشهادة عبر الرابط التالي:</p>
+            <p><a href="{{ site_url }}{% url 'students:verify' student.student_id %}" style="color: #06b6d4;">رابط التحقق من الشهادة</a></p>
+            
+            <div class="note">
+                ملاحظة: تم إرسال هذا البريد بناءً على طلبك من لوحة التحكم الخاصة بك. يمكنك طلب إرسال الشهادة حتى 3 مرات بحد أقصى.
+            </div>
+        </div>
+        <div class="footer">
+            جميع الحقوق محفوظة &copy; 2026 - فريق EduTech Egypt التقني بالقليوبية
+        </div>
+    </div>
+</body>
+</html>

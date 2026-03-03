@@ -1,0 +1,122 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}سجل العمليات - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="space-y-8 pb-12">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
+                    <i data-lucide="activity" class="w-6 h-6 text-cyan-400"></i>
+                </div>
+                <h1 class="text-3xl font-black text-white tracking-tight">سجل العمليات</h1>
+            </div>
+            <p class="text-slate-400 text-sm mr-12">تتبع شامل لكافة التحركات والنشاطات التي تمت داخل النظام.</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="hidden md:flex flex-col items-end">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Logs</span>
+                <span class="text-lg font-black text-white">{{ logs|length }} عملية</span>
+            </div>
+            <div class="w-px h-8 bg-slate-800 hidden md:block mx-2"></div>
+            <button onclick="window.location.reload()" class="p-2.5 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 rounded-xl border border-slate-700/50 transition-all group" title="تحديث السجل">
+                <i data-lucide="refresh-cw" class="w-5 h-5 group-hover:rotate-180 transition-transform duration-500"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Logs Table Card -->
+    <div class="relative group">
+        <!-- Decorative Glow -->
+        <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 rounded-[2rem] blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
+        
+        <div class="relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-[2rem] overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-separate border-spacing-0">
+                    <thead>
+                        <tr class="bg-slate-950/50">
+                            <th class="px-8 py-5 text-right text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-800/50">
+                                التاريخ والوقت
+                            </th>
+                            <th class="px-8 py-5 text-right text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-800/50">
+                                تفاصيل العملية والنشاط
+                            </th>
+                            <th class="px-8 py-5 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-800/50 w-24">
+                                الحالة
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/30">
+                        {% for log in logs %}
+                        <tr class="hover:bg-slate-800/20 transition-all group/row">
+                            <td class="px-8 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 bg-slate-800/50 rounded-lg border border-slate-700/30 group-hover/row:border-cyan-500/30 transition-colors">
+                                        <i data-lucide="calendar" class="w-4 h-4 text-slate-400 group-hover/row:text-cyan-400 transition-colors"></i>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-slate-200 group-hover/row:text-white transition-colors">{{ log.created_at|date:"Y-m-d" }}</span>
+                                        <span class="text-[10px] text-slate-500 font-medium tracking-tighter">{{ log.created_at|date:"H:i:s" }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-8 py-4">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-1 flex-shrink-0">
+                                        <div class="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)] group-hover/row:scale-125 transition-transform"></div>
+                                    </div>
+                                    <div class="flex flex-col gap-1">
+                                        <span class="text-sm text-slate-300 leading-relaxed group-hover/row:text-slate-100 transition-colors">
+                                            {{ log.action }}
+                                        </span>
+                                        {% if "تعديل" in log.action or "حذف" in log.action %}
+                                            <span class="text-[9px] font-black text-amber-500/80 uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-full w-fit border border-amber-500/20">Modification</span>
+                                        {% elif "إضافة" in log.action or "إنشاء" in log.action %}
+                                            <span class="text-[9px] font-black text-emerald-500/80 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-full w-fit border border-emerald-500/20">Creation</span>
+                                        {% else %}
+                                            <span class="text-[9px] font-black text-cyan-500/80 uppercase tracking-widest bg-cyan-500/10 px-2 py-0.5 rounded-full w-fit border border-cyan-500/20">System Action</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-8 py-4 text-center">
+                                <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="px-8 py-20 text-center">
+                                <div class="flex flex-col items-center gap-4 opacity-40">
+                                    <div class="p-6 bg-slate-800/30 rounded-full border border-slate-700/30">
+                                        <i data-lucide="clipboard-list" class="w-12 h-12 text-slate-500"></i>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-slate-300 font-bold">لا توجد سجلات حالياً</p>
+                                        <p class="text-slate-500 text-xs">سيتم تسجيل كافة العمليات المستقبلية هنا تلقائياً.</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Footer Info -->
+            <div class="px-8 py-4 bg-slate-950/30 border-t border-slate-800/50 flex items-center justify-between">
+                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">End of activity log</span>
+                <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-[10px] text-emerald-500/80 font-bold">System Online</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

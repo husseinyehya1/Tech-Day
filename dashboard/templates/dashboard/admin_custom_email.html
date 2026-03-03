@@ -1,0 +1,183 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}إرسال بريد مخصص - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-5xl mx-auto space-y-8 pb-12">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
+                    <i data-lucide="mail-plus" class="w-6 h-6 text-cyan-400"></i>
+                </div>
+                <h1 class="text-3xl font-black text-white tracking-tight">إرسال بريد مخصص</h1>
+            </div>
+            <p class="text-slate-400 text-sm mr-12">قم بصياغة وإرسال رسائل بريد إلكتروني مخصصة للمشاركين والمشرفين.</p>
+        </div>
+        <a href="{% url 'dashboard:admin_dashboard' %}"
+           class="group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 text-sm font-bold text-slate-300 transition-all">
+            <i data-lucide="chevron-right" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i>
+            رجوع للوحة التحكم
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="relative group">
+        {% csrf_token %}
+        
+        <!-- Decorative Glow -->
+        <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-[2.5rem] blur-xl opacity-50"></div>
+        
+        <div class="relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-[2.5rem] p-8 space-y-8">
+            
+            <!-- Recipients Section -->
+            <div class="grid gap-8 lg:grid-cols-5">
+                <div class="lg:col-span-3 space-y-4">
+                    <div class="flex items-center gap-2 px-1">
+                        <i data-lucide="users" class="w-4 h-4 text-cyan-400"></i>
+                        <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="to">المستلمون</label>
+                    </div>
+                    <div class="relative group/input">
+                        <input id="to" name="to" type="text" required value="{{ initial_to }}"
+                               class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-5 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all placeholder:text-slate-600"
+                               placeholder="user1@example.com, user2@example.com">
+                        <div class="absolute left-4 top-1/2 -translate-y-1/2">
+                            <i data-lucide="at-sign" class="w-4 h-4 text-slate-600 group-focus-within/input:text-cyan-400 transition-colors"></i>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 font-medium px-2">
+                        * افصل بين العناوين بفاصلة (,) للإرسال المتعدد.
+                    </p>
+                </div>
+
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex items-center gap-2 px-1">
+                        <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+                        <span class="text-sm font-black text-slate-200 uppercase tracking-widest">اختصارات سريعة</span>
+                    </div>
+                    <div class="bg-slate-950/30 rounded-2xl border border-slate-800/50 p-4 space-y-4">
+                        <!-- Student Code Search -->
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mr-1">بحث بكود الطالب</label>
+                            <div class="flex items-center gap-2">
+                                <div class="relative flex-1 group/search">
+                                    <input type="text" name="student_code_search" 
+                                           class="w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                                           placeholder="أدخل كود الطالب...">
+                                    <div class="absolute left-2.5 top-1/2 -translate-y-1/2">
+                                        <i data-lucide="search" class="w-3 h-3 text-slate-600 group-focus-within/search:text-cyan-400"></i>
+                                    </div>
+                                </div>
+                                <button type="submit" name="fill" value="search_code" formnovalidate
+                                        class="p-2 bg-slate-800 hover:bg-cyan-500 hover:text-slate-950 text-slate-300 rounded-xl border border-slate-700/50 transition-all"
+                                        title="إضافة بريد الطالب">
+                                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="w-full h-px bg-slate-800/30"></div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button type="submit" name="fill" value="students" formnovalidate
+                                    class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-cyan-500 hover:text-slate-950 text-xs font-bold text-slate-300 border border-slate-700/50 transition-all">
+                                <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i>
+                                الطلاب
+                            </button>
+                            <button type="submit" name="fill" value="supervisors" formnovalidate
+                                    class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/50 hover:bg-emerald-500 hover:text-slate-950 text-xs font-bold text-slate-300 border border-slate-700/50 transition-all">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                                المشرفين
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select name="preset_group_id"
+                                    class="flex-1 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
+                                <option value="">اختر مجموعة...</option>
+                                {% for group in groups %}
+                                <option value="{{ group.id }}">{{ group.name }} ({{ group.code }})</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" name="fill" value="group" formnovalidate
+                                    class="p-2 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-slate-950 text-slate-300 border border-slate-700/50 transition-all"
+                                    title="إضافة طلاب المجموعة">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject & Attachment -->
+            <div class="grid gap-8 md:grid-cols-2">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 px-1">
+                        <i data-lucide="type" class="w-4 h-4 text-cyan-400"></i>
+                        <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="subject">عنوان الرسالة</label>
+                    </div>
+                    <input id="subject" name="subject" type="text" required value="{{ subject }}"
+                           class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-5 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                           placeholder="أدخل عنواناً واضحاً للرسالة">
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 px-1">
+                        <i data-lucide="paperclip" class="w-4 h-4 text-cyan-400"></i>
+                        <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="attachment">المرفقات</label>
+                    </div>
+                    <div class="relative group/file">
+                        <input id="attachment" name="attachment" type="file"
+                               class="block w-full text-sm text-slate-500 file:mr-4 file:py-4 file:px-6 file:rounded-2xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-slate-800 file:text-cyan-400 hover:file:bg-cyan-500 hover:file:text-slate-950 file:transition-all cursor-pointer bg-slate-950/50 border border-slate-800 rounded-2xl">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Body -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 px-1">
+                    <i data-lucide="align-right" class="w-4 h-4 text-cyan-400"></i>
+                    <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="body">محتوى الرسالة</label>
+                </div>
+                <div class="relative">
+                    <textarea id="body" name="body" rows="12" required
+                              class="w-full rounded-3xl bg-slate-950/50 border border-slate-800 px-6 py-6 text-sm text-slate-200 leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                              placeholder="اكتب محتوى البريد هنا... يمكنك استخدام أسطر جديدة لتنسيق الفقرات.">{{ body }}</textarea>
+                    <div class="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                        <i data-lucide="info" class="w-3 h-3"></i>
+                        تنسيق تلقائي
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Footer -->
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-slate-800/50">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-950/50 border border-slate-800 flex items-center justify-center text-slate-500">
+                        <i data-lucide="info" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">إرسال من</span>
+                        <span class="text-xs font-mono text-cyan-400">{{ DEFAULT_FROM_EMAIL }}</span>
+                    </div>
+                </div>
+                
+                <button type="submit"
+                        class="group relative inline-flex items-center gap-3 px-10 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:-translate-y-1 overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:animate-shimmer"></div>
+                    <span>إرسال الرسالة الآن</span>
+                    <i data-lucide="send" class="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+@keyframes shimmer {
+    100% { transform: translateX(100%); }
+}
+.animate-shimmer {
+    animation: shimmer 1.5s infinite;
+}
+</style>
+{% endblock %}
+

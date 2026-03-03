@@ -1,0 +1,781 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <title>شهادة مشاركة - {{ event.name }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0mm;
+        }
+        html, body {
+            height: 100%;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        :root {
+            --bg-start: #ffffff;
+            --bg-end: #e9fbff;
+            --gradient-mid: #f0faff;
+            --accent: #0ea5c7;
+            --accent-2: #6f42c1;
+            --accent-3: #10b981;
+            --text-main: #0b2635;
+            --muted: #6b7280;
+            --shadow-glow: rgba(14, 165, 199, 0.5);
+            --border-radius: 14px;
+            --wave-dark-1: #0369a1;
+            --wave-dark-2: #075985;
+        }
+        @font-face {
+            font-family: "KhodkarSign";
+            src: url("{% static 'pHalls-Khodkar-phalls.com_.ttf' %}") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: "ShekariName";
+            src: url("{% static 'shekari.ttf' %}") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Cairo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            direction: rtl;
+            background: #ffffff;
+            color: var(--text-main);
+            font-size: 14pt;
+        }
+        .certificate {
+            border: 2px solid #0ea5c7;
+            border-radius: 0;
+            padding: 16mm 20mm;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--gradient-mid) 25%, #f5fcff 50%, var(--gradient-mid) 75%, var(--bg-end) 100%);
+        }
+        .certificate::before {
+            content: "";
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 3px solid var(--accent);
+            border-radius: var(--border-radius);
+            pointer-events: none;
+            z-index: 10;
+            box-shadow: 0 0 30px rgba(14, 165, 199, 0.3), inset 0 0 30px rgba(14, 165, 199, 0.08);
+        }
+        .certificate::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse at top right, rgba(111, 66, 193, 0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, rgba(14, 165, 199, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 180px;
+            font-weight: 800;
+            color: var(--accent);
+            opacity: 0.015;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .wave-pattern {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .wave-pattern svg {
+            width: 100%;
+            display: block;
+        }
+        .wave-pattern.wave-1 {
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            opacity: 0.2;
+        }
+        .wave-pattern.wave-2 {
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            height: 120px;
+            opacity: 0.18;
+        }
+        .geo-decor {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .geo-decor svg {
+            width: 100%;
+            height: 100%;
+        }
+        .geo-decor.top-left {
+            top: 50px;
+            left: 50px;
+            width: 200px;
+            height: 200px;
+        }
+        .geo-decor.top-right {
+            top: 60px;
+            right: 60px;
+            width: 180px;
+            height: 180px;
+        }
+        .geo-decor.bottom-left {
+            bottom: 80px;
+            left: 40px;
+            width: 150px;
+            height: 150px;
+        }
+        .geo-decor.bottom-right {
+            bottom: 60px;
+            right: 50px;
+            width: 160px;
+            height: 160px;
+        }
+        .flow-lines {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .flow-lines.left {
+            left: 0;
+            top: 20%;
+            width: 100px;
+            height: 300px;
+            opacity: 0.12;
+        }
+        .flow-lines.right {
+            right: 0;
+            bottom: 20%;
+            width: 100px;
+            height: 280px;
+            opacity: 0.12;
+        }
+        .flow-lines svg {
+            width: 100%;
+            height: 100%;
+        }
+        .circle-decor {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .circle-decor.c1 {
+            top: 15%;
+            left: 20%;
+            width: 80px;
+            height: 80px;
+            border: 2px solid var(--wave-dark-1);
+            opacity: 0.1;
+        }
+        .circle-decor.c2 {
+            bottom: 25%;
+            right: 22%;
+            width: 70px;
+            height: 70px;
+            border: 2px dashed var(--wave-dark-1);
+            opacity: 0.12;
+        }
+        .circle-decor.c3 {
+            top: 40%;
+            right: 15%;
+            width: 50px;
+            height: 50px;
+            border: 1.5px solid var(--accent-2);
+            opacity: 0.1;
+        }
+        .circle-decor.c4 {
+            bottom: 40%;
+            left: 18%;
+            width: 60px;
+            height: 60px;
+            border: 1.5px dashed var(--accent-3);
+            opacity: 0.1;
+        }
+        .dotted-waves {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.12;
+        }
+        .dotted-waves.dw1 {
+            top: 30%;
+            left: 5%;
+            width: 150px;
+            height: 100px;
+        }
+        .dotted-waves.dw2 {
+            bottom: 35%;
+            right: 5%;
+            width: 140px;
+            height: 90px;
+        }
+        .dotted-waves svg {
+            width: 100%;
+            height: 100%;
+        }
+        .corner-decor {
+            position: absolute;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .corner-decor.top-left {
+            top: 15px;
+            left: 15px;
+        }
+        .corner-decor.top-right {
+            top: 15px;
+            right: 15px;
+        }
+        .corner-decor.bottom-left {
+            bottom: 15px;
+            left: 15px;
+        }
+        .corner-decor.bottom-right {
+            bottom: 15px;
+            right: 15px;
+        }
+        .corner-decor svg {
+            width: 120px;
+            height: 120px;
+            opacity: 0.4;
+        }
+        .tech-bg-icon {
+            position: absolute;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.28;
+        }
+        .tech-bg-icon.robot-left {
+            left: 5%;
+            top: 35%;
+            transform: translateY(-50%);
+        }
+        .tech-bg-icon.robot-left svg {
+            width: 200px;
+            height: 200px;
+        }
+        .tech-bg-icon.computer-right {
+            right: 5%;
+            top: 40%;
+            transform: translateY(-50%);
+        }
+        .tech-bg-icon.computer-right svg {
+            width: 180px;
+            height: 180px;
+        }
+        .tech-bg-icon.coding-top {
+            top: 8%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .tech-bg-icon.coding-top svg {
+            width: 100px;
+            height: 100px;
+        }
+        .tech-bg-icon.workshop {
+            bottom: 12%;
+            left: 12%;
+        }
+        .tech-bg-icon.workshop svg {
+            width: 120px;
+            height: 120px;
+        }
+        .tech-bg-icon.innovation {
+            bottom: 15%;
+            right: 12%;
+        }
+        .tech-bg-icon.innovation svg {
+            width: 110px;
+            height: 110px;
+        }
+        .tech-bg-icon.gear {
+            top: 65%;
+            left: 15%;
+        }
+        .tech-bg-icon.gear svg {
+            width: 90px;
+            height: 90px;
+            animation: rotateGear 20s linear infinite;
+        }
+        @keyframes rotateGear {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .tech-bg-icon.circuit {
+            top: 12%;
+            right: 18%;
+        }
+        .tech-bg-icon.circuit svg {
+            width: 130px;
+            height: 130px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10mm;
+            position: relative;
+            z-index: 15;
+        }
+        .logo-circle {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 0 35px rgba(14, 165, 199, 0.4), 0 6px 20px rgba(0, 0, 0, 0.12);
+            position: relative;
+            z-index: 16;
+        }
+        .logo-circle::before {
+            content: "";
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            border: 2.5px solid transparent;
+            border-top-color: var(--accent-2);
+            border-right-color: var(--accent);
+            border-bottom-color: var(--accent-3);
+            border-left-color: var(--accent);
+            animation: logoSpin 6s linear infinite;
+        }
+        @keyframes logoSpin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        .logo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            position: relative;
+            z-index: 1;
+            display: block;
+        }
+        .title-block {
+            text-align: center;
+            flex: 1;
+            padding: 0 10mm;
+        }
+        .title-main {
+            margin: 0;
+            font-size: 42pt;
+            font-weight: 800;
+            color: #0b2635;
+        }
+        .title-sub {
+            margin-top: 6px;
+            font-size: 18pt;
+            color: #64748b;
+        }
+        .content {
+            text-align: center;
+            margin-bottom: 14mm;
+            position: relative;
+            z-index: 15;
+        }
+        .paragraph {
+            font-size: 16pt;
+            line-height: 2;
+            color: #111827;
+            max-width: 90%;
+            margin: 0 auto;
+        }
+        .student-name {
+            margin-top: 10mm;
+            margin-bottom: 5mm;
+            font-size: 34pt;
+            font-weight: 800;
+            color: #0ea5c7;
+            font-family: "ShekariName", "Cairo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .school {
+            font-size: 16pt;
+            color: #0b2635;
+            margin-bottom: 8mm;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: relative;
+            z-index: 15;
+            padding-top: 6mm;
+            gap: 18mm;
+        }
+        .qr-box {
+            text-align: center;
+            min-width: 32mm;
+            flex: 0 0 auto;
+            margin-top: -5mm;
+        }
+        .qr-img {
+            width: 110px;
+            height: 110px;
+            border: 1px solid #0ea5c7;
+            padding: 4px;
+        }
+        .qr-caption {
+            font-size: 12pt;
+            color: #111827;
+            margin-top: 4px;
+        }
+        .signatures {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        .sig {
+            display: table-cell;
+            text-align: center;
+            padding: 0 6mm;
+        }
+        .footer > div:last-child {
+            flex: 1 1 auto;
+        }
+        .sig-line {
+            border-bottom: 1px solid #94a3b8;
+            margin-bottom: 2mm;
+            margin-top: 4mm;
+        }
+        .sig-role,
+        .sig-name {
+            font-size: 13pt;
+            color: #111827;
+        }
+        .sig-role {
+            font-weight: 600;
+        }
+        .sig-name {
+            margin-top: 1mm;
+            font-weight: 600;
+            font-family: "KhodkarSign", "Cairo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .code {
+            font-size: 9pt;
+            color: #6b7280;
+            text-align: left;
+            margin-top: 4mm;
+        }
+    </style>
+</head>
+<body>
+    <div class="certificate">
+        <div class="wave-pattern wave-1" aria-hidden="true">
+            <svg viewBox="0 0 1200 150" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,80 C200,150 400,20 600,80 C800,140 1000,30 1200,90 L1200,150 L0,150 Z" fill="#0369a1"/>
+            </svg>
+        </div>
+        <div class="wave-pattern wave-2" aria-hidden="true">
+            <svg viewBox="0 0 1200 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,60 C150,100 350,20 500,70 C650,120 850,30 1000,80 C1100,110 1150,60 1200,70 L1200,120 L0,120 Z" fill="#075985"/>
+            </svg>
+        </div>
+        <div class="geo-decor top-left" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0369a1" stroke-width="1.5" opacity="0.5">
+                    <circle cx="100" cy="100" r="80"/>
+                    <circle cx="100" cy="100" r="60"/>
+                    <circle cx="100" cy="100" r="40"/>
+                    <circle cx="100" cy="100" r="20"/>
+                </g>
+            </svg>
+        </div>
+        <div class="geo-decor top-right" aria-hidden="true">
+            <svg viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#075985" stroke-width="1.5" opacity="0.5">
+                    <polygon points="90,10 170,55 170,125 90,170 10,125 10,55"/>
+                    <polygon points="90,30 150,65 150,115 90,150 30,115 30,65"/>
+                    <polygon points="90,50 130,75 130,105 90,130 50,105 50,75"/>
+                </g>
+            </svg>
+        </div>
+        <div class="geo-decor bottom-left" aria-hidden="true">
+            <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0369a1" stroke-width="1.5" opacity="0.4">
+                    <path d="M10,75 L75,10 L140,75 L75,140 Z"/>
+                    <path d="M25,75 L75,25 L125,75 L75,125 Z"/>
+                    <circle cx="75" cy="75" r="15"/>
+                </g>
+            </svg>
+        </div>
+        <div class="geo-decor bottom-right" aria-hidden="true">
+            <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#075985" stroke-width="1.5" opacity="0.5">
+                    <rect x="20" y="20" width="120" height="120" rx="10" transform="rotate(15 80 80)"/>
+                    <rect x="35" y="35" width="90" height="90" rx="8" transform="rotate(15 80 80)"/>
+                </g>
+            </svg>
+        </div>
+        <div class="flow-lines left" aria-hidden="true">
+            <svg viewBox="0 0 100 300" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0369a1" stroke-width="2" opacity="0.6">
+                    <path d="M20,0 Q60,75 20,150 Q-20,225 20,300"/>
+                    <path d="M50,0 Q90,75 50,150 Q10,225 50,300"/>
+                    <path d="M80,0 Q40,75 80,150 Q120,225 80,300"/>
+                </g>
+            </svg>
+        </div>
+        <div class="flow-lines right" aria-hidden="true">
+            <svg viewBox="0 0 100 280" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#075985" stroke-width="2" opacity="0.6">
+                    <path d="M80,0 Q40,70 80,140 Q120,210 80,280"/>
+                    <path d="M50,0 Q10,70 50,140 Q90,210 50,280"/>
+                    <path d="M20,0 Q60,70 20,140 Q-20,210 20,280"/>
+                </g>
+            </svg>
+        </div>
+        <div class="circle-decor c1" aria-hidden="true"></div>
+        <div class="circle-decor c2" aria-hidden="true"></div>
+        <div class="circle-decor c3" aria-hidden="true"></div>
+        <div class="circle-decor c4" aria-hidden="true"></div>
+        <div class="dotted-waves dw1" aria-hidden="true">
+            <svg viewBox="0 0 150 100" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0369a1" stroke-width="2" stroke-dasharray="5,5" opacity="0.7">
+                    <path d="M0,30 Q75,0 150,30"/>
+                    <path d="M0,50 Q75,20 150,50"/>
+                    <path d="M0,70 Q75,40 150,70"/>
+                    <path d="M0,90 Q75,60 150,90"/>
+                </g>
+            </svg>
+        </div>
+        <div class="dotted-waves dw2" aria-hidden="true">
+            <svg viewBox="0 0 140 90" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#075985" stroke-width="2" stroke-dasharray="5,5" opacity="0.7">
+                    <path d="M0,20 Q70,50 140,20"/>
+                    <path d="M0,40 Q70,70 140,40"/>
+                    <path d="M0,60 Q70,90 140,60"/>
+                    <path d="M0,80 Q70,110 140,80"/>
+                </g>
+            </svg>
+        </div>
+        <div class="watermark" aria-hidden="true">EDU-TECH</div>
+        <div class="corner-decor top-left" aria-hidden="true">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="1.5" opacity="0.7">
+                    <path d="M0 60 L60 60 L60 0"/>
+                    <path d="M0 90 L30 90 L30 0"/>
+                    <circle cx="60" cy="60" r="4" fill="#0ea5c7"/>
+                    <circle cx="30" cy="90" r="3" fill="#6f42c1"/>
+                    <rect x="40" y="40" width="40" height="40" rx="3" opacity="0.4"/>
+                </g>
+            </svg>
+        </div>
+        <div class="corner-decor top-right" aria-hidden="true">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="1.5" opacity="0.7">
+                    <path d="M120 60 L60 60 L60 0"/>
+                    <path d="M120 90 L90 90 L90 0"/>
+                    <circle cx="60" cy="60" r="4" fill="#0ea5c7"/>
+                    <circle cx="90" cy="90" r="3" fill="#6f42c1"/>
+                    <rect x="40" y="40" width="40" height="40" rx="3" opacity="0.4"/>
+                </g>
+            </svg>
+        </div>
+        <div class="corner-decor bottom-left" aria-hidden="true">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="1.5" opacity="0.7">
+                    <path d="M0 60 L60 60 L60 120"/>
+                    <path d="M0 30 L30 30 L30 120"/>
+                    <circle cx="60" cy="60" r="4" fill="#0ea5c7"/>
+                    <circle cx="30" cy="30" r="3" fill="#10b981"/>
+                    <rect x="40" y="40" width="40" height="40" rx="3" opacity="0.4"/>
+                </g>
+            </svg>
+        </div>
+        <div class="corner-decor bottom-right" aria-hidden="true">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="1.5" opacity="0.7">
+                    <path d="M120 60 L60 60 L60 120"/>
+                    <path d="M120 30 L90 30 L90 120"/>
+                    <circle cx="60" cy="60" r="4" fill="#0ea5c7"/>
+                    <circle cx="90" cy="30" r="3" fill="#10b981"/>
+                    <rect x="40" y="40" width="40" height="40" rx="3" opacity="0.4"/>
+                </g>
+            </svg>
+        </div>
+        <div class="tech-bg-icon robot-left" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="2">
+                    <rect x="50" y="30" width="100" height="80" rx="10"/>
+                    <circle cx="100" cy="20" r="8"/>
+                    <line x1="100" y1="28" x2="100" y2="30"/>
+                    <circle cx="75" cy="60" r="12"/>
+                    <circle cx="125" cy="60" r="12"/>
+                    <circle cx="75" cy="60" r="6" fill="#0ea5c7"/>
+                    <circle cx="125" cy="60" r="6" fill="#0ea5c7"/>
+                    <rect x="70" y="85" width="60" height="8" rx="4"/>
+                    <rect x="60" y="115" width="80" height="60" rx="5"/>
+                    <rect x="30" y="120" width="25" height="50" rx="5"/>
+                    <rect x="145" y="120" width="25" height="50" rx="5"/>
+                    <circle cx="80" cy="140" r="6" fill="#6f42c1" opacity="0.6"/>
+                    <circle cx="100" cy="140" r="6" fill="#0ea5c7" opacity="0.6"/>
+                    <circle cx="120" cy="140" r="6" fill="#10b981" opacity="0.6"/>
+                </g>
+            </svg>
+        </div>
+        <div class="tech-bg-icon computer-right" aria-hidden="true">
+            <svg viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="2">
+                    <rect x="25" y="20" width="130" height="90" rx="5"/>
+                    <rect x="35" y="30" width="110" height="70" rx="3"/>
+                    <line x1="45" y1="50" x2="105" y2="50" stroke-width="3"/>
+                    <line x1="45" y1="65" x2="90" y2="65" stroke-width="3"/>
+                    <line x1="45" y1="80" x2="120" y2="80" stroke-width="3"/>
+                    <path d="M20 115 L160 115 L150 160 L30 160 Z" fill="white"/>
+                    <path d="M20 115 L160 115 L150 160 L30 160 Z"/>
+                    <circle cx="90" cy="137" r="6" fill="#6f42c1" opacity="0.6"/>
+                </g>
+            </svg>
+        </div>
+        <div class="tech-bg-icon coding-top" aria-hidden="true">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="2">
+                    <path d="M30 30 L10 50 L30 70"/>
+                    <path d="M70 30 L90 50 L70 70"/>
+                    <path d="M55 20 L45 80" stroke="#6f42c1"/>
+                </g>
+            </svg>
+        </div>
+        <div class="tech-bg-icon workshop" aria-hidden="true">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="2">
+                    <circle cx="60" cy="60" r="40"/>
+                    <circle cx="60" cy="60" r="25"/>
+                    <circle cx="60" cy="60" r="10" fill="#0ea5c7" opacity="0.5"/>
+                    <path d="M60 15 L60 5"/>
+                    <path d="M60 115 L60 105"/>
+                    <path d="M15 60 L5 60"/>
+                    <path d="M115 60 L105 60"/>
+                </g>
+            </svg>
+        </div>
+        <div class="tech-bg-icon innovation" aria-hidden="true">
+            <svg viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#10b981" stroke-width="2">
+                    <path d="M55 10 L55 30"/>
+                    <path d="M55 80 L55 100"/>
+                    <path d="M10 55 L30 55"/>
+                    <path d="M80 55 L100 55"/>
+                    <circle cx="55" cy="55" r="20"/>
+                    <circle cx="55" cy="55" r="35" stroke="#0ea5c7" stroke-dasharray="5,5"/>
+                </g>
+            </svg>
+        </div>
+        <div class="tech-bg-icon gear" aria-hidden="true">
+            <svg viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#6f42c1" stroke-width="2">
+                    <circle cx="45" cy="45" r="20"/>
+                    <circle cx="45" cy="45" r="8" fill="#6f42c1" opacity="0.5"/>
+                    <path d="M45 5 L50 20 L40 20 Z"/>
+                    <path d="M45 85 L40 70 L50 70 Z"/>
+                    <path d="M5 45 L20 50 L20 40 Z"/>
+                    <path d="M85 45 L70 40 L70 50 Z"/>
+                </g>
+            </svg>
+        </div>
+        <div class="tech-bg-icon circuit" aria-hidden="true">
+            <svg viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="#0ea5c7" stroke-width="2">
+                    <rect x="20" y="20" width="90" height="90" rx="5"/>
+                    <circle cx="65" cy="65" r="25"/>
+                    <circle cx="65" cy="65" r="10" fill="#0ea5c7" opacity="0.5"/>
+                    <path d="M65 20 L65 40"/>
+                    <path d="M65 90 L65 110"/>
+                    <path d="M20 65 L40 65"/>
+                    <path d="M90 65 L110 65"/>
+                </g>
+            </svg>
+        </div>
+        <div class="header">
+            <div class="logo-circle">
+                <img src="https://td.edutech-egy.com/static/Ministry_of_Education_(Egypt)_logo.png" alt="شعار وزارة التربية والتعليم">
+            </div>
+            <div class="title-block">
+                <h1 class="title-main">شهادة مشاركة </h1>
+                
+            </div>
+            <div class="logo-circle">
+                <img src="https://td.edutech-egy.com/static/edutech-logo.png" alt="شعار EDU-TECH">
+            </div>
+        </div>
+        <div class="content">
+            <div class="paragraph">
+                يَسُرُّ الفريق التقني بتعليم القليوبية منح هذه الشهادة للطالب/ة
+            </div>
+            <div class="student-name">{{ student.name }}</div>
+            <div class="school">ب{{ student.school|default:"غير محددة" }}</div>
+            <div class="paragraph">
+                تُمنح هذه الشهادة تقديراً لمشاركته/مشاركتها في فعاليات يوم تكنولوجي، الذي نظمته مديرية التربية والتعليم بالقليوبية وفريق EDU-TECH{% if event.location_name %} في {{ event.location_name }}{% endif %}{% if event.start_datetime %} بتاريخ {{ event.start_datetime|date:"Y/m/d" }}{% endif %}. تعكس هذه الشهادة حماس المُشارك واستعداده لاستكشاف مهارات التكنولوجيا الرقمية.
+            </div>
+        </div>
+        <div class="footer">
+            <div class="qr-box">
+                <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data={{ qr_payload|urlencode }}" alt="رمز التحقق">
+                <div class="qr-caption">رمز التحقق</div>
+            </div>
+            <div>
+                <div class="signatures">
+                    <div class="sig">
+                        <div class="sig-role">قائد الفريق</div>
+                        <div class="sig-line"></div>
+                        <div class="sig-name">حسين يحيي</div>
+                    </div>
+                    <div class="sig">
+                        <div class="sig-role">الموجه العام</div>
+                        <div class="sig-line"></div>
+                        <div class="sig-name">د/ جيهان محمد </div>
+                    </div>
+                    <div class="sig">
+                        <div class="sig-role">مدير المديرية</div>
+                        <div class="sig-line"></div>
+                        <div class="sig-name">د/ ياسر محمود</div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</body>
+</html>
