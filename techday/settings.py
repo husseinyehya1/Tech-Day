@@ -211,6 +211,7 @@ EMAIL_USE_SSL = os.environ.get('TECHDAY_EMAIL_USE_SSL', 'true').lower() == 'true
 EMAIL_USE_TLS = os.environ.get('TECHDAY_EMAIL_USE_TLS', 'false').lower() == 'true'
 EMAIL_HOST_USER = os.environ.get('TECHDAY_EMAIL_USER', 'noreply@edutech-egy.com')
 EMAIL_HOST_PASSWORD = os.environ.get('TECHDAY_EMAIL_PASSWORD', '')
+EMAIL_TIMEOUT = int(os.environ.get('TECHDAY_EMAIL_TIMEOUT', 20))
 DEFAULT_FROM_EMAIL = 'EduTech Egypt System <noreply@edutech-egy.com>'
 CSRF_TRUSTED_ORIGINS = ['https://td.edutech-egy.com']
 if fly_app:
