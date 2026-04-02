@@ -66,6 +66,7 @@ urlpatterns = [
     path('الإيميلات-المنتظرة/', views.admin_failed_emails_list, name='admin_failed_emails_list'),
     path('الإيميلات-المنتظرة/<int:pk>/إعادة-محاولة/', views.admin_failed_email_retry, name='admin_failed_email_retry'),
     path('الإيميلات-المنتظرة/<int:pk>/حذف/', views.admin_failed_email_delete, name='admin_failed_email_delete'),
+    path('تشخيص-smtp/', views.admin_smtp_diagnose, name='admin_smtp_diagnose'),
     path('إصدارات-التطبيق/', views.admin_app_versions, name='admin_app_versions'),
     path('إصدارات-التطبيق/جديد/', views.admin_app_version_create, name='admin_app_version_create'),
     path('إصدارات-التطبيق/<int:pk>/تعديل/', views.admin_app_version_update, name='admin_app_version_update'),
