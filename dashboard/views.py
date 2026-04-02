@@ -3827,6 +3827,10 @@ def admin_backup_restore(request):
                     SOSRequest.objects.all().delete()
                     BroadcastMessage.objects.all().delete()
                     StudentSupportRequest.objects.all().delete()
+                    PublicFormAnswer.objects.all().delete()
+                    PublicFormSubmission.objects.all().delete()
+                    PublicFormField.objects.all().delete()
+                    PublicForm.objects.all().delete()
                     
                     # معالجة ملف JSON لتحويل EventSettings إلى Event لضمان التوافق
                     with open(tmp_path, 'r', encoding='utf-8') as f:
