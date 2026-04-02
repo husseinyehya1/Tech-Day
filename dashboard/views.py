@@ -3818,6 +3818,7 @@ def admin_backup_restore(request):
                     StudentViolation.objects.all().delete()
                     Notification.objects.all().delete()
                     FailedEmail.objects.all().delete()
+                    AppVersion.objects.all().delete()
                     AdminLog.objects.all().delete()
                     Event.objects.all().delete()
                     Badge.objects.all().delete()
