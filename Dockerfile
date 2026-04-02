@@ -28,4 +28,4 @@ ENV DJANGO_SETTINGS_MODULE=techday.settings
 
 RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "techday.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "techday.wsgi:application", "--bind", "0.0.0.0:8000", "--timeout", "180"]

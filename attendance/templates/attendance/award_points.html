@@ -32,14 +32,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="flex items-center justify-between">
                                     <div class="flex flex-col">
                                         <span class="text-sm font-bold text-slate-100 group-hover:text-amber-400 transition-colors">${student.name}</span>
-                                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${student.group}</span>
+                                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${student.group_code}</span>
                                     </div>
-                                    <span class="text-xs font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">${student.id}</span>
+                                    <span class="text-xs font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">${student.student_id}</span>
                                 </div>
                             `;
                             div.addEventListener('click', () => {
                                 searchInput.value = student.name;
-                                studentIdInput.value = student.id;
+                                studentIdInput.value = student.student_id;
                                 resultsContainer.classList.add('hidden');
                             });
                             resultsContainer.appendChild(div);
@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <option value="5">+5 نقاط (مشاركة بسيطة)</option>
                                 <option value="10" selected>+10 نقاط (تفاعل جيد)</option>
                                 <option value="20">+20 نقطة (تميز ملحوظ)</option>
-                                <option value="50">+50 نقطة (إنجاز استثنائي)</option>
+                                <option value="50">+50 نقطة (تميز كبير) *متلمسهاش يزياد* </option>
                                 <option value="-10">-10 نقاط (خصم سلوكي)</option>
                             </select>
                         </div>
