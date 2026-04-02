@@ -205,11 +205,11 @@ LOGOUT_REDIRECT_URL = 'users:login'
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_BACKEND = 'techday.email_backend.CustomEmailBackend'
-EMAIL_HOST = 'smtp.zeptomail.com'
-EMAIL_PORT = 465
-EMAIL_USE_SSL = True
-EMAIL_USE_TLS = False
-EMAIL_HOST_USER = os.environ.get('TECHDAY_EMAIL_USER', 'emailapikey')
+EMAIL_HOST = os.environ.get('TECHDAY_EMAIL_HOST', 'smtp.zoho.com')
+EMAIL_PORT = int(os.environ.get('TECHDAY_EMAIL_PORT', 465))
+EMAIL_USE_SSL = os.environ.get('TECHDAY_EMAIL_USE_SSL', 'true').lower() == 'true'
+EMAIL_USE_TLS = os.environ.get('TECHDAY_EMAIL_USE_TLS', 'false').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('TECHDAY_EMAIL_USER', 'noreply@edutech-egy.com')
 EMAIL_HOST_PASSWORD = os.environ.get('TECHDAY_EMAIL_PASSWORD', '')
 DEFAULT_FROM_EMAIL = 'EduTech Egypt System <noreply@edutech-egy.com>'
 CSRF_TRUSTED_ORIGINS = ['https://td.edutech-egy.com']

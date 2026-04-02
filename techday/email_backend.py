@@ -1,4 +1,5 @@
 import ssl
+import os
 from django.core.mail.backends.smtp import EmailBackend
 
 class CustomEmailBackend(EmailBackend):
@@ -7,9 +8,8 @@ class CustomEmailBackend(EmailBackend):
             return False
         
         try:
-            # تجاوز التحقق من الشهادة (SSL Certificate Verification)
-            # مفيد في البيئات التي تعاني من مشاكل في CA bundle
-            self.ssl_context = ssl._create_unverified_context()
+            if os.environ.get('SMTP_INSECURE_SSL', '').strip() == '1':
+                self.ssl_context = ssl._create_unverified_context()
             return super().open()
         except Exception:
             if not self.fail_silently:
