@@ -1,7 +1,15 @@
 from django.urls import path
 from . import views
+from django.http import HttpResponseForbidden
+from django.contrib.auth.decorators import login_required
 
 app_name = 'dashboard'
+
+def _admin_smtp_diagnose_dispatch(request):
+    if not getattr(request.user, 'is_authenticated', False):
+        return HttpResponseForbidden()
+    from .views import admin_smtp_diagnose
+    return admin_smtp_diagnose(request)
 
 urlpatterns = [
     path('', views.admin_dashboard, name='admin_dashboard'),
@@ -66,7 +74,7 @@ urlpatterns = [
     path('الإيميلات-المنتظرة/', views.admin_failed_emails_list, name='admin_failed_emails_list'),
     path('الإيميلات-المنتظرة/<int:pk>/إعادة-محاولة/', views.admin_failed_email_retry, name='admin_failed_email_retry'),
     path('الإيميلات-المنتظرة/<int:pk>/حذف/', views.admin_failed_email_delete, name='admin_failed_email_delete'),
-    path('تشخيص-smtp/', views.admin_smtp_diagnose, name='admin_smtp_diagnose'),
+    path('تشخيص-smtp/', login_required(lambda request: _admin_smtp_diagnose_dispatch(request)), name='admin_smtp_diagnose'),
     path('إصدارات-التطبيق/', views.admin_app_versions, name='admin_app_versions'),
     path('إصدارات-التطبيق/جديد/', views.admin_app_version_create, name='admin_app_version_create'),
     path('إصدارات-التطبيق/<int:pk>/تعديل/', views.admin_app_version_update, name='admin_app_version_update'),
