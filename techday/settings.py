@@ -213,6 +213,9 @@ EMAIL_HOST_USER = os.environ.get('TECHDAY_EMAIL_USER', 'noreply@edutech-egy.com'
 EMAIL_HOST_PASSWORD = os.environ.get('TECHDAY_EMAIL_PASSWORD', '')
 EMAIL_TIMEOUT = int(os.environ.get('TECHDAY_EMAIL_TIMEOUT', 20))
 DEFAULT_FROM_EMAIL = 'EduTech Egypt System <noreply@edutech-egy.com>'
+
+if os.environ.get('SENDGRID_API_KEY', '').strip():
+    EMAIL_BACKEND = 'techday.sendgrid_backend.SendGridEmailBackend'
 CSRF_TRUSTED_ORIGINS = ['https://td.edutech-egy.com']
 if fly_app:
     CSRF_TRUSTED_ORIGINS.append(f'https://{fly_app}.fly.dev')
