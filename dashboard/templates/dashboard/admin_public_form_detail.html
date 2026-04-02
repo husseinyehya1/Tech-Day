@@ -1,0 +1,151 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}تفاصيل الاستمارة{% endblock %}
+
+{% block page %}
+<div class="space-y-6">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+    <div class="flex items-center gap-4">
+      <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+        <i data-lucide="file-text" class="w-8 h-8"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-black text-slate-100">{{ form_obj.title }}</h1>
+        <p class="text-sm text-slate-400 font-medium">الردود: {{ submissions_count }}</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="{% url 'dashboard:admin_public_form_submissions' form_obj.pk %}"
+         class="px-5 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-black transition-all flex items-center gap-2">
+        <i data-lucide="inbox" class="w-4 h-4"></i>
+        عرض الردود
+      </a>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="toggle_active">
+        <button type="submit"
+                class="px-5 py-3 rounded-2xl border text-sm font-black transition-all flex items-center gap-2 {% if form_obj.is_active %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-slate-950{% else %}bg-slate-800/50 border-slate-700 text-slate-200 hover:bg-slate-700/50{% endif %}">
+          {% if form_obj.is_active %}
+          <i data-lucide="toggle-right" class="w-4 h-4"></i>
+          إيقاف
+          {% else %}
+          <i data-lucide="toggle-left" class="w-4 h-4"></i>
+          تشغيل
+          {% endif %}
+        </button>
+      </form>
+      {% if not form_obj.created_by %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="claim">
+        <button type="submit"
+                class="px-5 py-3 rounded-2xl bg-slate-800/50 border border-slate-700 text-sm font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+          تعيين كمنشئ
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-7 space-y-6">
+      <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+        <h2 class="text-sm font-black text-slate-200 mb-4">الوصف</h2>
+        {% if form_obj.description %}
+        <div class="text-sm text-slate-300 leading-relaxed">{{ form_obj.description }}</div>
+        {% else %}
+        <div class="text-sm text-slate-600 font-bold">—</div>
+        {% endif %}
+      </div>
+
+      <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+        <h2 class="text-sm font-black text-slate-200 mb-4">أسئلة الاستمارة</h2>
+        <div class="space-y-3">
+          {% for f in fields %}
+          <div class="rounded-2xl bg-slate-950/40 border border-slate-800 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-black text-slate-100">{{ f.label }}</div>
+                {% if f.help_text %}
+                <div class="text-[11px] text-slate-500 font-bold mt-1">{{ f.help_text }}</div>
+                {% endif %}
+              </div>
+              <div class="shrink-0">
+                {% if f.required %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-rose-500/10 text-rose-300 text-[10px] font-black border border-rose-500/20">مطلوب</span>
+                {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-black border border-slate-700">اختياري</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="text-[10px] text-slate-600 font-mono mt-2">{{ f.key }} • {{ f.field_type }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-5 space-y-6">
+      <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+        <h2 class="text-sm font-black text-slate-200 mb-4">الرابط السري</h2>
+        <div class="rounded-2xl bg-slate-950/40 border border-slate-800 p-4 space-y-3">
+          <div class="text-[11px] text-slate-500 font-bold">لا يتم عرض الرابط هنا بشكل مباشر. اضغط إظهار ثم انسخ.</div>
+          <div class="flex items-center gap-2">
+            <input id="formToken" value="••••••••••••••••••••••••••••••••" readonly
+                   class="flex-1 px-4 py-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-[11px] font-mono text-slate-300">
+            <button type="button" id="revealBtn"
+                    class="px-4 py-3 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+              إظهار
+            </button>
+            <button type="button" id="copyBtn"
+                    class="px-4 py-3 rounded-2xl bg-cyan-500 text-slate-950 text-[11px] font-black hover:bg-cyan-400 transition-all">
+              نسخ
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+        <h2 class="text-sm font-black text-slate-200 mb-4">تخصيص رابط الاستمارة</h2>
+        <form method="post" class="space-y-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="set_custom_link">
+          <div class="text-[11px] text-slate-500 font-bold">اكتب رابط مخصص (حروف إنجليزية/أرقام/شرطة -). اتركه فارغًا ثم حفظ لحذفه.</div>
+          <input name="custom_slug" value="{{ form_obj.custom_slug|default:'' }}" placeholder="central-team-form-2026"
+                 class="w-full px-4 py-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-[12px] font-mono text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500/30 transition-all">
+          <button type="submit"
+                  class="w-full py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-black transition-all">
+            حفظ الرابط المخصص
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+  const tokenInput = document.getElementById('formToken');
+  const secretUrl = "{% url 'dashboard:admin_public_form_secret_link' form_obj.pk %}";
+  let cachedUrl = null;
+  async function getUrl() {
+    if (cachedUrl) return cachedUrl;
+    const res = await fetch(secretUrl, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    cachedUrl = data.url || null;
+    return cachedUrl;
+  }
+  document.getElementById('revealBtn').addEventListener('click', async () => {
+    const url = await getUrl();
+    if (url) tokenInput.value = url;
+  });
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const url = await getUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (_) {}
+  });
+</script>
+{% endblock %}

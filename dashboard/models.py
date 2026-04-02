@@ -5,6 +5,14 @@ from students.models import Student
 
 
 class AdminLog(models.Model):
+    event = models.ForeignKey(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='admin_logs',
+        verbose_name='الفعالية',
+        null=True,
+        blank=True
+    )
     action = models.CharField(max_length=255, verbose_name='الإجراء')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='التاريخ')
 
@@ -23,6 +31,14 @@ class Notification(models.Model):
         GROUP = 'group', 'مجموعة معينة'
         SUPERVISORS = 'supervisors', 'المشرفون'
 
+    event = models.ForeignKey(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        verbose_name='الفعالية',
+        null=True,
+        blank=True
+    )
     title = models.CharField(max_length=200, verbose_name='العنوان')
     body = models.TextField(verbose_name='النص')
     target = models.CharField(
@@ -38,6 +54,21 @@ class Notification(models.Model):
         blank=True,
         verbose_name='المجموعة',
     )
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        null=True,
+        blank=True,
+        verbose_name='المستخدم المستهدف'
+    )
+    related_support_request = models.ForeignKey(
+        'StudentSupportRequest',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name='طلب الدعم المرتبط'
+    )
     is_active = models.BooleanField(default=True, verbose_name='مفعّل')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإرسال')
 
@@ -50,30 +81,78 @@ class Notification(models.Model):
         return self.title
 
 
-class EventSettings(models.Model):
+class Event(models.Model):
     name = models.CharField(max_length=150, default='Tech Day', verbose_name='اسم الفعالية')
-    start_datetime = models.DateTimeField(null=True, blank=True, verbose_name='موعد بدء الفعالية')
+    year = models.PositiveIntegerField(verbose_name='السنة', default=2026)
     location_name = models.CharField(max_length=255, blank=True, verbose_name='مكان الفعالية')
+    execution_number = models.PositiveIntegerField(default=1, verbose_name='رقم التنفيذ')
+    slug = models.SlugField(max_length=255, unique=True, verbose_name='رابط الأرشفة', blank=True)
+    
+    start_datetime = models.DateTimeField(null=True, blank=True, verbose_name='موعد بدء الفعالية')
     location_link = models.URLField(blank=True, verbose_name='رابط موقع الفعالية')
     arrival_time_text = models.CharField(max_length=100, blank=True, verbose_name='وقت الحضور المتوقع')
     whatsapp_group_link = models.URLField(blank=True, verbose_name='رابط مجموعة الواتساب')
     event_instructions = models.TextField(blank=True, verbose_name='تعليمات الفعالية')
     max_students = models.PositiveIntegerField(null=True, blank=True, verbose_name='الحد الأقصى للطلاب')
+    
+    is_active = models.BooleanField(default=True, verbose_name='نشطة حالياً')
+    is_archived = models.BooleanField(default=False, verbose_name='مؤرشفة')
     is_registration_closed = models.BooleanField(default=False, verbose_name='إغلاق التسجيل يدوياً')
+    allow_existing_students_registration = models.BooleanField(default=True, verbose_name='السماح للطلاب المسجلين سابقاً بالتسجيل')
+    is_education_admin_locked = models.BooleanField(default=False, verbose_name='قفل الإدارة التعليمية للتسجيل')
+    locked_education_admin = models.CharField(max_length=150, blank=True, default='العبور', verbose_name='الإدارة التعليمية المسموح بها')
     allow_group_points = models.BooleanField(default=True, verbose_name='السماح بإضافة نقاط للمجموعات')
     is_finished = models.BooleanField(default=False, verbose_name='تم إنهاء الفعالية')
+    is_maintenance_mode = models.BooleanField(default=False, verbose_name='وضع الصيانة')
+    maintenance_facebook_url = models.URLField(default='https://facebook.com/edutechegypt', verbose_name='لينك الفيسبوك في الصيانة')
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
 
     class Meta:
-        verbose_name = 'إعدادات الفعالية'
-        verbose_name_plural = 'إعدادات الفعالية'
+        verbose_name = 'فعالية'
+        verbose_name_plural = 'الفعاليات'
+        ordering = ['-created_at']
 
     def __str__(self):
-        return self.name or 'إعدادات الفعالية'
+        return f"{self.name} - {self.location_name} ({self.year}/{self.execution_number})"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            # Generate slug: {year}-{location_name}-{execution_number}
+            # Handle Arabic characters using a simpler approach if slugify returns empty
+            from django.utils.text import slugify
+            loc_slug = slugify(self.location_name)
+            if not loc_slug:
+                # Fallback for Arabic/Non-ASCII characters
+                loc_slug = self.location_name.replace(' ', '-')
+            
+            self.slug = f"{self.year}-{loc_slug}-{self.execution_number}"
+        super().save(*args, **kwargs)
 
     @classmethod
-    def get_solo(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
+    def get_current(cls):
+        # محاولة جلب أول فعالية نشطة
+        event = cls.objects.filter(is_active=True).first()
+        
+        # إذا لم توجد فعالية نشطة، نبحث عن أي فعالية موجودة
+        if not event:
+            event = cls.objects.first()
+            
+        # إذا لم توجد أي فعالية على الإطلاق، ننشئ واحدة افتراضية
+        if not event:
+            try:
+                # محاولة الإنشاء مع التعامل مع احتمالية وجود Slug مكرر
+                event = cls.objects.create(
+                    name="Tech Day", 
+                    location_name="Main", 
+                    year=2026, 
+                    is_active=True
+                )
+            except Exception:
+                # في حالة الفشل التام (مثلاً بسبب Slug)، نحاول جلب أي سجل موجود مرة أخرى
+                event = cls.objects.first()
+                
+        return event
 
 
 class VIPInvite(models.Model):
@@ -117,6 +196,14 @@ class SOSRequest(models.Model):
         PENDING = 'pending', 'قيد الانتظار'
         SOLVED = 'solved', 'تم الحل'
 
+    event = models.ForeignKey(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='sos_requests',
+        verbose_name='الفعالية',
+        null=True,
+        blank=True
+    )
     supervisor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -167,6 +254,14 @@ class BroadcastMessage(models.Model):
         SUPERVISORS = 'supervisors', 'المشرفين فقط'
         VOLUNTEERS = 'volunteers', 'المتطوعين فقط'
 
+    event = models.ForeignKey(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='broadcast_messages',
+        verbose_name='الفعالية',
+        null=True,
+        blank=True
+    )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -209,15 +304,6 @@ class FailedEmail(models.Model):
 
     def __str__(self):
         return f"إلى: {self.recipient} - {self.subject}"
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإضافة')
-
-    class Meta:
-        verbose_name = 'ملاحظة متطوع'
-        verbose_name_plural = 'ملاحظات المتطوعين'
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f'{self.author} - {self.created_at:%Y-%m-%d %H:%M}'
 
 
 class StudentViolation(models.Model):
@@ -225,6 +311,14 @@ class StudentViolation(models.Model):
         PENDING = 'pending', 'في انتظار مراجعة الإدارة'
         RESOLVED = 'resolved', 'تمت المعالجة'
 
+    event = models.ForeignKey(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='violations',
+        verbose_name='الفعالية',
+        null=True,
+        blank=True
+    )
     student = models.ForeignKey(
         Student,
         on_delete=models.CASCADE,
@@ -281,6 +375,14 @@ class StudentSupportRequest(models.Model):
         WORKSHOP = 'workshop', 'مشكلة في الورشة'
         OTHER = 'other', 'أخرى'
 
+    event = models.ForeignKey(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='support_requests',
+        verbose_name='الفعالية',
+        null=True,
+        blank=True
+    )
     student = models.ForeignKey(
         Student,
         on_delete=models.CASCADE,
@@ -312,3 +414,29 @@ class StudentSupportRequest(models.Model):
 
     def __str__(self):
         return f'{self.student.name} - {self.get_category_display()} - {self.get_status_display()}'
+
+
+class AppVersion(models.Model):
+    platform = models.CharField(
+        max_length=20,
+        choices=[('android', 'Android'), ('ios', 'iOS')],
+        default='android',
+        verbose_name='نظام التشغيل'
+    )
+    version_code = models.CharField(max_length=50, verbose_name='رقم الإصدار (e.g. 1.0.0)')
+    build_number = models.IntegerField(verbose_name='رقم البناء (Build Number)')
+    min_build_number = models.IntegerField(verbose_name='أقل رقم بناء مسموح به')
+    download_url = models.URLField(verbose_name='رابط تحميل التحديث', blank=True)
+    apk_file = models.FileField(upload_to='app_releases/', blank=True, null=True, verbose_name='ملف APK')
+    release_notes = models.TextField(verbose_name='ملاحظات الإصدار', blank=True)
+    is_force_update = models.BooleanField(default=False, verbose_name='تحديث إجباري')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإصدار')
+
+    class Meta:
+        verbose_name = 'إصدار التطبيق'
+        verbose_name_plural = 'إصدارات التطبيق'
+        ordering = ['-build_number']
+        unique_together = ['platform', 'build_number']
+
+    def __str__(self):
+        return f"{self.platform.upper()} - Version {self.version_code} ({self.build_number})"

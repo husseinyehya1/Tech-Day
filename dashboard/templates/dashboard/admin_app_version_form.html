@@ -1,0 +1,107 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}{% if version_obj %}تعديل إصدار{% else %}إضافة إصدار{% endif %} - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl {% if version_obj %}bg-cyan-500/10 text-cyan-400{% else %}bg-emerald-500/10 text-emerald-400{% endif %}">
+                <i data-lucide="{% if version_obj %}pencil{% else %}plus{% endif %}" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">{% if version_obj %}تعديل إصدار{% else %}إضافة إصدار جديد{% endif %}</h1>
+                <p class="text-sm text-slate-400 font-medium">املأ بيانات الإصدار وارفع ملف APK للأندرويد عند الحاجة</p>
+            </div>
+        </div>
+        <a href="{% url 'dashboard:admin_app_versions' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للقائمة</span>
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        {% csrf_token %}
+        <div class="p-6 space-y-6">
+            {% if form.non_field_errors %}
+            <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm font-bold">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 mr-2">{{ form.platform.label }}</label>
+                    {{ form.platform }}
+                    {% if form.platform.errors %}<div class="text-rose-300 text-xs font-bold">{{ form.platform.errors }}</div>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 mr-2">{{ form.version_code.label }}</label>
+                    {{ form.version_code }}
+                    {% if form.version_code.errors %}<div class="text-rose-300 text-xs font-bold">{{ form.version_code.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 mr-2">{{ form.build_number.label }}</label>
+                    {{ form.build_number }}
+                    {% if form.build_number.errors %}<div class="text-rose-300 text-xs font-bold">{{ form.build_number.errors }}</div>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 mr-2">{{ form.min_build_number.label }}</label>
+                    {{ form.min_build_number }}
+                    {% if form.min_build_number.errors %}<div class="text-rose-300 text-xs font-bold">{{ form.min_build_number.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-500 mr-2">{{ form.download_url.label }}</label>
+                {{ form.download_url }}
+                {% if form.download_url.errors %}<div class="text-rose-300 text-xs font-bold">{{ form.download_url.errors }}</div>{% endif %}
+                <div class="text-[11px] text-slate-500 font-bold">لو حاطط رابط خارجي سيبه هنا، ولو هترفع APK سيب الرابط فاضي.</div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-500 mr-2">{{ form.apk_file.label }}</label>
+                {{ form.apk_file }}
+                {% if version_obj and version_obj.apk_file %}
+                <div class="mt-2 flex items-center gap-2">
+                    <a href="{{ version_obj.apk_file.url }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all text-[10px] font-black uppercase tracking-widest">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        تنزيل الملف الحالي
+                    </a>
+                </div>
+                {% endif %}
+                {% if form.apk_file.errors %}<div class="text-rose-300 text-xs font-bold">{{ form.apk_file.errors }}</div>{% endif %}
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-500 mr-2">{{ form.release_notes.label }}</label>
+                {{ form.release_notes }}
+                {% if form.release_notes.errors %}<div class="text-rose-300 text-xs font-bold">{{ form.release_notes.errors }}</div>{% endif %}
+            </div>
+
+            <div class="flex items-center gap-3 p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                {{ form.is_force_update }}
+                <div class="text-sm font-bold text-slate-200">{{ form.is_force_update.label }}</div>
+            </div>
+            {% if form.is_force_update.errors %}<div class="text-rose-300 text-xs font-bold">{{ form.is_force_update.errors }}</div>{% endif %}
+        </div>
+
+        <div class="p-6 bg-slate-950/50 border-t border-slate-800 flex items-center gap-3">
+            <a href="{% url 'dashboard:admin_app_versions' %}"
+               class="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+                إلغاء
+            </a>
+            <button type="submit"
+                    class="px-8 py-3 rounded-2xl {% if version_obj %}bg-cyan-500 hover:bg-cyan-400{% else %}bg-emerald-500 hover:bg-emerald-400{% endif %} text-slate-950 font-black text-sm shadow-xl transition-all active:scale-95 flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                {% if version_obj %}حفظ التعديلات{% else %}إضافة الإصدار{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

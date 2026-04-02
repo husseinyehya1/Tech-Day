@@ -1,0 +1,99 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}جميع الفعاليات - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-7xl mx-auto space-y-8 pb-12">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl">
+        <div class="flex items-center gap-5">
+            <div class="p-4 rounded-3xl bg-indigo-500/10 text-indigo-400 shadow-2xl shadow-indigo-500/10">
+                <i data-lucide="layers" class="w-10 h-10"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-black text-slate-100 tracking-tight">سجل الفعاليات</h1>
+                <p class="text-sm text-slate-400 font-medium mt-1">عرض جميع الفعاليات الجارية والمنتهية</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Event (If Any) -->
+    {% if active_event %}
+    <div class="space-y-4">
+        <div class="flex items-center gap-2 text-emerald-400 mb-4 px-4">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h2 class="text-xs font-black uppercase tracking-widest">الفعالية النشطة حالياً</h2>
+        </div>
+        
+        <div class="group relative bg-slate-900/40 backdrop-blur-xl border border-emerald-500/20 rounded-[2.5rem] p-10 hover:border-emerald-500/40 transition-all shadow-2xl overflow-hidden">
+            <div class="absolute -right-24 -top-24 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all"></div>
+            
+            <div class="relative flex flex-col md:flex-row items-center justify-between gap-8">
+                <div class="space-y-4 text-center md:text-right">
+                    <div class="flex items-center justify-center md:justify-start gap-3">
+                        <span class="px-4 py-1.5 rounded-full bg-slate-950 border border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">{{ active_event.year }}</span>
+                        <span class="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black text-emerald-400 uppercase tracking-widest">نشط الآن</span>
+                    </div>
+                    <div>
+                        <h3 class="text-4xl font-black text-white tracking-tight">{{ active_event.location_name }}</h3>
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-[0.3em] mt-2">{{ active_event.name }} - المرة {{ active_event.execution_number }}</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'dashboard:admin_dashboard' %}" class="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl text-xs font-black transition-all shadow-xl shadow-emerald-500/20">
+                        دخول لوحة التحكم
+                    </a>
+                    <a href="{% url 'dashboard:admin_event_settings' %}" class="p-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl transition-all border border-slate-700">
+                        <i data-lucide="settings" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Archived Events -->
+    <div class="space-y-6 pt-8">
+        <div class="flex items-center gap-2 text-slate-500 mb-4 px-4">
+            <i data-lucide="archive" class="w-4 h-4"></i>
+            <h2 class="text-xs font-black uppercase tracking-widest">الأرشيف (الفعاليات السابقة)</h2>
+        </div>
+
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {% for event in archived_events %}
+            <div class="group relative bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[2rem] p-8 hover:border-indigo-500/30 transition-all shadow-xl overflow-hidden">
+                <div class="absolute -right-12 -top-12 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-all"></div>
+                
+                <div class="relative space-y-6">
+                    <div class="flex items-center justify-between">
+                        <span class="px-4 py-1.5 rounded-full bg-slate-950 border border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">{{ event.year }}</span>
+                        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
+                            <i data-lucide="hash" class="w-3 h-3"></i>
+                            المرة {{ event.execution_number }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-black text-white tracking-tight">{{ event.location_name }}</h3>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">{{ event.name }}</p>
+                    </div>
+
+                    <div class="pt-6 border-t border-slate-800/50 flex items-center justify-between">
+                        <div class="text-[10px] text-slate-500 font-mono">{{ event.created_at|date:"Y-m-d" }}</div>
+                        <a href="{% url 'dashboard:admin_archived_event_detail' event.slug %}" class="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-400 text-slate-950 rounded-xl text-[10px] font-black transition-all shadow-lg shadow-indigo-500/10">
+                            عرض الأرشيف
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full py-32 text-center opacity-30">
+                <i data-lucide="folder-search" class="w-16 h-16 mx-auto mb-4 text-slate-600"></i>
+                <p class="text-xs font-black uppercase tracking-widest text-slate-600">لا توجد فعاليات مؤرشفة حتى الآن</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

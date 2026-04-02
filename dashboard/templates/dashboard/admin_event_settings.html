@@ -156,6 +156,104 @@
 
         <!-- Sidebar / Action Panels -->
         <div class="space-y-6">
+            <div class="p-6 rounded-3xl bg-slate-900/40 border border-slate-800 space-y-5">
+                <div class="flex items-center gap-2 text-slate-400 mb-1">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">Config Panel</h3>
+                </div>
+
+                <div class="grid gap-2">
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">التسجيل</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.is_registration_closed %}bg-rose-500/10 border-rose-500/20 text-rose-300{% else %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300{% endif %}">
+                            {% if event.is_registration_closed %}مغلق{% else %}مفتوح{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">طلاب قدامى</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.allow_existing_students_registration %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300{% else %}bg-rose-500/10 border-rose-500/20 text-rose-300{% endif %}">
+                            {% if event.allow_existing_students_registration %}مسموح{% else %}ممنوع{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">الإدارة التعليمية</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.is_education_admin_locked %}bg-amber-500/10 border-amber-500/20 text-amber-300{% else %}bg-slate-800/50 border-slate-700/50 text-slate-400{% endif %}">
+                            {% if event.is_education_admin_locked %}{{ event.locked_education_admin|default:"مقفول" }}{% else %}غير مقيد{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">الحد الأقصى</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if is_full %}bg-rose-500/10 border-rose-500/20 text-rose-300{% else %}bg-slate-800/50 border-slate-700/50 text-slate-400{% endif %}">
+                            {% if event.max_students %}{{ total_registered }}/{{ event.max_students }}{% else %}غير محدود{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">الصيانة</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.is_maintenance_mode %}bg-rose-500/10 border-rose-500/20 text-rose-300{% else %}bg-slate-800/50 border-slate-700/50 text-slate-400{% endif %}">
+                            {% if event.is_maintenance_mode %}مفعلة{% else %}متوقفة{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <form method="post" class="space-y-4 pt-4 border-t border-slate-800/50">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="config">
+
+                    <label class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i data-lucide="user-plus" class="w-4 h-4 text-cyan-400"></i>
+                            <span class="text-xs font-black">قفل التسجيل</span>
+                        </div>
+                        <input type="checkbox" name="is_registration_closed" class="w-5 h-5 accent-rose-500" {% if event.is_registration_closed %}checked{% endif %}>
+                    </label>
+
+                    <label class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i data-lucide="user-x" class="w-4 h-4 text-amber-400"></i>
+                            <span class="text-xs font-black">السماح للطلاب المسجلين سابقاً</span>
+                        </div>
+                        <input type="checkbox" name="allow_existing_students_registration" class="w-5 h-5 accent-emerald-500" {% if event.allow_existing_students_registration %}checked{% endif %}>
+                    </label>
+
+                    <label class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+                            <span class="text-xs font-black">السماح بنقاط المجموعات</span>
+                        </div>
+                        <input type="checkbox" name="allow_group_points" class="w-5 h-5 accent-emerald-500" {% if event.allow_group_points %}checked{% endif %}>
+                    </label>
+
+                    <label class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i data-lucide="wrench" class="w-4 h-4 text-rose-400"></i>
+                            <span class="text-xs font-black">تفعيل وضع الصيانة</span>
+                        </div>
+                        <input type="checkbox" name="is_maintenance_mode" class="w-5 h-5 accent-rose-500" {% if event.is_maintenance_mode %}checked{% endif %}>
+                    </label>
+
+                    <div class="p-4 rounded-2xl bg-slate-950/40 border border-slate-800 space-y-3">
+                        <label class="flex items-center justify-between gap-3 cursor-pointer">
+                            <div class="flex items-center gap-2 text-slate-300">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-amber-400"></i>
+                                <span class="text-xs font-black">قفل الإدارة التعليمية للتسجيل</span>
+                            </div>
+                            <input type="checkbox" name="is_education_admin_locked" class="w-5 h-5 accent-amber-500" {% if event.is_education_admin_locked %}checked{% endif %}>
+                        </label>
+                        <select name="locked_education_admin"
+                                class="w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold">
+                            {% for a in education_admin_choices %}
+                            <option value="{{ a }}" {% if event.locked_education_admin == a %}selected{% endif %}>{{ a }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20 transition-all active:scale-95">
+                        حفظ إعدادات القيود
+                    </button>
+                </form>
+            </div>
+
             <!-- Event Control -->
             <div class="p-6 rounded-3xl bg-slate-900/40 border border-slate-800 space-y-4">
                 <div class="flex items-center gap-2 text-slate-400 mb-2">
@@ -214,7 +312,7 @@
                             <span class="text-xs font-bold text-slate-200">تأكيد الموعد والمكان</span>
                             <i data-lucide="mail" class="w-4 h-4 text-slate-500 group-hover:text-cyan-400"></i>
                         </div>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">إرسال تفاصيل الموقع ووقت الحضور لجميع الطلاب.</p>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">إرسال تفاصيل الموقع ووقت الحضور لطلاب الفعالية الحالية فقط.</p>
                     </button>
                 </form>
                 {% endif %}
@@ -228,7 +326,7 @@
                             <span class="text-xs font-bold text-slate-200">رابط مجموعة الواتساب</span>
                             <i data-lucide="message-square" class="w-4 h-4 text-slate-500 group-hover:text-emerald-400"></i>
                         </div>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">دعوة جميع الطلاب للانضمام لمجموعة الفعالية الرسمية.</p>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">دعوة طلاب الفعالية الحالية فقط للانضمام لمجموعة الفعالية الرسمية.</p>
                     </button>
                 </form>
                 {% endif %}
@@ -242,7 +340,7 @@
                             <span class="text-xs font-bold text-slate-200">إرسال التعليمات للطلاب</span>
                             <i data-lucide="send" class="w-4 h-4 text-slate-500 group-hover:text-violet-400"></i>
                         </div>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">إرسال تعليمات الفعالية المكتوبة لجميع الطلاب عبر البريد.</p>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">إرسال تعليمات الفعالية المكتوبة لطلاب الفعالية الحالية فقط عبر البريد.</p>
                     </button>
                 </form>
                 {% endif %}

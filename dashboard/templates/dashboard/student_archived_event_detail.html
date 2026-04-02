@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}أرشيف الفعالية - {{ event.location_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8 pb-12 px-4 md:px-0">
+    <!-- Header -->
+    <div class="bg-slate-900 border border-slate-800 p-8 md:p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+        <div class="absolute -right-24 -top-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] group-hover:bg-indigo-500/20 transition-all duration-1000"></div>
+        
+        <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div class="flex items-center gap-6">
+                <div class="p-5 rounded-[2rem] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-2xl shadow-indigo-500/10 group-hover:scale-110 transition-transform duration-500">
+                    <i data-lucide="archive" class="w-12 h-12"></i>
+                </div>
+                <div>
+                    <h1 class="text-4xl font-black text-white tracking-tight">{{ event.location_name }}</h1>
+                    <div class="flex flex-wrap gap-3 mt-3">
+                        <span class="px-4 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            {{ event.name }} {{ event.year }}
+                        </span>
+                        <span class="px-4 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            المرة: {{ event.execution_number }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if student_stats %}
+            <div class="flex items-center gap-6 px-8 py-5 rounded-[2.5rem] bg-slate-950/50 border border-slate-800 backdrop-blur-md shadow-2xl">
+                <div class="text-center">
+                    <div class="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">نقاطي</div>
+                    <div class="text-3xl font-black text-cyan-400 tracking-tighter">{{ student_stats.points }}</div>
+                </div>
+                <div class="w-px h-10 bg-slate-800"></div>
+                <div class="text-center">
+                    <div class="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">ترتيبي</div>
+                    <div class="text-3xl font-black text-amber-400 tracking-tighter">#{{ student_rank }}</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <!-- Main Content -->
+        <div class="lg:col-span-8 space-y-8">
+            <!-- Leaderboard -->
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-xl relative overflow-hidden group">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-cyan-500/5 rounded-full blur-[50px] group-hover:bg-cyan-500/10 transition-all duration-1000"></div>
+                <div class="relative z-10">
+                    <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
+                        <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i> لوحة شرف الفعالية (Top 10)
+                    </h3>
+                    
+                    <div class="grid gap-4 md:grid-cols-2">
+                        {% for stats in top_stats %}
+                        <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 hover:border-cyan-500/30 transition-all group/top">
+                            <div class="relative">
+                                <div class="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-800 group-hover/top:scale-110 transition-transform">
+                                    <span class="text-lg font-black text-white">{{ forloop.counter }}</span>
+                                </div>
+                                {% if forloop.first %}<i data-lucide="crown" class="absolute -top-2 -right-2 w-5 h-5 text-amber-500 fill-amber-500 drop-shadow-lg"></i>{% endif %}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-black text-white truncate group-hover/top:text-cyan-400 transition-colors">{{ stats.student.name }}</div>
+                                <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{{ stats.student.group.name|default:"مشارك فردي" }}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-black text-cyan-400">{{ stats.points }}</div>
+                                <div class="text-[8px] text-slate-600 font-bold uppercase">PTS</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workshop History -->
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-xl">
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
+                    <i data-lucide="cpu" class="w-5 h-5 text-violet-400"></i> الورش والمسارات التدريبية
+                </h3>
+                <div class="grid gap-4 md:grid-cols-2">
+                    {% for workshop in workshops %}
+                    <div class="p-6 rounded-3xl bg-slate-950/50 border border-slate-800/50 hover:border-violet-500/30 transition-all group">
+                        <h4 class="text-base font-black text-white group-hover:text-violet-400 transition-colors">{{ workshop.title }}</h4>
+                        <div class="flex items-center gap-3 mt-3">
+                            <span class="text-[10px] text-slate-500 font-bold bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="map-pin" class="w-3 h-3 text-indigo-400"></i>
+                                {{ workshop.room }}
+                            </span>
+                            {% if workshop.supervisor %}
+                            <span class="text-[10px] text-slate-500 font-bold bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="user" class="w-3 h-3 text-cyan-400"></i>
+                                {{ workshop.supervisor.get_full_name|default:workshop.supervisor.username }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="lg:col-span-4 space-y-8">
+            <!-- Personal Journey Logs -->
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-xl relative overflow-hidden group">
+                <div class="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-[50px]"></div>
+                <div class="relative z-10">
+                    <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
+                        <i data-lucide="scroll-text" class="w-5 h-5 text-indigo-500"></i> سجل إنجازاتي في الفعالية
+                    </h3>
+                    
+                    <div class="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                        {% for log in personal_logs %}
+                        <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 hover:border-indigo-500/30 transition-all shadow-inner group/log">
+                            <p class="text-[11px] text-slate-300 font-medium leading-relaxed">{{ log.action }}</p>
+                            <div class="text-[8px] text-slate-600 mt-3 font-mono border-t border-slate-900 pt-2 flex justify-between">
+                                <span class="uppercase font-bold">Activity Log</span>
+                                <span>{{ log.created_at|date:"H:i" }}</span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="py-12 text-center opacity-30">
+                            <i data-lucide="history" class="w-10 h-10 mx-auto mb-3 text-slate-600"></i>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">لا توجد سجلات خاصة بك</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Standings -->
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-xl relative overflow-hidden group">
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-violet-500/5 rounded-full blur-[50px]"></div>
+                <div class="relative z-10">
+                    <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
+                        <i data-lucide="layers" class="w-5 h-5 text-violet-500"></i> ترتيب المجموعات النهائي
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        {% for group in groups %}
+                        <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-violet-500/30 transition-all">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-xs" style="background-color: {{ group.color }}20; color: {{ group.color }}; border: 1px solid {{ group.color }}40;">
+                                    {{ group.code }}
+                                </div>
+                                <span class="text-xs font-bold text-slate-200">{{ group.name }}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs font-black text-violet-400">{{ group.points }}</span>
+                                <span class="text-[8px] text-slate-600 font-bold uppercase ml-1">PTS</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+</script>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.3); border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+</style>
+{% endblock %}

@@ -21,8 +21,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         debounceTimer = setTimeout(() => {
             fetch(`{% url 'attendance:search_students' %}?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
+                .then(async (response) => {
+                    if (!response.ok) {
+                        throw new Error('bad_response');
+                    }
+                    return response.json();
+                })
+                .then((data) => {
                     if (data.success && data.students.length > 0) {
                         resultsContainer.innerHTML = '';
                         data.students.forEach(student => {
@@ -32,14 +37,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="flex items-center justify-between">
                                     <div class="flex flex-col">
                                         <span class="text-sm font-bold text-slate-100 group-hover:text-rose-400 transition-colors">${student.name}</span>
-                                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${student.group}</span>
+                                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${student.group_code}</span>
                                     </div>
-                                    <span class="text-xs font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">${student.id}</span>
+                                    <span class="text-xs font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">${student.student_id}</span>
                                 </div>
                             `;
                             div.addEventListener('click', () => {
                                 searchInput.value = student.name;
-                                studentIdInput.value = student.id;
+                                studentIdInput.value = student.student_id;
                                 resultsContainer.classList.add('hidden');
                             });
                             resultsContainer.appendChild(div);
@@ -49,6 +54,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         resultsContainer.innerHTML = '<div class="p-4 text-xs text-slate-500 text-center">لا توجد نتائج</div>';
                         resultsContainer.classList.remove('hidden');
                     }
+                })
+                .catch(() => {
+                    resultsContainer.innerHTML = '<div class="p-4 text-xs text-rose-300 text-center">تعذر البحث الآن، حاول مرة أخرى.</div>';
+                    resultsContainer.classList.remove('hidden');
                 });
         }, 300);
     });
@@ -295,4 +304,3 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 {% endblock %}
-

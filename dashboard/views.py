@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, time
 import io
 import threading
@@ -5,27 +6,43 @@ import csv
 import os
 import tempfile
 import shutil
+import mimetypes
+from urllib.parse import unquote
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMultiAlternatives
 from django.core.management import call_command
+from django.core.paginator import Paginator
+from django.core.files.storage import default_storage
+from django import forms
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.db import transaction
 from django.db.models import Count, Max, Q, Avg, F, OuterRef, Subquery
 from django.db.models.functions import Trim
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponseForbidden, HttpResponse, Http404, FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.http import JsonResponse
 
+from fcm_django.models import FCMDevice
+
 from attendance.models import Attendance
 from groups.models import Group
-from students.models import Student, StudentRegistration
+from students.models import Student, StudentRegistration, Badge, StudentBadge, StudentEventStats
 from users.models import User
 from workshops.models import Workshop, WorkshopSession, WorkshopFeedback
+from api.models import MobileDevice
+from public_screen.models import PublicForm, PublicFormSubmission, PublicFormAnswer, PublicFormField
 
-from .models import AdminLog, Notification, EventSettings, VIPInvite, VolunteerNote, StudentViolation, FailedEmail, SOSRequest, BroadcastMessage, StudentSupportRequest
+from .models import (
+    AdminLog, Notification, Event, VIPInvite, VolunteerNote, 
+    StudentViolation, FailedEmail, SOSRequest, BroadcastMessage, 
+    StudentSupportRequest, AppVersion
+)
 from techday.utils import send_email_async, get_styled_email_html
 
 
@@ -51,6 +68,7 @@ def admin_broadcast_send(request):
         BroadcastMessage.objects.filter(target=target, is_active=True).update(is_active=False)
         
         BroadcastMessage.objects.create(
+            event=Event.get_current(),
             author=request.user,
             message=message,
             target=target,
@@ -245,25 +263,91 @@ def supervisor_sos_send(request):
 
 
 @login_required
+def admin_archived_events_list(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    active_event = Event.get_current()
+    archived_events = Event.objects.filter(is_archived=True).order_by('-created_at')
+    
+    return render(request, 'dashboard/admin_archived_events_list.html', {
+        'active_event': active_event,
+        'archived_events': archived_events
+    })
+
+
+@login_required
+def admin_archived_event_detail(request, slug):
+    # This will show the frozen data for a specific event
+    event = get_object_or_404(Event, slug=slug)
+    
+    # Check if the requester is a student or staff
+    student = getattr(request.user, 'student_profile', None)
+    is_staff = request.user.is_staff or (hasattr(request.user, 'is_admin') and request.user.is_admin())
+    
+    # Fetch data linked to THIS event
+    context = {
+        'event': event,
+        'is_archive_view': True,
+        'is_staff': is_staff,
+        'total_students': StudentEventStats.objects.filter(event=event).count(),
+        'total_present': StudentEventStats.objects.filter(event=event, checked_in=True).count(),
+        'workshops': Workshop.objects.filter(event=event),
+        'groups': Group.objects.filter(event=event).order_by('-points'),
+        'top_stats': StudentEventStats.objects.filter(event=event, points__gt=0).select_related('student', 'student__group').order_by('-points')[:10],
+    }
+
+    if is_staff:
+        context['recent_logs'] = AdminLog.objects.filter(event=event)[:20]
+    elif student:
+        # Student specific data for this archived event
+        stats = StudentEventStats.objects.filter(student=student, event=event).first()
+        if stats:
+            context['student_stats'] = stats
+            context['student_rank'] = StudentEventStats.objects.filter(event=event, points__gt=stats.points).count() + 1
+        
+        # Student's personal logs (awards/violations) for this event
+        personal_logs = AdminLog.objects.filter(
+            event=event, 
+            action__icontains=student.name
+        ).order_by('-created_at')
+        context['personal_logs'] = personal_logs
+
+    template_name = 'dashboard/admin_archived_event_detail.html' if is_staff else 'dashboard/student_archived_event_detail.html'
+    return render(request, template_name, context)
+
+
+@login_required
 def admin_dashboard(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
+    
+    event = Event.get_current()
+        
     now = timezone.localtime()
     today = now.date()
-    total_students = Student.objects.count()
+    
+    # Statistics should be for the CURRENT event
+    # Total Students = Approved registrations for this event
+    total_students = StudentRegistration.objects.filter(
+        event=event,
+        status=StudentRegistration.Status.APPROVED,
+        removed_at__isnull=True,
+    ).count()
     total_present = Student.objects.filter(checked_in=True).count()
+    
+    # General System Stats (Accounts)
     students_with_accounts = Student.objects.filter(user__isnull=False).count()
     total_logins_ever = Student.objects.filter(user__last_login__isnull=False).count()
     total_logins_today = Student.objects.filter(user__last_login__date=today).count()
-    workshops = Workshop.objects.all()
-    groups = Group.objects.all()
-    active_workshops = workshops.filter(status='active').count()
-    latest_notification = Notification.objects.filter(is_active=True).first()
-    recent_logs = AdminLog.objects.all()[:5]
-    event = EventSettings.get_solo()
-    pending_emails_count = FailedEmail.objects.count()
     
-    # إضافة عداد الملاحظات لليوم
+    workshops = Workshop.objects.filter(event=event)
+    groups = Group.objects.filter(event=event)
+    active_workshops = workshops.filter(status='active').count()
+    latest_notification = Notification.objects.filter(event=event, is_active=True).first()
+    recent_logs = AdminLog.objects.filter(event=event)[:5]
+    
+    pending_emails_count = FailedEmail.objects.count()
     today_notes_count = VolunteerNote.objects.filter(created_at__date=today).count()
     
     event_status = 'لم تبدأ بعد'
@@ -274,6 +358,7 @@ def admin_dashboard(request):
             event_status = 'لم تبدأ بعد'
         elif now >= event.start_datetime:
             event_status = 'جارية'
+            
     context = {
         'now': now,
         'total_students': total_students,
@@ -298,9 +383,38 @@ def admin_dashboard(request):
 def admin_event_settings(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
-    event = EventSettings.get_solo()
+    event = Event.get_current()
+    if not event:
+        event = Event.objects.create(name="Tech Day", location_name="Main", year=2026, is_active=True)
     if request.method == 'POST':
         action = request.POST.get('action') or 'save'
+        if action == 'config':
+            is_registration_closed = request.POST.get('is_registration_closed') == 'on'
+            allow_existing = request.POST.get('allow_existing_students_registration') == 'on'
+            allow_group_points = request.POST.get('allow_group_points') == 'on'
+            is_maintenance_mode = request.POST.get('is_maintenance_mode') == 'on'
+            is_admin_locked = request.POST.get('is_education_admin_locked') == 'on'
+            locked_admin = (request.POST.get('locked_education_admin') or '').strip()
+            if is_admin_locked and not locked_admin:
+                locked_admin = 'العبور'
+
+            event.is_registration_closed = is_registration_closed
+            event.allow_existing_students_registration = allow_existing
+            event.allow_group_points = allow_group_points
+            event.is_maintenance_mode = is_maintenance_mode
+            event.is_education_admin_locked = is_admin_locked
+            event.locked_education_admin = locked_admin
+            event.save(update_fields=[
+                'is_registration_closed',
+                'allow_existing_students_registration',
+                'allow_group_points',
+                'is_maintenance_mode',
+                'is_education_admin_locked',
+                'locked_education_admin',
+            ])
+            AdminLog.objects.create(action='تم تحديث لوحة التحكم بالقيود (Config Panel)')
+            messages.success(request, 'تم حفظ إعدادات القيود بنجاح.')
+            return redirect('dashboard:admin_event_settings')
         if action == 'end':
             Workshop.objects.exclude(status='finished').update(status='finished')
             event.is_finished = True
@@ -343,7 +457,89 @@ def admin_event_settings(request):
         if not messages.get_messages(request):
             messages.success(request, 'تم حفظ إعدادات الفعالية.')
         return redirect('dashboard:admin_event_settings')
-    return render(request, 'dashboard/admin_event_settings.html', {'event': event})
+    total_registered = StudentRegistration.objects.filter(
+        event=event,
+        status=StudentRegistration.Status.APPROVED,
+        removed_at__isnull=True,
+    ).count()
+    is_full = event.max_students is not None and total_registered >= event.max_students
+    education_admin_choices = [
+        'بنها', 'طوخ', 'كفر شكر', 'شبين القناطر', 'الخانكة', 'قها',
+        'قليوب', 'القناطر الخيرية', 'غرب شبرا الخيمة', 'شرق شبرا الخيمة',
+        'الخصوص', 'العبور',
+    ]
+    return render(request, 'dashboard/admin_event_settings.html', {
+        'event': event,
+        'total_registered': total_registered,
+        'is_full': is_full,
+        'education_admin_choices': education_admin_choices,
+    })
+
+
+@login_required
+def admin_archive_event(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    current_event = Event.get_current()
+    if not current_event:
+        messages.error(request, 'لا توجد فعالية نشطة حالياً لأرشفتها.')
+        return redirect('dashboard:admin_event_settings')
+    
+    if request.method == 'POST':
+        with transaction.atomic():
+            # 1. Capture current student stats into StudentEventStats
+            students = Student.objects.all()
+            for student in students:
+                StudentEventStats.objects.update_or_create(
+                    student=student,
+                    event=current_event,
+                    defaults={
+                        'points': student.points,
+                        'checked_in': student.checked_in,
+                        'checked_in_at': student.checked_in_at,
+                    },
+                )
+                # Reset student for next event
+                student.points = 0
+                student.checked_in = False
+                student.checked_in_at = None
+                student.save(update_fields=['points', 'checked_in', 'checked_in_at'])
+            
+            # 2. Archive the event
+            current_event.is_active = False
+            current_event.is_archived = True
+            current_event.is_finished = True
+            current_event.save()
+            
+            # 3. Create a new empty event
+            # Logic for execution number: same location, same year -> increment
+            next_exec = Event.objects.filter(
+                location_name=current_event.location_name,
+                year=current_event.year
+            ).count() + 1
+            
+            Event.objects.create(
+                name=current_event.name,
+                location_name=current_event.location_name,
+                location_link=current_event.location_link,
+                year=current_event.year,
+                execution_number=next_exec,
+                arrival_time_text=current_event.arrival_time_text,
+                whatsapp_group_link=current_event.whatsapp_group_link,
+                event_instructions=current_event.event_instructions,
+                max_students=current_event.max_students,
+                is_active=True
+            )
+            
+            AdminLog.objects.create(
+                action=f'تم أرشفة الفعالية {current_event} وبدء فعالية جديدة رقم {next_exec}'
+            )
+            
+            messages.success(request, f'تم أرشفة الفعالية بنجاح برابط: {current_event.slug}. النظام الآن جاهز للفعالية الجديدة.')
+            return redirect('dashboard:admin_archived_events_list')
+            
+    return render(request, 'dashboard/admin_archive_confirm.html', {'event': current_event})
 
 
 @login_required
@@ -351,7 +547,7 @@ def admin_toggle_group_points(request):
     if not require_admin(request.user):
         return JsonResponse({'success': False, 'error': 'غير مصرح'})
     
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     event.allow_group_points = not event.allow_group_points
     event.save()
     
@@ -367,12 +563,188 @@ def admin_toggle_group_points(request):
     })
 
 
+def check_app_version(request):
+    """
+    API to check the app version and return update info (Public API)
+    """
+    platform = request.GET.get('platform', 'android').lower()
+    try:
+        current_build = int(request.GET.get('build', 0))
+    except (ValueError, TypeError):
+        current_build = 0
+    
+    latest_version = AppVersion.objects.filter(platform=platform).order_by('-build_number').first()
+    
+    if not latest_version:
+        return JsonResponse({
+            'update_required': False,
+            'update_available': False,
+        })
+        
+    update_available = latest_version.build_number > current_build
+    update_required = (
+        latest_version.min_build_number > current_build
+        or (latest_version.is_force_update and update_available)
+    )
+
+    download_url = latest_version.download_url
+    if not download_url and latest_version.apk_file:
+        download_url = request.build_absolute_uri(latest_version.apk_file.url)
+    
+    return JsonResponse({
+        'update_available': update_available,
+        'update_required': update_required,
+        'is_force_update': latest_version.is_force_update and update_available,
+        'latest_version': latest_version.version_code,
+        'latest_build': latest_version.build_number,
+        'download_url': download_url,
+        'release_notes': latest_version.release_notes,
+    })
+
+
+class AppVersionForm(forms.ModelForm):
+    class Meta:
+        model = AppVersion
+        fields = [
+            'platform',
+            'version_code',
+            'build_number',
+            'min_build_number',
+            'download_url',
+            'apk_file',
+            'release_notes',
+            'is_force_update',
+        ]
+        widgets = {
+            'platform': forms.Select(),
+            'version_code': forms.TextInput(),
+            'build_number': forms.NumberInput(),
+            'min_build_number': forms.NumberInput(),
+            'download_url': forms.URLInput(),
+            'apk_file': forms.ClearableFileInput(),
+            'release_notes': forms.Textarea(attrs={'rows': 5}),
+            'is_force_update': forms.CheckboxInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        input_class = (
+            'w-full px-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 '
+            'focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm'
+        )
+        for name, field in self.fields.items():
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.update({
+                    'class': 'w-5 h-5 rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-500/50',
+                })
+            elif isinstance(field.widget, (forms.Textarea,)):
+                field.widget.attrs.update({
+                    'class': input_class,
+                })
+            else:
+                field.widget.attrs.update({
+                    'class': input_class,
+                })
+
+    def clean(self):
+        cleaned = super().clean()
+        platform = cleaned.get('platform')
+        download_url = (cleaned.get('download_url') or '').strip()
+        apk_file = cleaned.get('apk_file')
+        if platform == 'android' and not download_url and not apk_file:
+            raise ValidationError('Android لازم يكون له إما رابط تحميل أو ملف APK.')
+        return cleaned
+
+
+@login_required
+def admin_app_versions(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    platform = (request.GET.get('platform') or '').strip().lower()
+    qs = AppVersion.objects.all().order_by('-created_at', '-build_number')
+    if platform in ('android', 'ios'):
+        qs = qs.filter(platform=platform)
+
+    return render(request, 'dashboard/admin_app_versions.html', {
+        'versions': list(qs),
+        'platform': platform,
+    })
+
+
+@login_required
+def admin_app_version_create(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    if request.method == 'POST':
+        form = AppVersionForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                version = form.save()
+                AdminLog.objects.create(action=f'تم إضافة إصدار تطبيق: {version}')
+                messages.success(request, 'تم إضافة الإصدار بنجاح.')
+                return redirect('dashboard:admin_app_versions')
+            except IntegrityError:
+                form.add_error(None, 'نفس (Platform + Build Number) موجود بالفعل.')
+    else:
+        form = AppVersionForm()
+
+    return render(request, 'dashboard/admin_app_version_form.html', {
+        'form': form,
+        'version_obj': None,
+    })
+
+
+@login_required
+def admin_app_version_update(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    version_obj = get_object_or_404(AppVersion, pk=pk)
+    if request.method == 'POST':
+        form = AppVersionForm(request.POST, request.FILES, instance=version_obj)
+        if form.is_valid():
+            try:
+                version = form.save()
+                AdminLog.objects.create(action=f'تم تعديل إصدار تطبيق: {version}')
+                messages.success(request, 'تم حفظ التعديلات بنجاح.')
+                return redirect('dashboard:admin_app_versions')
+            except IntegrityError:
+                form.add_error(None, 'نفس (Platform + Build Number) موجود بالفعل.')
+    else:
+        form = AppVersionForm(instance=version_obj)
+
+    return render(request, 'dashboard/admin_app_version_form.html', {
+        'form': form,
+        'version_obj': version_obj,
+    })
+
+
+@login_required
+def admin_app_version_delete(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    version_obj = get_object_or_404(AppVersion, pk=pk)
+    if request.method == 'POST':
+        label = str(version_obj)
+        version_obj.delete()
+        AdminLog.objects.create(action=f'تم حذف إصدار تطبيق: {label}')
+        messages.success(request, 'تم حذف الإصدار بنجاح.')
+        return redirect('dashboard:admin_app_versions')
+
+    return render(request, 'dashboard/admin_app_version_delete_confirm.html', {
+        'version_obj': version_obj,
+    })
+
+
 @login_required
 def admin_toggle_registration(request):
     if not require_admin(request.user):
         return JsonResponse({'success': False}, status=403)
     
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     event.is_registration_closed = not event.is_registration_closed
     event.save(update_fields=['is_registration_closed'])
     
@@ -387,9 +759,58 @@ def admin_toggle_registration(request):
 
 
 @login_required
+def admin_toggle_existing_students_registration(request):
+    if not require_admin(request.user):
+        return JsonResponse({'success': False}, status=403)
+
+    event = Event.get_current()
+    event.allow_existing_students_registration = not event.allow_existing_students_registration
+    event.save(update_fields=['allow_existing_students_registration'])
+
+    status = 'مسموح' if event.allow_existing_students_registration else 'ممنوع'
+    AdminLog.objects.create(action=f'تم تغيير حالة تسجيل الطلاب المسجلين سابقاً إلى: {status}')
+
+    return JsonResponse({
+        'success': True,
+        'is_allowed': event.allow_existing_students_registration,
+        'message': f'تم {status} تسجيل الطلاب المسجلين سابقاً.'
+    })
+
+
+@login_required
+def admin_toggle_maintenance(request):
+    if not require_admin(request.user):
+        return JsonResponse({'success': False}, status=403)
+    
+    event = Event.get_current()
+    event.is_maintenance_mode = not event.is_maintenance_mode
+    event.save(update_fields=['is_maintenance_mode'])
+    
+    status = 'مفعل' if event.is_maintenance_mode else 'معطل'
+    AdminLog.objects.create(action=f'تم تغيير حالة وضع الصيانة إلى: {status}')
+    
+    return JsonResponse({
+        'success': True, 
+        'is_maintenance': event.is_maintenance_mode,
+        'message': f'تم {status} وضع الصيانة بنجاح.'
+    })
+
+
+def maintenance_page(request):
+    event = Event.get_current()
+    if not event.is_maintenance_mode:
+        return redirect('dashboard:admin_dashboard')
+    return render(request, 'dashboard/maintenance.html', {
+        'facebook_url': event.maintenance_facebook_url
+    })
+
+
+@login_required
 def admin_students_list(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
+    
+    event = Event.get_current()
     students_qs = Student.objects.select_related('group').all()
     q = request.GET.get('q') or ''
     group_id = request.GET.get('group') or ''
@@ -400,15 +821,96 @@ def admin_students_list(request):
     students = list(students_qs)
     for student in students:
         student.current_status = 'present' if student.checked_in else None
-    groups = Group.objects.all()
-    return render(request, 'dashboard/admin_students_list.html', {'students': students, 'groups': groups})
+    
+    # Show only groups for the current event in the filter dropdown
+    groups = Group.objects.filter(event=event) if event else Group.objects.all()
+    return render(request, 'dashboard/admin_students_list.html', {
+        'students': students, 
+        'groups': groups,
+        'current_event': event
+    })
+
+
+@login_required
+def admin_smart_search(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    query = request.GET.get('q', '').strip()
+    results = []
+    
+    if query:
+        # البحث الشامل في الطلاب
+        results = Student.objects.filter(
+            Q(name__icontains=query) |
+            Q(student_id__icontains=query) |
+            Q(phone_number__icontains=query) |
+            Q(email__icontains=query) |
+            Q(school__icontains=query) |
+            Q(education_admin__icontains=query) |
+            Q(grade__icontains=query) |
+            Q(group__name__icontains=query) |
+            Q(group__code__icontains=query)
+        ).select_related('group').distinct().order_by('name')
+        
+    return render(request, 'dashboard/admin_smart_search.html', {
+        'query': query,
+        'results': results,
+        'current_event': Event.get_current()
+    })
+
+
+@login_required
+def admin_current_event_students(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    event = Event.get_current()
+    if not event:
+        messages.warning(request, 'لا توجد فعالية نشطة حالياً.')
+        return redirect('dashboard:admin_dashboard')
+
+    # Get students who have an APPROVED registration for the current event
+    students_qs = Student.objects.filter(
+        registrations__event=event,
+        registrations__status=StudentRegistration.Status.APPROVED,
+        registrations__removed_at__isnull=True,
+    ).select_related('group').distinct()
+
+    q = request.GET.get('q') or ''
+    group_id = request.GET.get('group') or ''
+    if q:
+        students_qs = students_qs.filter(Q(name__icontains=q) | Q(student_id__icontains=q))
+    if group_id:
+        students_qs = students_qs.filter(group_id=group_id)
+    
+    # We want to know if they checked in for THIS event
+    from students.models import StudentEventStats
+    stats_map = {
+        s.student_id: s.checked_in 
+        for s in StudentEventStats.objects.filter(event=event)
+    }
+
+    students = list(students_qs)
+    for student in students:
+        # Use StudentEventStats if exists, fallback to student.checked_in (legacy)
+        student.is_checked_in_this_event = stats_map.get(student.id, student.checked_in)
+        
+    groups = Group.objects.filter(event=event)
+    return render(request, 'dashboard/admin_current_event_students.html', {
+        'students': students, 
+        'groups': groups,
+        'event': event
+    })
 
 
 @login_required
 def admin_student_create(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
-    groups = Group.objects.all()
+    
+    event = Event.get_current()
+    groups = Group.objects.filter(event=event) if event else Group.objects.all()
     if request.method == 'POST':
         name = request.POST.get('name') or ''
         student_id = request.POST.get('student_id') or ''
@@ -475,7 +977,7 @@ def admin_student_create(request):
         )
         AdminLog.objects.create(action=f'تم إضافة الطالب {name}')
         if password_plain and email:
-            event = EventSettings.get_solo()
+            event = Event.get_current()
             whatsapp_block_text = ""
             whatsapp_block_html = ""
             if event.whatsapp_group_link:
@@ -570,7 +1072,9 @@ def admin_student_update(request, pk):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     student = get_object_or_404(Student, pk=pk)
-    groups = Group.objects.all()
+    
+    event = Event.get_current()
+    groups = Group.objects.filter(event=event) if event else Group.objects.all()
     if request.method == 'POST':
         old_group = student.group
         new_name = request.POST.get('name') or student.name
@@ -601,36 +1105,22 @@ def admin_student_update(request, pk):
         student.save()
         AdminLog.objects.create(action=f'تم تحديث بيانات الطالب {student.name}')
         if group and group != old_group and student.email:
-            group_students = Student.objects.filter(group=group).order_by('name')
-            lines = [s.name for s in group_students]
-            group_list_text = '\n'.join(lines)
             subject = 'تحديث مجموعتك في فعالية Tech Day – EduTech Egypt'
             text_body = (
                 f'مرحبًا {student.name},\n\n'
                 f'تم تحديث مجموعتك في فعالية Tech Day – الفريق التقني بالقليوبية.\n\n'
                 f'المجموعة الحالية: {group.name} ({group.code})\n\n'
-                f'زملاؤك في المجموعة:\n'
-                f'{group_list_text}\n\n'
                 f'نتمنى لك تجربة مميزة وممتعة مع فريقك.\n\n'
                 f'تحياتنا،\n'
                 f'EduTech Egypt System'
             )
-            group_items_html = ''.join(
-                f"<li style='margin:2px 0;'>{s.name}</li>" for s in group_students
-            )
             
             content_blocks = f"""
                 <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;text-align:center;">
-                  <p class="td-email-text-main" style="margin:0 0 10px;font-size:14px;color:#94a3b8;">مجموعتك الحالية:</p>
+                  <p class="td-email-text-main" style="margin:0 0-10px;font-size:14px;color:#94a3b8;">مجموعتك الحالية:</p>
                   <div class="td-group-badge" style="display:inline-block;padding:8px 20px;border-radius:12px;background-color:#1e293b;color:#ffffff;font-size:18px;font-weight:800;border:1px solid {group.color};">
                     {group.name} ({group.code})
                   </div>
-                </div>
-                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
-                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">👥 زملاؤك في المجموعة:</p>
-                  <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
-                    {group_items_html}
-                  </ul>
                 </div>
             """
             
@@ -772,81 +1262,373 @@ def admin_student_delete(request, pk):
 
 
 @login_required
+def admin_student_add_to_current_event(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return HttpResponseForbidden()
+    
+    student = get_object_or_404(Student, pk=pk)
+    event = Event.get_current()
+    
+    if student.is_registered_for_event(event):
+        messages.warning(request, 'هذا الطالب مسجل بالفعل في الفعالية الحالية.')
+    else:
+        # Create a registration record
+        StudentRegistration.objects.create(
+            event=event,
+            student=student,
+            full_name_ar=student.name,
+            email=student.email,
+            phone_number=student.phone_number,
+            school=student.school,
+            education_admin=student.education_admin,
+            grade=student.grade,
+            status=StudentRegistration.Status.APPROVED,
+            approved_by=request.user,
+            approved_at=timezone.now()
+        )
+        AdminLog.objects.create(action=f'تم تسجيل الطالب {student.name} في الفعالية {event.name} يدوياً')
+        messages.success(request, f'تم تسجيل الطالب في فعالية {event.name} بنجاح.')
+        
+    return redirect('dashboard:admin_students_list')
+
+
+@login_required
+def admin_student_remove_from_current_event(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    student = get_object_or_404(Student, pk=pk)
+    event = Event.get_current()
+    if not event:
+        messages.error(request, 'لا توجد فعالية نشطة حالياً.')
+        return redirect('dashboard:admin_dashboard')
+
+    registration = (
+        StudentRegistration.objects
+        .filter(
+            student=student,
+            event=event,
+            status=StudentRegistration.Status.APPROVED,
+            removed_at__isnull=True,
+        )
+        .order_by('-created_at')
+        .first()
+    )
+
+    if request.method == 'POST':
+        if not registration:
+            messages.warning(request, 'هذا الطالب غير مسجل في الفعالية الحالية.')
+            return redirect('dashboard:admin_current_event_students')
+
+        reason = (request.POST.get('reason') or '').strip()
+
+        registration.removed_at = timezone.localtime()
+        registration.removed_reason = reason
+        registration.removed_by = request.user
+        registration.save(update_fields=['removed_at', 'removed_reason', 'removed_by'])
+
+        AdminLog.objects.create(
+            action=f'تم إزالة الطالب {student.name} من الفعالية الحالية{": " + reason if reason else ""}',
+        )
+
+        email = (registration.email or student.email or '').strip()
+        if email:
+            subject = f'تم إلغاء تسجيلك في فعالية {event.name} – EduTech Egypt'
+            reason_block_text = f'\n\nالسبب: {reason}\n' if reason else ''
+            text_body = (
+                f'مرحبًا {student.name},\n\n'
+                f'نود إبلاغك بأنه تم إلغاء تسجيلك في الفعالية الحالية.\n'
+                f'الفعالية: {event.name} – {event.location_name} ({event.year})\n'
+                f'{reason_block_text}\n'
+                f'في حال كان لديك أي استفسار يمكنك التواصل مع إدارة الفعالية.\n\n'
+                f'تحياتنا،\n'
+                f'EduTech Egypt System'
+            )
+
+            content_blocks = ''
+            if reason:
+                content_blocks = f"""
+                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;">
+                      <p class="td-email-text-main" style="margin:0 0 10px;font-size:14px;color:#fca5a5;font-weight:700;">📝 سبب الإلغاء:</p>
+                      <p class="td-email-text-main" style="margin:0;font-size:14px;color:#e5e7eb;line-height:1.6;">{reason}</p>
+                    </div>
+                """
+
+            html_body = get_styled_email_html(
+                subject=subject,
+                preview_text='تم إلغاء تسجيلك في الفعالية الحالية',
+                title='📌 تحديث مهم بخصوص تسجيلك',
+                main_text=f'مرحبًا {student.name}، تم إلغاء تسجيلك في الفعالية الحالية.',
+                content_blocks_html=content_blocks + f"""
+                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
+                      <p class="td-email-text-main" style="margin:0;font-size:14px;color:#cbd5f5;">
+                        الفعالية: <b>{event.name}</b> – {event.location_name} ({event.year})
+                      </p>
+                    </div>
+                """,
+            )
+
+            message = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+            )
+            message.attach_alternative(html_body, 'text/html')
+            send_email_async(message, 'إشعار إزالة طالب من الفعالية الحالية')
+            messages.success(request, 'تمت إزالة الطالب من الفعالية وإرسال بريد له (إن وجد).')
+        else:
+            messages.success(request, 'تمت إزالة الطالب من الفعالية (لا يوجد بريد لإرسال رسالة).')
+
+        return redirect('dashboard:admin_current_event_students')
+
+    return render(request, 'dashboard/admin_remove_student_from_event_confirm.html', {
+        'student': student,
+        'event': event,
+        'registration': registration,
+    })
+
+
+@login_required
 def admin_registrations_list(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     registrations = StudentRegistration.objects.select_related('student', 'approved_by').all()
+    q = (request.GET.get('q') or '').strip()
+    status = (request.GET.get('status') or '').strip().lower()
+    if q:
+        registrations = registrations.filter(
+            Q(full_name_ar__icontains=q)
+            | Q(email__icontains=q)
+            | Q(phone_number__icontains=q)
+            | Q(school__icontains=q)
+        )
+    if status in {StudentRegistration.Status.PENDING, StudentRegistration.Status.APPROVED, StudentRegistration.Status.REJECTED}:
+        registrations = registrations.filter(status=status)
+
+    registrations = registrations.order_by('-created_at')
+    paginator = Paginator(registrations, 50)
+    page_obj = paginator.get_page(request.GET.get('page') or 1)
     return render(
         request,
         'dashboard/admin_registrations_list.html',
-        {'registrations': registrations},
+        {
+            'registrations': page_obj,
+            'q': q,
+            'status': status or 'all',
+            'total_count': paginator.count,
+        },
     )
 
+@login_required
+def admin_current_event_registrations(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    event = Event.get_current()
+    registrations = StudentRegistration.objects.select_related('student', 'approved_by').filter(event=event)
+    status = (request.GET.get('status') or '').lower()
+    if status == 'pending':
+        registrations = registrations.filter(status=StudentRegistration.Status.PENDING)
+    elif status == 'approved':
+        registrations = registrations.filter(status=StudentRegistration.Status.APPROVED, removed_at__isnull=True)
+    pending_count = StudentRegistration.objects.filter(event=event, status=StudentRegistration.Status.PENDING).count()
+    approved_count = StudentRegistration.objects.filter(
+        event=event, status=StudentRegistration.Status.APPROVED, removed_at__isnull=True
+    ).count()
+    registrations = registrations.order_by('-created_at')
+    paginator = Paginator(registrations, 50)
+    page_obj = paginator.get_page(request.GET.get('page') or 1)
+    return render(
+        request,
+        'dashboard/admin_current_event_registrations.html',
+        {
+            'event': event,
+            'registrations': page_obj,
+            'status': status or 'all',
+            'pending_count': pending_count,
+            'approved_count': approved_count,
+        },
+    )
 
 @login_required
 def admin_registration_detail(request, pk):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     registration = get_object_or_404(StudentRegistration, pk=pk)
-    groups = Group.objects.all()
+    # Filter groups to only those belonging to the event of this registration
+    groups = Group.objects.filter(event=registration.event)
+    possible_student_matches = []
+    possible_registration_matches = []
+    if registration.status == StudentRegistration.Status.PENDING:
+        email = (registration.email or '').strip()
+        phone = (registration.phone_number or '').strip()
+        name_ar = (registration.full_name_ar or '').strip()
+        school = (registration.school or '').strip()
+        possible_student_matches = list(
+            Student.objects.filter(
+                Q(email__iexact=email)
+                | Q(phone_number=phone)
+                | (Q(name__iexact=name_ar) & Q(school__iexact=school))
+            )
+            .distinct()
+            .order_by('name')[:10]
+        )
+        possible_registration_matches = list(
+            StudentRegistration.objects.filter(
+                event=registration.event,
+            )
+            .filter(
+                Q(email__iexact=email)
+                | Q(phone_number=phone)
+                | (Q(full_name_ar__iexact=name_ar) & Q(school__iexact=school))
+            )
+            .exclude(pk=registration.pk)
+            .order_by('-created_at')[:10]
+        )
     if request.method == 'POST':
         action = request.POST.get('action') or ''
         if action == 'approve' and registration.status == StudentRegistration.Status.PENDING:
+            link_student_id = (request.POST.get('link_student_id') or '').strip()
+            force_new = (request.POST.get('force_new') or '').strip() == '1'
+            if (possible_student_matches or possible_registration_matches) and not force_new and not link_student_id:
+                messages.warning(
+                    request,
+                    'تم العثور على تطابق محتمل. اختر "ربط بالطالب الموجود" أو فعّل خيار إنشاء طالب جديد رغم التطابق.',
+                )
+                return render(
+                    request,
+                    'dashboard/admin_registration_detail.html',
+                    {
+                        'registration': registration,
+                        'groups': groups,
+                        'possible_student_matches': possible_student_matches,
+                        'possible_registration_matches': possible_registration_matches,
+                    },
+                )
+
             group_id = request.POST.get('group') or ''
             group = Group.objects.filter(id=group_id).first() if group_id else None
-            from django.utils.crypto import get_random_string
 
-            student_id = None
-            for _ in range(10):
-                candidate = get_random_string(6, allowed_chars='0123456789')
-                if not Student.objects.filter(student_id=candidate).exists():
-                    student_id = candidate
-                    break
-            if not student_id:
-                messages.error(request, 'تعذّر توليد رقم فريد للطالب. حاول مرة أخرى.')
-                return redirect('dashboard:admin_registration_detail', pk=registration.pk)
-            email = registration.email or ''
-            user = None
+            student = None
             password_plain = None
-            if email:
-                username = f'student_{student_id}'
-                if User.objects.filter(email__iexact=email).exists():
-                    messages.error(
-                        request,
-                        'هذا البريد الإلكتروني مرتبط بالفعل بحساب آخر، لا يمكن إنشاء حساب جديد بنفس البريد.',
-                    )
+            if link_student_id:
+                student = Student.objects.filter(id=link_student_id).first()
+                if not student:
+                    messages.error(request, 'الطالب المختار غير موجود.')
                     return redirect('dashboard:admin_registration_detail', pk=registration.pk)
-                user, created = User.objects.get_or_create(
-                    username=username,
-                    defaults={'role': User.Roles.STUDENT, 'email': email},
-                )
-                from django.utils.crypto import get_random_string as get_random_password
+                if student.is_registered_for_event(registration.event):
+                    registration.status = StudentRegistration.Status.REJECTED
+                    registration.approved_by = request.user
+                    registration.approved_at = timezone.localtime()
+                    registration.save(update_fields=['status', 'approved_by', 'approved_at'])
+                    AdminLog.objects.create(
+                        action=f'تم رفض طلب تسجيل مكرر للطالب {registration.full_name_ar} (مسجل بالفعل في الفعالية).',
+                    )
+                    messages.info(request, 'تم رفض الطلب لأنه مكرر: الطالب مسجل بالفعل في الفعالية الحالية.')
+                    next_reg = StudentRegistration.objects.filter(
+                        event=registration.event,
+                        status=StudentRegistration.Status.PENDING,
+                    ).order_by('-created_at').first()
+                    if next_reg:
+                        return redirect('dashboard:admin_registration_detail', pk=next_reg.pk)
+                    current_event = Event.get_current()
+                    if current_event and registration.event_id == current_event.id:
+                        return redirect('dashboard:admin_current_event_registrations')
+                    return redirect('dashboard:admin_registrations_list')
+                if group and not student.group:
+                    student.group = group
+                    student.save(update_fields=['group'])
+            else:
+                from django.utils.crypto import get_random_string
 
-                password_plain = get_random_password(10)
-                user.set_password(password_plain)
-                user.email = email
-                user.save()
-            student = Student.objects.create(
-                name=registration.full_name_ar,
-                student_id=student_id,
-                group=group,
-                school=registration.school,
-                education_admin=registration.education_admin,
-                grade=registration.grade,
-                email=registration.email,
-                phone_number=registration.phone_number,
-                user=user,
-            )
+                student_id = None
+                for _ in range(10):
+                    candidate = get_random_string(6, allowed_chars='0123456789')
+                    if not Student.objects.filter(student_id=candidate).exists():
+                        student_id = candidate
+                        break
+                if not student_id:
+                    messages.error(request, 'تعذّر توليد رقم فريد للطالب. حاول مرة أخرى.')
+                    return redirect('dashboard:admin_registration_detail', pk=registration.pk)
+                email = registration.email or ''
+                user = None
+                if email:
+                    username = f'student_{student_id}'
+                    if User.objects.filter(email__iexact=email).exists():
+                        messages.error(
+                            request,
+                            'هذا البريد الإلكتروني مرتبط بالفعل بحساب آخر، لا يمكن إنشاء حساب جديد بنفس البريد.',
+                        )
+                        return redirect('dashboard:admin_registration_detail', pk=registration.pk)
+                    user, created = User.objects.get_or_create(
+                        username=username,
+                        defaults={'role': User.Roles.STUDENT, 'email': email},
+                    )
+                    from django.utils.crypto import get_random_string as get_random_password
+
+                    password_plain = get_random_password(10)
+                    user.set_password(password_plain)
+                    user.email = email
+                    user.save()
+                student = Student.objects.create(
+                    name=registration.full_name_ar,
+                    student_id=student_id,
+                    group=group,
+                    school=registration.school,
+                    education_admin=registration.education_admin,
+                    grade=registration.grade,
+                    email=registration.email,
+                    phone_number=registration.phone_number,
+                    user=user,
+                )
             registration.status = StudentRegistration.Status.APPROVED
             registration.student = student
             registration.approved_by = request.user
             registration.approved_at = timezone.localtime()
             registration.save()
+            StudentEventStats.objects.get_or_create(student=student, event=registration.event)
             AdminLog.objects.create(
                 action=f'تمت الموافقة على طلب تسجيل الطالب {registration.full_name_ar}',
             )
+            email = (registration.email or '').strip()
+            if link_student_id and email:
+                if not (student.email or '').strip():
+                    student.email = email
+                    student.save(update_fields=['email'])
+                send_registration_confirmation_email(student, registration.event)
+                messages.success(
+                    request,
+                    'تمت الموافقة على الطلب وربطه بحساب طالب موجود. تم إرسال تفاصيل الفعالية إلى بريد الطالب.',
+                )
+                next_reg = StudentRegistration.objects.filter(
+                    event=registration.event,
+                    status=StudentRegistration.Status.PENDING,
+                ).order_by('-created_at').first()
+                if next_reg:
+                    return redirect('dashboard:admin_registration_detail', pk=next_reg.pk)
+                current_event = Event.get_current()
+                if current_event and registration.event_id == current_event.id:
+                    return redirect('dashboard:admin_current_event_registrations')
+                return redirect('dashboard:admin_registrations_list')
+            if link_student_id:
+                messages.success(
+                    request,
+                    'تمت الموافقة على الطلب وربطه بحساب طالب موجود (لا يوجد بريد لإرسال رسالة).',
+                )
+                next_reg = StudentRegistration.objects.filter(
+                    event=registration.event,
+                    status=StudentRegistration.Status.PENDING,
+                ).order_by('-created_at').first()
+                if next_reg:
+                    return redirect('dashboard:admin_registration_detail', pk=next_reg.pk)
+                current_event = Event.get_current()
+                if current_event and registration.event_id == current_event.id:
+                    return redirect('dashboard:admin_current_event_registrations')
+                return redirect('dashboard:admin_registrations_list')
             if password_plain and email:
-                event = EventSettings.get_solo()
+                event = Event.get_current()
                 whatsapp_block_text = ""
                 whatsapp_block_html = ""
                 if event.whatsapp_group_link:
@@ -942,6 +1724,15 @@ def admin_registration_detail(request, pk):
                     request,
                     'تمت الموافقة على طلب التسجيل وإنشاء حساب الطالب (بدون بريد إلكتروني).',
                 )
+            next_reg = StudentRegistration.objects.filter(
+                event=registration.event,
+                status=StudentRegistration.Status.PENDING,
+            ).order_by('-created_at').first()
+            if next_reg:
+                return redirect('dashboard:admin_registration_detail', pk=next_reg.pk)
+            current_event = Event.get_current()
+            if current_event and registration.event_id == current_event.id:
+                return redirect('dashboard:admin_current_event_registrations')
             return redirect('dashboard:admin_registrations_list')
         elif action == 'reject' and registration.status == StudentRegistration.Status.PENDING:
             rejection_reason = request.POST.get('rejection_reason', '').strip()
@@ -1008,14 +1799,31 @@ def admin_registration_detail(request, pk):
                 )
             else:
                 messages.success(request, 'تم رفض طلب التسجيل.')
+            next_reg = StudentRegistration.objects.filter(
+                event=registration.event,
+                status=StudentRegistration.Status.PENDING,
+            ).order_by('-created_at').first()
+            if next_reg:
+                return redirect('dashboard:admin_registration_detail', pk=next_reg.pk)
+            current_event = Event.get_current()
+            if current_event and registration.event_id == current_event.id:
+                return redirect('dashboard:admin_current_event_registrations')
             return redirect('dashboard:admin_registrations_list')
         else:
             messages.error(request, 'لا يمكن تنفيذ العملية على هذا الطلب.')
+            current_event = Event.get_current()
+            if current_event and registration.event_id == current_event.id:
+                return redirect('dashboard:admin_current_event_registrations')
             return redirect('dashboard:admin_registrations_list')
     return render(
         request,
         'dashboard/admin_registration_detail.html',
-        {'registration': registration, 'groups': groups},
+        {
+            'registration': registration,
+            'groups': groups,
+            'possible_student_matches': possible_student_matches,
+            'possible_registration_matches': possible_registration_matches,
+        },
     )
 
 
@@ -1033,22 +1841,14 @@ def admin_student_transfer(request, pk):
         student.save()
         AdminLog.objects.create(action=f'تم نقل الطالب {student.name} من مجموعة {old_group} إلى {group}')
         if group and group != old_group and student.email:
-            group_students = Student.objects.filter(group=group).order_by('name')
-            lines = [s.name for s in group_students]
-            group_list_text = '\n'.join(lines)
             subject = 'تم نقلك إلى مجموعة جديدة في Tech Day – EduTech Egypt'
             text_body = (
                 f'مرحبًا {student.name},\n\n'
                 f'تم نقلك إلى مجموعة جديدة في فعالية Tech Day – الفريق التقني بالقليوبية.\n\n'
                 f'المجموعة الحالية: {group.name} ({group.code})\n\n'
-                f'زملاؤك في المجموعة:\n'
-                f'{group_list_text}\n\n'
                 f'نتمنى لك تجربة مميزة وممتعة مع فريقك.\n\n'
                 f'تحياتنا،\n'
                 f'EduTech Egypt System'
-            )
-            group_items_html = ''.join(
-                f"<li style='margin:2px 0;'>{s.name}</li>" for s in group_students
             )
             
             content_blocks = f"""
@@ -1057,12 +1857,6 @@ def admin_student_transfer(request, pk):
                   <div class="td-group-badge" style="display:inline-block;padding:8px 20px;border-radius:12px;background-color:#1e293b;color:#ffffff;font-size:18px;font-weight:800;border:1px solid {group.color};">
                     {group.name} ({group.code})
                   </div>
-                </div>
-                <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
-                  <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">👥 زملاؤك في المجموعة:</p>
-                  <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
-                    {group_items_html}
-                  </ul>
                 </div>
             """
             
@@ -1091,21 +1885,39 @@ def admin_student_transfer(request, pk):
 def admin_groups(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
-    groups = Group.objects.all()
-    return render(request, 'dashboard/admin_groups.html', {'groups': groups})
+    
+    event = Event.get_current()
+    show_all = request.GET.get('all') == 'true'
+    
+    if show_all:
+        groups = Group.objects.all().order_by('-event__created_at', 'code')
+    else:
+        # عرض مجموعات الفعالية الحالية فقط افتراضياً
+        groups = Group.objects.filter(event=event).order_by('code')
+        
+    return render(request, 'dashboard/admin_groups.html', {
+        'groups': groups, 
+        'event': event,
+        'show_all': show_all
+    })
 
 
 @login_required
 def admin_group_create(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
+    event = Event.get_current()
     if request.method == 'POST':
         name = request.POST.get('name') or ''
         code = request.POST.get('code') or ''
         color = request.POST.get('color') or ''
         level = request.POST.get('level') or Group.Level.PRIMARY
         max_students = int(request.POST.get('max_students') or 0) or 25
-        group = Group.objects.create(name=name, code=code, color=color, max_students=max_students, level=level)
+        group = Group.objects.create(
+            name=name, code=code, color=color, 
+            max_students=max_students, level=level,
+            event=event
+        )
         AdminLog.objects.create(action=f'تم إنشاء المجموعة {group}')
         messages.success(request, 'تم إنشاء المجموعة بنجاح')
         return redirect('dashboard:admin_groups')
@@ -1135,11 +1947,21 @@ def admin_groups_redistribute(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     
-    primary_groups = list(Group.objects.filter(level=Group.Level.PRIMARY))
-    prep_sec_groups = list(Group.objects.filter(level=Group.Level.PREP_SEC))
+    event = Event.get_current()
+    if not event:
+        messages.error(request, 'لا توجد فعالية نشطة لإعادة توزيع الطلاب عليها.')
+        return redirect('dashboard:admin_groups')
     
-    # تصنيف الطلاب
-    all_students = list(Student.objects.all())
+    primary_groups = list(Group.objects.filter(event=event, level=Group.Level.PRIMARY))
+    prep_sec_groups = list(Group.objects.filter(event=event, level=Group.Level.PREP_SEC))
+    
+    # تصنيف الطلاب المسجلين في الفعالية الحالية فقط
+    all_students = list(Student.objects.filter(
+        registrations__event=event,
+        registrations__status=StudentRegistration.Status.APPROVED,
+        registrations__removed_at__isnull=True,
+    ).distinct())
+    
     primary_students = []
     prep_sec_students = []
     other_students = []
@@ -1155,14 +1977,17 @@ def admin_groups_redistribute(request):
             other_students.append(s)
             
     # إذا لم توجد مجموعات من نوع معين، ندمج المجموعات المتاحة
-    if not primary_groups:
+    if not primary_groups and prep_sec_groups:
         prep_sec_students.extend(primary_students)
         primary_students = []
         primary_groups = prep_sec_groups
-    elif not prep_sec_groups:
+    elif not prep_sec_groups and primary_groups:
         primary_students.extend(prep_sec_students)
         prep_sec_students = []
         prep_sec_groups = primary_groups
+    elif not primary_groups and not prep_sec_groups:
+        messages.error(request, 'لا توجد مجموعات معرفة لهذه الفعالية.')
+        return redirect('dashboard:admin_groups')
         
     # دمج الطلاب غير المصنفين مع المرحلة الأكبر
     prep_sec_students.extend(other_students)
@@ -1198,20 +2023,17 @@ def admin_groups_redistribute(request):
 
     # تنفيذ التحديثات وإرسال الإيميلات
     with transaction.atomic():
+        # تفريغ المجموعات الحالية للفعالية لضمان نظافة التوزيع
+        Student.objects.filter(group__event=event).update(group=None)
+        
         for student, new_group in assignments:
             old_group = student.group
             student.group = new_group
             student.save(update_fields=['group'])
             
             if new_group != old_group and student.email:
-                # إرسال إيميل التحديث (نفس المنطق السابق)
-                group_students = Student.objects.filter(group=new_group).order_by('name')
-                group_list_text = '\n'.join([s.name for s in group_students])
+                # إرسال إيميل التحديث
                 subject = 'تحديث مجموعتك بعد إعادة التوزيع في Tech Day – EduTech Egypt'
-                
-                group_items_html = ''.join(
-                    f"<li style='margin:2px 0;'>{s.name}</li>" for s in group_students
-                )
                 
                 content_blocks = f"""
                     <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;margin-bottom:20px;text-align:center;">
@@ -1219,12 +2041,6 @@ def admin_groups_redistribute(request):
                       <div class="td-group-badge" style="display:inline-block;padding:8px 20px;border-radius:12px;background-color:#1e293b;color:#ffffff;font-size:18px;font-weight:800;border:1px solid {new_group.color};">
                         {new_group.name} ({new_group.code})
                       </div>
-                    </div>
-                    <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#0f172a;border:1px solid #1e293b;">
-                      <p class="td-email-text-main" style="margin:0 0 15px;font-size:14px;color:#e5e7eb;font-weight:700;">👥 زملاؤك في المجموعة الجديدة:</p>
-                      <ul style="margin:0;padding:0 20px;font-size:13px;color:#cbd5f5;line-height:1.6;">
-                        {group_items_html}
-                      </ul>
                     </div>
                 """
                 
@@ -1238,15 +2054,15 @@ def admin_groups_redistribute(request):
                 
                 message = EmailMultiAlternatives(
                     subject,
-                    f'مرحبًا {student.name},\n\nتم إعادة توزيعك للمجموعة: {new_group.name}\n\nزملاؤك:\n{group_list_text}',
+                    f'مرحبًا {student.name},\n\nتم إعادة توزيعك للمجموعة: {new_group.name}\n\nنتمنى لك التوفيق.',
                     settings.DEFAULT_FROM_EMAIL,
                     [student.email],
                 )
                 message.attach_alternative(html_body, 'text/html')
                 send_email_async(message, 'إشعار إعادة توزيع الطلاب على المجموعات')
 
-    AdminLog.objects.create(action=f'تم إعادة توزيع {len(assignments)} طالب حسب المراحل الدراسية')
-    messages.success(request, f'تم إعادة توزيع {len(assignments)} طالب حسب المراحل الدراسية بنجاح')
+    AdminLog.objects.create(action=f'تم إعادة توزيع {len(assignments)} طالب في فعالية {event.name} ({event.location_name})')
+    messages.success(request, f'تم إعادة توزيع {len(assignments)} طالب في الفعالية الحالية بنجاح')
     return redirect('dashboard:admin_groups')
 
 
@@ -1255,14 +2071,23 @@ def admin_send_location_email(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     if not event.location_name or not event.location_link:
         messages.error(request, 'يرجى ضبط مكان الفعالية ورابط الموقع أولاً في الإعدادات.')
         return redirect('dashboard:admin_event_settings')
     
-    students = Student.objects.filter(email__isnull=False).exclude(email='')
+    students = (
+        Student.objects.filter(
+            registrations__event=event,
+            registrations__status=StudentRegistration.Status.APPROVED,
+            registrations__removed_at__isnull=True,
+            email__isnull=False,
+        )
+        .exclude(email='')
+        .distinct()
+    )
     if not students.exists():
-        messages.error(request, 'لا يوجد طلاب لديهم بريد إلكتروني مسجل.')
+        messages.error(request, 'لا يوجد طلاب في الفعالية الحالية لديهم بريد إلكتروني مسجل.')
         return redirect('dashboard:admin_dashboard')
     
     count = 0
@@ -1362,7 +2187,7 @@ def admin_send_location_email(request):
         count += 1
 
     AdminLog.objects.create(action=f'تم البدء في إرسال تأكيدات الحضور لـ {count} طالب')
-    messages.success(request, f'جاري إرسال تأكيدات الحضور والموقع لـ {count} طالب في الخلفية.')
+    messages.success(request, f'جاري إرسال تأكيدات الحضور والموقع لطلاب الفعالية الحالية ({count}) في الخلفية.')
     return redirect('dashboard:admin_dashboard')
 
 
@@ -1379,6 +2204,7 @@ def admin_workshop_create(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     supervisors = User.objects.filter(role=User.Roles.SUPERVISOR)
+    current_event = Event.get_current()
     if request.method == 'POST':
         title = request.POST.get('title') or ''
         room = request.POST.get('room') or ''
@@ -1386,6 +2212,7 @@ def admin_workshop_create(request):
         supervisor = supervisors.filter(id=supervisor_id).first() if supervisor_id else None
         status = request.POST.get('status') or 'upcoming'
         workshop = Workshop.objects.create(
+            event=current_event,
             title=title,
             room=room,
             supervisor=supervisor,
@@ -1465,6 +2292,7 @@ def admin_workshop_update(request, pk):
         return HttpResponseForbidden()
     workshop = get_object_or_404(Workshop, pk=pk)
     supervisors = User.objects.filter(role=User.Roles.SUPERVISOR)
+    current_event = Event.get_current()
     if request.method == 'POST':
         old_supervisor = workshop.supervisor
         workshop.title = request.POST.get('title') or workshop.title
@@ -1473,6 +2301,8 @@ def admin_workshop_update(request, pk):
         new_supervisor = supervisors.filter(id=supervisor_id).first() if supervisor_id else None
         workshop.supervisor = new_supervisor
         workshop.status = request.POST.get('status') or workshop.status
+        if not workshop.event_id and current_event:
+            workshop.event = current_event
         workshop.save()
         AdminLog.objects.create(action=f'تم تعديل الورشة {workshop.title}')
         if new_supervisor and new_supervisor != old_supervisor and new_supervisor.email:
@@ -1555,6 +2385,20 @@ def admin_workshop_toggle_status(request, pk):
     AdminLog.objects.create(action=f'تم تغيير حالة الورشة {workshop.title} إلى {workshop.get_status_display()}')
     messages.success(request, 'تم تحديث حالة الورشة')
     return redirect('dashboard:admin_workshops')
+
+
+@login_required
+def admin_workshop_delete(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    workshop = get_object_or_404(Workshop, pk=pk)
+    if request.method == 'POST':
+        title = workshop.title
+        workshop.delete()
+        AdminLog.objects.create(action=f'تم حذف الورشة {title}')
+        messages.success(request, 'تم حذف الورشة بنجاح')
+        return redirect('dashboard:admin_workshops')
+    return render(request, 'dashboard/admin_workshop_delete_confirm.html', {'workshop': workshop})
 
 
 @login_required
@@ -1701,6 +2545,20 @@ def admin_supervisor_update(request, pk):
 
 
 @login_required
+def admin_supervisor_delete(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    supervisor = get_object_or_404(User, pk=pk, role=User.Roles.SUPERVISOR)
+    if request.method == 'POST':
+        name = supervisor.get_full_name() or supervisor.username
+        supervisor.delete()
+        AdminLog.objects.create(action=f'تم حذف المشرف: {name}')
+        messages.success(request, 'تم حذف المشرف بنجاح')
+        return redirect('dashboard:admin_supervisors')
+    return render(request, 'dashboard/admin_supervisor_delete_confirm.html', {'supervisor': supervisor})
+
+
+@login_required
 def admin_volunteers(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
@@ -1844,16 +2702,35 @@ def admin_volunteer_update(request, pk):
 
 
 @login_required
+def admin_volunteer_delete(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    volunteer = get_object_or_404(User, pk=pk, role=User.Roles.VOLUNTEER)
+    if request.method == 'POST':
+        name = volunteer.get_full_name() or volunteer.username
+        volunteer.delete()
+        AdminLog.objects.create(action=f'تم حذف المتطوع: {name}')
+        messages.success(request, 'تم حذف المتطوع بنجاح')
+        return redirect('dashboard:admin_volunteers')
+    return render(request, 'dashboard/admin_volunteer_delete_confirm.html', {'volunteer': volunteer})
+
+
+@login_required
 def admin_schedule(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
-    sessions = WorkshopSession.objects.select_related('workshop', 'group').all()
+    current_event = Event.get_current()
+    sessions = (
+        WorkshopSession.objects.select_related('workshop', 'group')
+        .filter(group__event=current_event)
+        .all()
+    )
     periods = WorkshopSession.PERIOD_CHOICES
-    groups = Group.objects.all()
+    groups = Group.objects.filter(event=current_event).order_by('code')
     return render(
         request,
         'dashboard/admin_schedule.html',
-        {'sessions': sessions, 'periods': periods, 'groups': groups},
+        {'sessions': sessions, 'periods': periods, 'groups': groups, 'event': current_event},
     )
 
 
@@ -1863,26 +2740,23 @@ def admin_schedule_random_assign(request):
         return HttpResponseForbidden()
     if request.method != 'POST':
         return redirect('dashboard:admin_schedule')
-    workshops = list(Workshop.objects.all())
-    groups = list(Group.objects.all())
+    current_event = Event.get_current()
+    workshops = list(Workshop.objects.filter(Q(event=current_event) | Q(event__isnull=True)))
+    groups = list(Group.objects.filter(event=current_event))
     if not workshops or not groups:
         messages.error(request, 'يجب إضافة الورش والمجموعات أولًا قبل التوزيع التلقائي.')
         return redirect('dashboard:admin_schedule')
-    WorkshopSession.objects.all().delete()
+    WorkshopSession.objects.filter(group__event=current_event).delete()
     
     # الفترات التي يتم فيها توزيع ورش فعلياً
-    workshop_periods = ['9:40-10:25', '10:35-11:20', '12:00-12:45', '12:55-1:40']
+    workshop_periods = ['8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30']
     
     period_time_map = {
-        '9:00-9:40': (time(9, 0), time(9, 40)),
-        '9:40-10:25': (time(9, 40), time(10, 25)),
-        '10:25-10:35': (time(10, 25), time(10, 35)),
-        '10:35-11:20': (time(10, 35), time(11, 20)),
-        '11:20-12:00': (time(11, 20), time(12, 0)),
-        '12:00-12:45': (time(12, 0), time(12, 45)),
-        '12:45-12:55': (time(12, 45), time(12, 55)),
-        '12:55-1:40': (time(12, 55), time(13, 40)),
-        '1:40-2:00': (time(13, 40), time(14, 0)),
+        '8:45-9:30': (time(8, 45), time(9, 30)),
+        '9:35-10:20': (time(9, 35), time(10, 20)),
+        '10:25-11:10': (time(10, 25), time(11, 10)),
+        '11:55-12:40': (time(11, 55), time(12, 40)),
+        '12:45-1:30': (time(12, 45), time(13, 30)),
     }
     
     groups_sorted = sorted(groups, key=lambda g: g.code)
@@ -1907,8 +2781,9 @@ def admin_schedule_random_assign(request):
 def admin_session_create(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
-    workshops = Workshop.objects.all()
-    groups = Group.objects.all()
+    current_event = Event.get_current()
+    workshops = Workshop.objects.filter(Q(event=current_event) | Q(event__isnull=True))
+    groups = Group.objects.filter(event=current_event)
     session = WorkshopSession()
     group_id_initial = request.GET.get('group') or ''
     period_initial = request.GET.get('period') or ''
@@ -1929,7 +2804,10 @@ def admin_session_create(request):
         session.period = period or session.period
         session.start_time = start_time or session.start_time
         session.end_time = end_time or session.end_time
-        if not workshop or not group or not period or not start_time or not end_time:
+        allowed_workshop_periods = {'8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30'}
+        if period and period not in allowed_workshop_periods:
+            messages.error(request, 'هذه الفترة ليست فترة ورش، لا يمكن إنشاء جلسة لها.')
+        elif not workshop or not group or not period or not start_time or not end_time:
             messages.error(request, 'يرجى ملء جميع الحقول المطلوبة قبل حفظ الجلسة.')
         else:
             existing_session, created = WorkshopSession.objects.get_or_create(
@@ -1953,10 +2831,15 @@ def admin_session_create(request):
             )
             messages.success(request, 'تم حفظ الجلسة في الجدول الزمني.')
             return redirect('dashboard:admin_schedule')
+    period_choices = [
+        (v, l)
+        for v, l in WorkshopSession.PERIOD_CHOICES
+        if v in {'8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30'}
+    ]
     return render(
         request,
         'dashboard/admin_session_form.html',
-        {'session': session, 'workshops': workshops, 'groups': groups},
+        {'session': session, 'workshops': workshops, 'groups': groups, 'period_choices': period_choices},
     )
 
 
@@ -1976,14 +2859,19 @@ def admin_session_update(request, pk):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     session = get_object_or_404(WorkshopSession, pk=pk)
-    workshops = Workshop.objects.all()
-    groups = Group.objects.all()
+    current_event = Event.get_current()
+    workshops = Workshop.objects.filter(Q(event=current_event) | Q(event__isnull=True))
+    groups = Group.objects.filter(event=current_event)
     if request.method == 'POST':
         workshop_id = request.POST.get('workshop') or ''
         group_id = request.POST.get('group') or ''
         period = request.POST.get('period') or session.period
         start_time = request.POST.get('start_time') or session.start_time
         end_time = request.POST.get('end_time') or session.end_time
+        allowed_workshop_periods = {'8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30'}
+        if period and period not in allowed_workshop_periods:
+            messages.error(request, 'هذه الفترة ليست فترة ورش، لا يمكن إنشاء جلسة لها.')
+            return redirect('dashboard:admin_session_update', pk=session.pk)
         session.workshop = workshops.filter(id=workshop_id).first() if workshop_id else session.workshop
         session.group = groups.filter(id=group_id).first() if group_id else session.group
         session.period = period
@@ -1993,10 +2881,15 @@ def admin_session_update(request, pk):
         AdminLog.objects.create(action='تم تعديل جلسة في الجدول الزمني')
         messages.success(request, 'تم تعديل الجلسة')
         return redirect('dashboard:admin_schedule')
+    period_choices = [
+        (v, l)
+        for v, l in WorkshopSession.PERIOD_CHOICES
+        if v in {'8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30'}
+    ]
     return render(
         request,
         'dashboard/admin_session_form.html',
-        {'session': session, 'workshops': workshops, 'groups': groups},
+        {'session': session, 'workshops': workshops, 'groups': groups, 'period_choices': period_choices},
     )
 
 
@@ -2032,7 +2925,7 @@ def admin_notifications(request):
 def admin_vip_invites(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     if not event.start_datetime or not event.location_name:
         messages.error(request, 'يرجى ضبط موعد ومكان الفعالية أولًا من إعدادات الفعالية قبل إرسال دعوات VIP.')
         invites = VIPInvite.objects.all()[:20]
@@ -2187,7 +3080,7 @@ def admin_factory_reset(request):
         Notification.objects.all().delete()
         VIPInvite.objects.all().delete()
         AdminLog.objects.all().delete()
-        event = EventSettings.get_solo()
+        event = Event.get_current()
         event.name = 'Tech Day'
         event.start_datetime = None
         event.location_name = ''
@@ -2202,9 +3095,24 @@ def admin_factory_reset(request):
 def admin_reports(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
-    total_students = Student.objects.count()
-    total_attendance = Student.objects.filter(checked_in=True).count()
-    education_admins = Student.objects.annotate(
+    
+    event = Event.get_current()
+    if not event:
+        event = Event.objects.create(name="Tech Day", location_name="Main", year=2026, is_active=True)
+
+    # الطلاب المسجلين والموافق عليهم في هذه الفعالية فقط
+    current_students_ids = StudentRegistration.objects.filter(
+        event=event, 
+        status=StudentRegistration.Status.APPROVED,
+        removed_at__isnull=True,
+    ).values_list('student_id', flat=True)
+    
+    current_students_qs = Student.objects.filter(id__in=current_students_ids)
+    
+    total_students = current_students_qs.count()
+    total_attendance = current_students_qs.filter(checked_in=True).count()
+    
+    education_admins = current_students_qs.annotate(
         admin_clean=Trim('education_admin')
     ).exclude(
         admin_clean__isnull=True
@@ -2214,12 +3122,12 @@ def admin_reports(request):
         'admin_clean', flat=True
     ).distinct().order_by('admin_clean')
     
-    # إحصائيات المجموعات حسب النقاط والحضور
+    # إحصائيات المجموعات حسب النقاط والحضور (لهذه الفعالية فقط)
     by_group = (
-        Group.objects.annotate(
+        Group.objects.filter(event=event).annotate(
             present_count=Count(
                 'students',
-                filter=Q(students__checked_in=True),
+                filter=Q(students__id__in=current_students_ids, students__checked_in=True),
                 distinct=True,
             )
         )
@@ -2227,17 +3135,17 @@ def admin_reports(request):
         .order_by('-points')
     )
     
-    # إحصائيات الورش حسب الحضور والتقييم
+    # إحصائيات الورش حسب الحضور والتقييم (لهذه الفعالية فقط)
     feedback_stats = WorkshopFeedback.objects.filter(workshop=OuterRef('pk')).values('workshop').annotate(
         c=Count('id'),
         a=Avg('rating')
     )
     
     by_workshop = (
-        Workshop.objects.annotate(
+        Workshop.objects.filter(event=event).annotate(
             present_count=Count(
                 'sessions__attendance_records',
-                filter=Q(sessions__attendance_records__status=Attendance.Status.PRESENT),
+                filter=Q(sessions__attendance_records__status=Attendance.Status.PRESENT, sessions__attendance_records__student__id__in=current_students_ids),
                 distinct=True,
             ),
             feedbacks_count=Subquery(feedback_stats.values('c')),
@@ -2247,19 +3155,20 @@ def admin_reports(request):
         .order_by('-avg_rating')
     )
     
-    # أفضل الطلاب حسب النقاط
-    top_students = Student.objects.order_by('-points')[:10]
+    # أفضل الطلاب حسب النقاط في هذه الفعالية
+    top_students = current_students_qs.order_by('-points')[:10]
     
     most_attended = by_workshop.order_by('-present_count').first() if by_workshop else None
     
-    # الطلاب المستحقون للشهادة (حضروا الفعالية فقط)
+    # الطلاب المستحقون للشهادة (حضروا الفعالية الحالية فقط)
     eligible_count = (
-        Student.objects.filter(checked_in=True, email__isnull=False, is_certificate_banned=False)
+        current_students_qs.filter(checked_in=True, email__isnull=False, is_certificate_banned=False)
         .exclude(email='')
         .count()
     )
     
     context = {
+        'event': event,
         'total_students': total_students,
         'total_attendance': total_attendance,
         'eligible_count': eligible_count,
@@ -2276,18 +3185,31 @@ def admin_statistics(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     
-    # 1. إحصائيات عامة
-    total_students = Student.objects.count()
-    total_checked_in = Student.objects.filter(checked_in=True).count()
+    event = Event.get_current()
+    if not event:
+        event = Event.objects.create(name="Tech Day", location_name="Main", year=2026, is_active=True)
+
+    # 1. إحصائيات عامة (للفعالية الحالية)
+    # الطلاب المسجلين والموافق عليهم في هذه الفعالية
+    current_registrations = StudentRegistration.objects.filter(
+        event=event,
+        status=StudentRegistration.Status.APPROVED,
+        removed_at__isnull=True,
+    )
+    current_students_ids = current_registrations.values_list('student_id', flat=True)
+    total_students = current_registrations.count()
+    
+    # الطلاب الذين حضروا بالفعل في هذه الفعالية
+    total_checked_in = Student.objects.filter(id__in=current_students_ids, checked_in=True).count()
     attendance_rate = (total_checked_in / total_students * 100) if total_students > 0 else 0
     
-    # 2. إحصائيات حسب الإدارة التعليمية
-    stats_by_admin = Student.objects.values('education_admin').annotate(
+    # 2. إحصائيات حسب الإدارة التعليمية (للمسجلين في الفعالية فقط)
+    stats_by_admin = current_registrations.values('education_admin').annotate(
         count=Count('id'),
-        checked_in_count=Count('id', filter=Q(checked_in=True))
+        checked_in_count=Count('id', filter=Q(student__id__in=current_students_ids, student__checked_in=True))
     ).order_by('-count')
     
-    # 3. إحصائيات حسب السنة الدراسية
+    # 3. إحصائيات حسب السنة الدراسية (للمسجلين في الفعالية فقط)
     grade_map = {
         '4-prim': 'الرابع الابتدائي',
         '5-prim': 'الخامس الابتدائي',
@@ -2299,7 +3221,7 @@ def admin_statistics(request):
         '2-sec': 'الثاني الثانوي',
         '3-sec': 'الثالث الثانوي',
     }
-    stats_by_grade_raw = Student.objects.values('grade').annotate(count=Count('id')).order_by('grade')
+    stats_by_grade_raw = current_registrations.values('grade').annotate(count=Count('id')).order_by('grade')
     stats_by_grade = []
     for item in stats_by_grade_raw:
         stats_by_grade.append({
@@ -2307,17 +3229,22 @@ def admin_statistics(request):
             'count': item['count']
         })
     
-    # 4. إحصائيات الحضور حسب المجموعات
-    stats_by_group = Group.objects.annotate(
+    # 4. إحصائيات الحضور حسب المجموعات (المرتبطة بالفعالية الحالية)
+    stats_by_group = Group.objects.filter(event=event).annotate(
         total=Count('students'),
         checked_in=Count('students', filter=Q(students__checked_in=True))
     ).order_by('-checked_in')
     
-    # 5. توزيع النقاط (أعلى 5 طلاب)
-    top_points_students = Student.objects.order_by('-points')[:5]
+    # 5. توزيع النقاط (أعلى 5 طلاب في الفعالية الحالية)
+    # الطلاب الذين لديهم نقاط في هذه الفعالية
+    top_points_students = Student.objects.filter(
+        registrations__event=event, 
+        registrations__status=StudentRegistration.Status.APPROVED,
+        registrations__removed_at__isnull=True,
+    ).order_by('-points')[:5]
     
-    # 6. إحصائيات طلبات التسجيل
-    reg_stats = StudentRegistration.objects.values('status').annotate(count=Count('id'))
+    # 6. إحصائيات طلبات التسجيل (لهذه الفعالية)
+    reg_stats = StudentRegistration.objects.filter(event=event).values('status').annotate(count=Count('id'))
     
     context = {
         'total_students': total_students,
@@ -2420,14 +3347,23 @@ def admin_student_violations(request):
 def admin_reports_export_csv(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
+    
+    event = Event.get_current()
+    current_students_ids = StudentRegistration.objects.filter(
+        event=event, 
+        status=StudentRegistration.Status.APPROVED,
+        removed_at__isnull=True,
+    ).values_list('student_id', flat=True)
+
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="techday_report.csv"'
     lines = ['اسم المجموعة,الكود,عدد الحضور\n']
     by_group = (
-        Group.objects.annotate(
+        Group.objects.filter(event=event).annotate(
             present_count=Count(
-                'students__attendance_records',
-                filter=Q(students__attendance_records__status=Attendance.Status.PRESENT),
+                'students',
+                filter=Q(students__id__in=current_students_ids, students__checked_in=True),
+                distinct=True,
             )
         )
         .values('name', 'code', 'present_count')
@@ -2443,14 +3379,19 @@ def admin_reports_export_csv(request):
 def admin_export_students_by_admin(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
+    
+    event = Event.get_current()
     education_admin = (request.GET.get('education_admin') or '').strip()
     if not education_admin:
         return redirect('dashboard:admin_reports')
-    qs = (
-        Student.objects.filter(education_admin__iexact=education_admin)
-        .select_related('group', 'user')
-        .order_by('name')
-    )
+    
+    qs = Student.objects.filter(
+        registrations__event=event,
+        registrations__status=StudentRegistration.Status.APPROVED,
+        registrations__removed_at__isnull=True,
+        education_admin__iexact=education_admin
+    ).select_related('group', 'user').distinct().order_by('name')
+
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     filename = f"students_{education_admin}.csv".replace(' ', '_')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -2501,6 +3442,8 @@ def admin_export_students_by_admin(request):
 def admin_export_students_by_admin_excel(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
+    
+    event = Event.get_current()
     education_admin = (request.GET.get('education_admin') or '').strip()
     try:
         from openpyxl import Workbook
@@ -2508,14 +3451,21 @@ def admin_export_students_by_admin_excel(request):
     except Exception:
         messages.error(request, 'مكتبة openpyxl غير متوفرة. يرجى تثبيتها: pip install openpyxl')
         return redirect('dashboard:admin_reports')
+    
     if not education_admin or education_admin == 'all':
-        admins = Student.objects.annotate(admin_clean=Trim('education_admin')).exclude(
+        # Get admins who have students in the current event
+        admins = Student.objects.filter(
+            registrations__event=event,
+            registrations__status=StudentRegistration.Status.APPROVED,
+            registrations__removed_at__isnull=True,
+        ).annotate(admin_clean=Trim('education_admin')).exclude(
             admin_clean__isnull=True
         ).exclude(
             admin_clean=''
         ).values_list('admin_clean', flat=True).distinct().order_by('admin_clean')
     else:
         admins = [education_admin]
+    
     wb = Workbook()
     ws = wb.active
     ws.title = 'بيانات الطلاب'
@@ -2556,11 +3506,14 @@ def admin_export_students_by_admin_excel(request):
         ws[f'A{row}'].font = Font(bold=True, color='000b1220')
         ws[f'A{row}'].fill = PatternFill('solid', fgColor='000ea5e9')
         ws[f'A{row}'].alignment = Alignment(horizontal='right')
-        students = (
-            Student.objects.filter(education_admin__iexact=admin_name)
-            .select_related('group', 'user')
-            .order_by('name')
-        )
+        
+        students = Student.objects.filter(
+            registrations__event=event,
+            registrations__status=StudentRegistration.Status.APPROVED,
+            registrations__removed_at__isnull=True,
+            education_admin__iexact=admin_name
+        ).select_related('group', 'user').distinct().order_by('name')
+        
         for s in students:
             group_name = s.group.name if s.group else ''
             group_code = s.group.code if s.group else ''
@@ -2610,7 +3563,7 @@ def admin_export_verification_pages(request):
     buffer = io.BytesIO()
     from zipfile import ZipFile, ZIP_DEFLATED
 
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     # تصدير صفحات التحقق فقط للطلاب الذين سجلوا حضوراً وغير محظورين من الشهادة
     students = Student.objects.filter(
         checked_in=True, 
@@ -2866,8 +3819,78 @@ def admin_backup_restore(request):
                     Notification.objects.all().delete()
                     FailedEmail.objects.all().delete()
                     AdminLog.objects.all().delete()
+                    Event.objects.all().delete()
+                    Badge.objects.all().delete()
+                    StudentBadge.objects.all().delete()
+                    StudentEventStats.objects.all().delete()
+                    SOSRequest.objects.all().delete()
+                    BroadcastMessage.objects.all().delete()
+                    StudentSupportRequest.objects.all().delete()
+                    
+                    # معالجة ملف JSON لتحويل EventSettings إلى Event لضمان التوافق
+                    with open(tmp_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    
+                    modified = False
+                    for entry in data:
+                        if entry.get('model') == 'dashboard.eventsettings':
+                            entry['model'] = 'dashboard.event'
+                            # إضافة الحقول الجديدة الناقصة في الموديل الجديد
+                            if 'fields' in entry:
+                                if 'year' not in entry['fields']:
+                                    entry['fields']['year'] = 2026
+                                if 'execution_number' not in entry['fields']:
+                                    entry['fields']['execution_number'] = 1
+                                if 'is_active' not in entry['fields']:
+                                    entry['fields']['is_active'] = True
+                                if 'is_archived' not in entry['fields']:
+                                    entry['fields']['is_archived'] = False
+                                if 'created_at' not in entry['fields']:
+                                    # إضافة تاريخ حالي لضمان عدم حدوث خطأ NOT NULL
+                                    entry['fields']['created_at'] = timezone.now().isoformat()
+                            modified = True
+                    
+                    if modified:
+                        with open(tmp_path, 'w', encoding='utf-8') as f:
+                            json.dump(data, f, ensure_ascii=False, indent=4)
                     
                     call_command('loaddata', tmp_path)
+                    
+                    # 2. ضمان وجود فعالية نشطة وربط البيانات بها
+                    # أولاً: مسح أي فعاليات فارغة قد تكون أنشئت تلقائياً أثناء عملية الرفع (بواسطة الميدل وير)
+                    Event.objects.annotate(
+                        w_count=Count('workshops'),
+                        g_count=Count('groups'),
+                        r_count=Count('registrations')
+                    ).filter(w_count=0, g_count=0, r_count=0, name="Tech Day").exclude(id__in=Event.objects.order_by('created_at').values_list('id', flat=True)[:1]).delete()
+
+                    # ثانياً: إذا لم توجد فعالية نشطة ولكن توجد فعاليات مستوردة، نفعل أحدث واحدة بها بيانات
+                    if not Event.objects.filter(is_active=True).exists():
+                        latest_event = Event.objects.annotate(
+                            data_count=Count('workshops') + Count('groups')
+                        ).order_by('-data_count', '-created_at').first()
+                        
+                        if latest_event:
+                            latest_event.is_active = True
+                            latest_event.save(update_fields=['is_active'])
+                    
+                    current_event = Event.get_current()
+                    if current_event:
+                        # ربط أي بيانات يتيمة (بدون فعالية) بالفعالية الحالية
+                        Workshop.objects.filter(event__isnull=True).update(event=current_event)
+                        Group.objects.filter(event__isnull=True).update(event=current_event)
+                        StudentRegistration.objects.filter(event__isnull=True).update(event=current_event)
+                        AdminLog.objects.filter(event__isnull=True).update(event=current_event)
+                        SOSRequest.objects.filter(event__isnull=True).update(event=current_event)
+                        BroadcastMessage.objects.filter(event__isnull=True).update(event=current_event)
+                        
+                        # حالة خاصة: إذا تم استيراد مجموعات مرتبطة بفعالية قديمة (ID مختلف) 
+                        # والسيستم حالياً لا يحتوي إلا على الفعالية الحالية، نقوم بنقلهم للفعالية الحالية
+                        if Event.objects.count() == 1:
+                            Workshop.objects.exclude(event=current_event).update(event=current_event)
+                            Group.objects.exclude(event=current_event).update(event=current_event)
+                            StudentRegistration.objects.exclude(event=current_event).update(event=current_event)
+                    
                     AdminLog.objects.create(action=f'تم استرجاع البيانات بنجاح من ملف JSON: {backup_file.name}')
                     messages.success(request, 'تم استرجاع بيانات JSON بنجاح.')
                 
@@ -2902,13 +3925,22 @@ def admin_send_whatsapp_link(request):
         return HttpResponseForbidden()
     if request.method != 'POST':
         return redirect('dashboard:admin_event_settings')
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     if not event.whatsapp_group_link:
         messages.error(request, 'يرجى إدخال رابط مجموعة الواتساب أولًا.')
         return redirect('dashboard:admin_event_settings')
-    students = Student.objects.filter(email__isnull=False).exclude(email='')
+    students = (
+        Student.objects.filter(
+            registrations__event=event,
+            registrations__status=StudentRegistration.Status.APPROVED,
+            registrations__removed_at__isnull=True,
+            email__isnull=False,
+        )
+        .exclude(email='')
+        .distinct()
+    )
     if not students.exists():
-        messages.error(request, 'لا يوجد طلاب لديهم بريد إلكتروني مسجل لإرسال الرابط لهم.')
+        messages.error(request, 'لا يوجد طلاب في الفعالية الحالية لديهم بريد إلكتروني مسجل لإرسال الرابط لهم.')
         return redirect('dashboard:admin_event_settings')
 
     def _job():
@@ -2957,10 +3989,10 @@ def admin_send_whatsapp_link(request):
             )
             message.attach_alternative(html_body, 'text/html')
             send_email_async(message, 'إرسال رابط مجموعة الواتساب')
-        AdminLog.objects.create(action=f'تم إرسال رابط الواتساب لعدد {students.count()} طالب')
+        AdminLog.objects.create(action=f'تم إرسال رابط الواتساب لطلاب الفعالية الحالية لعدد {students.count()} طالب')
 
     threading.Thread(target=_job, daemon=True).start()
-    messages.success(request, f'تم بدء عملية إرسال رابط الواتساب لـ {students.count()} طالب في الخلفية.')
+    messages.success(request, f'تم بدء عملية إرسال رابط الواتساب لطلاب الفعالية الحالية لـ {students.count()} طالب في الخلفية.')
     return redirect('dashboard:admin_event_settings')
 
 
@@ -2970,13 +4002,22 @@ def admin_send_event_instructions(request):
         return HttpResponseForbidden()
     if request.method != 'POST':
         return redirect('dashboard:admin_event_settings')
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     if not event.event_instructions:
         messages.error(request, 'يرجى إدخال تعليمات الفعالية أولاً.')
         return redirect('dashboard:admin_event_settings')
-    students = Student.objects.filter(email__isnull=False).exclude(email='')
+    students = (
+        Student.objects.filter(
+            registrations__event=event,
+            registrations__status=StudentRegistration.Status.APPROVED,
+            registrations__removed_at__isnull=True,
+            email__isnull=False,
+        )
+        .exclude(email='')
+        .distinct()
+    )
     if not students.exists():
-        messages.error(request, 'لا يوجد طلاب لديهم بريد إلكتروني مسجل لإرسال التعليمات لهم.')
+        messages.error(request, 'لا يوجد طلاب في الفعالية الحالية لديهم بريد إلكتروني مسجل لإرسال التعليمات لهم.')
         return redirect('dashboard:admin_event_settings')
 
     def _job():
@@ -3021,10 +4062,10 @@ def admin_send_event_instructions(request):
             )
             message.attach_alternative(html_body, 'text/html')
             send_email_async(message, 'إرسال تعليمات الفعالية')
-        AdminLog.objects.create(action=f'تم إرسال تعليمات الفعالية لعدد {students.count()} طالب')
+        AdminLog.objects.create(action=f'تم إرسال تعليمات الفعالية لطلاب الفعالية الحالية لعدد {students.count()} طالب')
 
     threading.Thread(target=_job, daemon=True).start()
-    messages.success(request, f'تم بدء عملية إرسال التعليمات لـ {students.count()} طالب في الخلفية.')
+    messages.success(request, f'تم بدء عملية إرسال التعليمات لطلاب الفعالية الحالية لـ {students.count()} طالب في الخلفية.')
     return redirect('dashboard:admin_event_settings')
 
 
@@ -3046,7 +4087,7 @@ def admin_send_certificates(request):
             'برجاء مراجعة مسؤول الخادم لتثبيت التبعيات اللازمة.',
         )
         return redirect('dashboard:admin_reports')
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     if not event.is_finished:
         messages.error(request, 'لا يمكن إصدار شهادات الحضور قبل إنهاء الفعالية.')
         return redirect('dashboard:admin_reports')
@@ -3077,7 +4118,7 @@ def admin_send_certificates(request):
 
     def _send_certificates_job(event_id, student_id_list):
         from weasyprint import HTML
-        event_local = EventSettings.objects.get(pk=event_id)
+        event_local = Event.objects.get(pk=event_id)
         sent_count_local = 0
         skipped_count_local = 0
         for student in Student.objects.filter(id__in=student_id_list).select_related('group'):
@@ -3364,3 +4405,497 @@ def admin_failed_email_delete(request, pk):
     failed_email.delete()
     messages.success(request, 'تم حذف سجل البريد الفاشل.')
     return redirect('dashboard:admin_failed_emails_list')
+
+
+@login_required
+def admin_student_manual_checkin(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return HttpResponseForbidden()
+    
+    student = get_object_or_404(Student, pk=pk)
+    event = Event.get_current()
+    now = timezone.localtime()
+    
+    # 1. تحديث حالة الحضور العامة للطالب
+    student.checked_in = True
+    student.checked_in_at = now
+    student.save(update_fields=['checked_in', 'checked_in_at'])
+    
+    # 2. تحديث حالة الحضور في إحصائيات الفعالية الحالية
+    stats, _ = StudentEventStats.objects.get_or_create(student=student, event=event)
+    stats.checked_in = True
+    stats.checked_in_at = now
+    stats.save(update_fields=['checked_in', 'checked_in_at'])
+    
+    # 3. محاولة تسجيل حضور لأي جلسة نشطة حالياً أو أقرب جلسة
+    session = WorkshopSession.objects.filter(
+        group=student.group,
+        start_time__lte=now.time(),
+        end_time__gte=now.time(),
+    ).first()
+    
+    if not session and student.group:
+        # إذا لم توجد جلسة نشطة، نأخذ أول جلسة لمجموعته في الفعالية لمنحه نقاطها الأساسية
+        session = WorkshopSession.objects.filter(group=student.group).order_by('start_time').first()
+    
+    if session:
+        Attendance.objects.update_or_create(
+            student=student,
+            session=session,
+            defaults={'status': Attendance.Status.PRESENT, 'scanned_at': now}
+        )
+        # منح النقاط
+        points = session.workshop.points_per_session
+        student.points += points
+        student.save(update_fields=['points'])
+        stats.points += points
+        stats.save(update_fields=['points'])
+        if student.group and event.allow_group_points:
+            student.group.points += points
+            student.group.save(update_fields=['points'])
+
+    AdminLog.objects.create(
+        action=f'تم تحضير الطالب {student.name} يدوياً بواسطة الأدمن {request.user.username}',
+        event=event
+    )
+    
+    messages.success(request, f'تم تسجيل حضور الطالب {student.name} بنجاح.')
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard:admin_current_event_students'))
+
+
+@login_required
+def admin_clearance_all(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    
+    event = Event.get_current()
+    # جلب الطلاب الذين سجلوا حضوراً في الفعالية الحالية فقط
+    current_students_qs = Student.objects.filter(
+        registrations__event=event,
+        registrations__status=StudentRegistration.Status.APPROVED,
+        registrations__removed_at__isnull=True,
+        checked_in=True
+    ).distinct().order_by('name')
+    
+    # تجهيز الأسماء (أول 3 أسماء فقط)
+    students_list = []
+    for student in current_students_qs:
+        name_parts = (student.name or "").split()
+        student.short_name = " ".join(name_parts[:3])
+        students_list.append(student)
+    
+    return render(request, 'dashboard/admin_clearance_all.html', {
+        'students': students_list,
+        'event': event
+    })
+
+
+@login_required
+def admin_devices(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        device_pk = request.POST.get('device_pk')
+        reason = (request.POST.get('reason') or '').strip()
+        device = get_object_or_404(MobileDevice, pk=device_pk)
+        now = timezone.localtime()
+        if action == 'ban':
+            device.is_banned = True
+            device.banned_reason = reason
+            device.banned_at = now
+            device.banned_by = request.user
+            device.save(update_fields=['is_banned', 'banned_reason', 'banned_at', 'banned_by', 'updated_at'])
+            if device.fcm_device_id:
+                FCMDevice.objects.filter(id=device.fcm_device_id).update(active=False)
+            AdminLog.objects.create(
+                action=f'تم حظر جهاز {device.device_id} للمستخدم {device.user.username if device.user else "-"}',
+            )
+            messages.success(request, 'تم حظر الجهاز.')
+        elif action == 'unban':
+            device.is_banned = False
+            device.banned_reason = ''
+            device.banned_at = None
+            device.banned_by = None
+            device.save(update_fields=['is_banned', 'banned_reason', 'banned_at', 'banned_by', 'updated_at'])
+            if device.fcm_device_id:
+                FCMDevice.objects.filter(id=device.fcm_device_id).update(active=True)
+            AdminLog.objects.create(
+                action=f'تم إلغاء حظر جهاز {device.device_id} للمستخدم {device.user.username if device.user else "-"}',
+            )
+            messages.success(request, 'تم إلغاء حظر الجهاز.')
+        elif action == 'disable_notifications':
+            if device.fcm_device_id:
+                FCMDevice.objects.filter(id=device.fcm_device_id).update(active=False)
+                messages.success(request, 'تم تعطيل إشعارات هذا الجهاز.')
+        elif action == 'enable_notifications':
+            if not device.is_banned and device.fcm_device_id:
+                FCMDevice.objects.filter(id=device.fcm_device_id).update(active=True)
+                messages.success(request, 'تم تفعيل إشعارات هذا الجهاز.')
+        return redirect(request.META.get('HTTP_REFERER', 'dashboard:admin_devices'))
+
+    q = (request.GET.get('q') or '').strip()
+    status_filter = (request.GET.get('status') or '').strip().lower() or 'all'
+    devices_qs = MobileDevice.objects.select_related('user', 'banned_by').order_by('-last_seen_at')
+    if q:
+        devices_qs = devices_qs.filter(
+            Q(device_id__icontains=q)
+            | Q(name__icontains=q)
+            | Q(device_model__icontains=q)
+            | Q(manufacturer__icontains=q)
+            | Q(os_version__icontains=q)
+            | Q(user__username__icontains=q)
+            | Q(user__email__icontains=q)
+        )
+    if status_filter == 'banned':
+        devices_qs = devices_qs.filter(is_banned=True)
+    elif status_filter == 'allowed':
+        devices_qs = devices_qs.filter(is_banned=False)
+
+    total_count = MobileDevice.objects.count()
+    banned_count = MobileDevice.objects.filter(is_banned=True).count()
+    allowed_count = total_count - banned_count
+
+    paginator = Paginator(devices_qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page') or 1)
+    fcm_ids = [d.fcm_device_id for d in page_obj.object_list if d.fcm_device_id]
+    fcm_map = {d.id: d for d in FCMDevice.objects.filter(id__in=fcm_ids)}
+    for d in page_obj.object_list:
+        fcm = fcm_map.get(d.fcm_device_id) if d.fcm_device_id else None
+        d.fcm_active = bool(getattr(fcm, 'active', False)) if fcm else False
+        d.fcm_type = getattr(fcm, 'type', '') if fcm else ''
+        token = getattr(fcm, 'registration_id', '') if fcm else ''
+        d.fcm_token_short = (token[:18] + '…') if token and len(token) > 18 else token
+
+    return render(
+        request,
+        'dashboard/admin_devices.html',
+        {
+            'devices': page_obj,
+            'q': q,
+            'status': status_filter,
+            'total_count': total_count,
+            'banned_count': banned_count,
+            'allowed_count': allowed_count,
+        },
+    )
+
+
+@login_required
+def admin_device_detail(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    device = get_object_or_404(MobileDevice.objects.select_related('user', 'banned_by'), pk=pk)
+    fcm_device = None
+    if device.fcm_device_id:
+        fcm_device = FCMDevice.objects.filter(id=device.fcm_device_id).first()
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        reason = (request.POST.get('reason') or '').strip()
+        now = timezone.localtime()
+        if action == 'ban':
+            device.is_banned = True
+            device.banned_reason = reason
+            device.banned_at = now
+            device.banned_by = request.user
+            device.save(update_fields=['is_banned', 'banned_reason', 'banned_at', 'banned_by', 'updated_at'])
+            if device.fcm_device_id:
+                FCMDevice.objects.filter(id=device.fcm_device_id).update(active=False)
+            messages.success(request, 'تم حظر الجهاز.')
+        elif action == 'unban':
+            device.is_banned = False
+            device.banned_reason = ''
+            device.banned_at = None
+            device.banned_by = None
+            device.save(update_fields=['is_banned', 'banned_reason', 'banned_at', 'banned_by', 'updated_at'])
+            if device.fcm_device_id:
+                FCMDevice.objects.filter(id=device.fcm_device_id).update(active=True)
+            messages.success(request, 'تم إلغاء حظر الجهاز.')
+        elif action == 'disable_notifications':
+            if device.fcm_device_id:
+                FCMDevice.objects.filter(id=device.fcm_device_id).update(active=False)
+                messages.success(request, 'تم تعطيل إشعارات هذا الجهاز.')
+        elif action == 'enable_notifications':
+            if not device.is_banned and device.fcm_device_id:
+                FCMDevice.objects.filter(id=device.fcm_device_id).update(active=True)
+                messages.success(request, 'تم تفعيل إشعارات هذا الجهاز.')
+        return redirect('dashboard:admin_device_detail', pk=device.pk)
+
+    return render(
+        request,
+        'dashboard/admin_device_detail.html',
+        {'device': device, 'fcm_device': fcm_device},
+    )
+
+
+@login_required
+def admin_public_forms(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    q = (request.GET.get('q') or '').strip()
+    forms_qs = PublicForm.objects.select_related('created_by').annotate(submissions_count=Count('submissions')).order_by('-created_at')
+    if q:
+        forms_qs = forms_qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
+
+    paginator = Paginator(forms_qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page') or 1)
+    return render(
+        request,
+        'dashboard/admin_public_forms.html',
+        {'forms': page_obj, 'q': q},
+    )
+
+
+@login_required
+def admin_public_form_detail(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    form_obj = get_object_or_404(PublicForm.objects.select_related('created_by'), pk=pk)
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        if action == 'toggle_active':
+            form_obj.is_active = not form_obj.is_active
+            form_obj.save(update_fields=['is_active'])
+            messages.success(request, 'تم تحديث حالة الاستمارة.')
+        elif action == 'claim':
+            if not form_obj.created_by_id:
+                form_obj.created_by = request.user
+                form_obj.save(update_fields=['created_by'])
+                messages.success(request, 'تم تعيينك كمنشئ للاستمارة.')
+        elif action == 'set_custom_link':
+            raw_slug = (request.POST.get('custom_slug') or '').strip().lower()
+            if not raw_slug:
+                form_obj.custom_slug = None
+                form_obj.save(update_fields=['custom_slug'])
+                messages.success(request, 'تم حذف الرابط المخصص والرجوع للرابط الافتراضي.')
+            elif PublicForm.objects.exclude(pk=form_obj.pk).filter(custom_slug=raw_slug).exists():
+                messages.error(request, 'هذا الرابط مستخدم بالفعل، اختر رابطًا مختلفًا.')
+            else:
+                form_obj.custom_slug = raw_slug
+                try:
+                    form_obj.full_clean()
+                except ValidationError:
+                    messages.error(request, 'صيغة الرابط غير صالحة. استخدم حروف إنجليزية وأرقام وشرطات فقط.')
+                else:
+                    form_obj.save(update_fields=['custom_slug'])
+                    messages.success(request, 'تم حفظ الرابط المخصص بنجاح.')
+        return redirect('dashboard:admin_public_form_detail', pk=form_obj.pk)
+
+    fields = list(form_obj.fields.all())
+    submissions_count = form_obj.submissions.count()
+    return render(
+        request,
+        'dashboard/admin_public_form_detail.html',
+        {'form_obj': form_obj, 'fields': fields, 'submissions_count': submissions_count},
+    )
+
+
+@login_required
+def admin_public_form_secret_link(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    form_obj = get_object_or_404(PublicForm, pk=pk)
+    public_key = form_obj.custom_slug or form_obj.token
+    path = reverse('public_screen:public_form', args=[public_key])
+    return JsonResponse({'url': request.build_absolute_uri(path)})
+
+
+@login_required
+def admin_public_form_submissions(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    form_obj = get_object_or_404(PublicForm, pk=pk)
+    submissions_qs = PublicFormSubmission.objects.filter(form=form_obj).prefetch_related(
+        'answers',
+        'answers__field',
+    )
+    paginator = Paginator(submissions_qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page') or 1)
+
+    field_keys = {
+        'full_name': 'الاسم',
+        'student_code': 'كود الطالب',
+        'phone': 'الهاتف',
+        'education_admin': 'الإدارة',
+    }
+    for sub in page_obj.object_list:
+        by_key = {}
+        for ans in sub.answers.all():
+            by_key[ans.field.key] = ans.value_text
+        sub.summary = {k: by_key.get(k, '') for k in field_keys.keys()}
+
+    return render(
+        request,
+        'dashboard/admin_public_form_submissions.html',
+        {'form_obj': form_obj, 'submissions': page_obj},
+    )
+
+
+@login_required
+def admin_public_form_export_excel(request, pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    form_obj = get_object_or_404(PublicForm, pk=pk)
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from openpyxl.utils import get_column_letter
+    except Exception:
+        messages.error(request, 'مكتبة openpyxl غير متوفرة. يرجى تثبيتها: pip install openpyxl')
+        return redirect('dashboard:admin_public_form_submissions', pk=form_obj.pk)
+
+    fields = list(form_obj.fields.all().order_by('order', 'label'))
+    submissions = list(
+        PublicFormSubmission.objects.filter(form=form_obj)
+        .prefetch_related('answers', 'answers__field')
+        .order_by('-submitted_at')
+    )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'الردود'
+    ws.sheet_view.rightToLeft = True
+
+    header = ['وقت الإرسال', 'IP'] + [f.label for f in fields]
+    ws.append(header)
+
+    head_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
+    head_font = Font(color='FFFFFF', bold=True)
+    center = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    border = Border(
+        left=Side(style='thin', color='334155'),
+        right=Side(style='thin', color='334155'),
+        top=Side(style='thin', color='334155'),
+        bottom=Side(style='thin', color='334155'),
+    )
+
+    for i in range(1, len(header) + 1):
+        cell = ws.cell(row=1, column=i)
+        cell.fill = head_fill
+        cell.font = head_font
+        cell.alignment = center
+        cell.border = border
+
+    for submission in submissions:
+        answers_map = {}
+        for ans in submission.answers.all():
+            answers_map.setdefault(ans.field_id, []).append(ans)
+        row = [
+            timezone.localtime(submission.submitted_at).strftime('%Y-%m-%d %H:%M'),
+            submission.ip_address or '',
+        ]
+        for f in fields:
+            ans_list = answers_map.get(f.id) or []
+            if not ans_list:
+                row.append('')
+                continue
+            if any(ans.value_file for ans in ans_list):
+                file_values = []
+                for ans in ans_list:
+                    if not ans.value_file:
+                        continue
+                    try:
+                        file_values.append(request.build_absolute_uri(ans.value_file.url))
+                    except Exception:
+                        file_values.append(ans.value_file.name or '')
+                row.append('\n'.join(file_values))
+            else:
+                text_values = [ans.value_text or '' for ans in ans_list if ans.value_text]
+                row.append('\n'.join(text_values))
+        ws.append(row)
+
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=len(header)):
+        for cell in row:
+            cell.alignment = Alignment(vertical='top', wrap_text=True)
+            cell.border = border
+
+    ws.freeze_panes = 'A2'
+    ws.column_dimensions['A'].width = 22
+    ws.column_dimensions['B'].width = 16
+    for idx in range(3, len(header) + 1):
+        ws.column_dimensions[get_column_letter(idx)].width = 28
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    response = HttpResponse(
+        buffer.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    safe_name = ''.join(ch if ch.isalnum() else '_' for ch in form_obj.title)[:40] or 'public_form'
+    response['Content-Disposition'] = f'attachment; filename="{safe_name}_responses.xlsx"'
+    return response
+
+
+@login_required
+def admin_public_form_submission_detail(request, form_pk, submission_pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    form_obj = get_object_or_404(PublicForm, pk=form_pk)
+    submission = get_object_or_404(
+        PublicFormSubmission.objects.filter(form=form_obj).prefetch_related('answers', 'answers__field'),
+        pk=submission_pk,
+    )
+    answers = list(submission.answers.all())
+    answers.sort(key=lambda a: a.field.order)
+    for ans in answers:
+        ans.file_exists = False
+        ans.file_url = ''
+        if ans.value_file:
+            file_name = ans.value_file.name or ''
+            if file_name:
+                ans.file_exists = default_storage.exists(file_name)
+                if ans.file_exists:
+                    try:
+                        ans.file_url = ans.value_file.url
+                    except Exception:
+                        ans.file_url = ''
+    return render(
+        request,
+        'dashboard/admin_public_form_submission_detail.html',
+        {'form_obj': form_obj, 'submission': submission, 'answers': answers},
+    )
+
+
+@login_required
+def admin_public_form_submission_delete(request, form_pk, submission_pk):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return redirect('dashboard:admin_public_form_submissions', pk=form_pk)
+
+    form_obj = get_object_or_404(PublicForm, pk=form_pk)
+    submission = get_object_or_404(PublicFormSubmission, pk=submission_pk, form=form_obj)
+
+    for ans in submission.answers.all():
+        if ans.value_file:
+            ans.value_file.delete(save=False)
+    submission.delete()
+
+    messages.success(request, 'تم حذف الرد بنجاح.')
+    return redirect('dashboard:admin_public_form_submissions', pk=form_obj.pk)
+
+
+def media_proxy(request, file_path):
+    normalized = (unquote(file_path or '')).lstrip('/')
+    if not normalized:
+        raise Http404()
+    parts = normalized.replace('\\', '/').split('/')
+    if any(p in {'..', ''} for p in parts):
+        raise Http404()
+    if not default_storage.exists(normalized):
+        raise Http404()
+    stream = default_storage.open(normalized, mode='rb')
+    content_type, _ = mimetypes.guess_type(normalized)
+    response = FileResponse(stream, content_type=content_type or 'application/octet-stream')
+    return response

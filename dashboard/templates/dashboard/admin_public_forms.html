@@ -1,0 +1,101 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}الاستمارات{% endblock %}
+
+{% block page %}
+<div class="space-y-6">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+    <div class="flex items-center gap-4">
+      <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+        <i data-lucide="file-pen-line" class="w-8 h-8"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-black text-slate-100">الاستمارات</h1>
+        <p class="text-sm text-slate-400 font-medium">عرض الاستمارات السرية والردود عليها</p>
+      </div>
+    </div>
+    <form method="get" class="flex items-center gap-2">
+      <input name="q" value="{{ q }}" placeholder="بحث بالعنوان"
+             class="w-72 px-4 py-3 rounded-2xl bg-slate-900/40 border border-slate-800 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/40 transition-all">
+      <button type="submit"
+              class="px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-black transition-all">
+        بحث
+      </button>
+    </form>
+  </div>
+
+  <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-right">
+        <thead class="bg-slate-800/30 text-slate-500 text-[10px] uppercase tracking-wider font-bold border-b border-slate-800">
+          <tr>
+            <th class="px-6 py-4">العنوان</th>
+            <th class="px-6 py-4">المنشئ</th>
+            <th class="px-6 py-4">الحالة</th>
+            <th class="px-6 py-4">الردود</th>
+            <th class="px-6 py-4">التاريخ</th>
+            <th class="px-6 py-4 text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800">
+          {% for f in forms %}
+          <tr class="hover:bg-slate-800/20 transition-colors">
+            <td class="px-6 py-4">
+              <div class="font-black text-slate-100">{{ f.title }}</div>
+              {% if f.description %}
+              <div class="text-[11px] text-slate-500 mt-1 line-clamp-2">{{ f.description }}</div>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-slate-200 font-bold">{% if f.created_by %}{{ f.created_by.username }}{% else %}—{% endif %}</div>
+            </td>
+            <td class="px-6 py-4">
+              {% if f.is_active %}
+              <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">مفتوحة</span>
+              {% else %}
+              <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-black border border-slate-700">مغلقة</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-black text-slate-200">{{ f.submissions_count }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-[11px] font-mono text-slate-400">{{ f.created_at|date:"Y-m-d H:i" }}</div>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <a href="{% url 'dashboard:admin_public_form_detail' f.pk %}"
+                 class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+                تفاصيل
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="px-6 py-12 text-center text-slate-500 font-bold">لا توجد استمارات</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if forms.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between gap-3 pt-2">
+    <div class="text-[11px] text-slate-500 font-bold">صفحة {{ forms.number }} من {{ forms.paginator.num_pages }}</div>
+    <div class="flex items-center gap-2">
+      {% if forms.has_previous %}
+      <a href="?q={{ q }}&page={{ forms.previous_page_number }}"
+         class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">السابق</a>
+      {% endif %}
+      {% if forms.has_next %}
+      <a href="?q={{ q }}&page={{ forms.next_page_number }}"
+         class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">التالي</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+<script>lucide.createIcons();</script>
+{% endblock %}
+

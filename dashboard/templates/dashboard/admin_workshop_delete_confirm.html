@@ -1,0 +1,51 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}حذف ورشة - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-lg mx-auto space-y-4">
+    <div class="text-right">
+        <h1 class="text-xl font-black text-slate-100">تأكيد حذف الورشة</h1>
+        <p class="text-sm text-slate-400">
+            هل أنت متأكد من حذف هذه الورشة؟ سيؤدي ذلك إلى حذف جميع البيانات المرتبطة بها مثل الموارد والجدول الزمني. لا يمكن التراجع عن هذه العملية.
+        </p>
+    </div>
+
+    <div class="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 space-y-4">
+        <div class="flex items-center gap-4">
+            <div class="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                <i data-lucide="cpu" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">اسم الورشة</div>
+                <div class="text-lg font-black text-slate-200">{{ workshop.title }}</div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800/50">
+            <div>
+                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">الحالة</div>
+                <div class="text-xs font-bold {% if workshop.status == 'active' %}text-emerald-400{% else %}text-amber-400{% endif %}">
+                    {{ workshop.get_status_display }}
+                </div>
+            </div>
+            <div>
+                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">الموقع</div>
+                <div class="text-xs font-bold text-slate-400">{{ workshop.location|default:"غير محدد" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="flex items-center justify-end gap-3 pt-4">
+        {% csrf_token %}
+        <a href="{% url 'dashboard:admin_workshops' %}"
+           class="inline-flex items-center px-6 py-3 rounded-2xl border border-slate-800 text-sm font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">
+            إلغاء والعودة
+        </a>
+        <button type="submit"
+                class="inline-flex items-center px-8 py-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-rose-950 text-sm font-black transition-all">
+            تأكيد الحذف النهائي
+        </button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تحت الصيانة - Tech Day</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            background-color: #020617;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .gradient-bg {
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #020617 100%);
+        }
+        .glass {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        .animate-pulse-soft { animation: pulse-soft 6s ease-in-out infinite; }
+        
+        .hero-text {
+            background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* لضمان التوسيط المطلق في جميع المتصفحات */
+        .absolute-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="gradient-bg text-slate-100 min-h-[100dvh] w-full relative">
+    <!-- Visual Decorations -->
+    <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] bg-cyan-500/10 rounded-full blur-[120px] animate-pulse-soft"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse-soft" style="animation-delay: -3s;"></div>
+    </div>
+
+    <div class="absolute-center px-6">
+        <div class="w-full max-w-sm flex flex-col items-center gap-8 sm:gap-10">
+            <!-- Logo/Icon Section -->
+            <div class="relative group">
+                <div class="absolute inset-0 bg-cyan-500/20 blur-3xl rounded-full scale-125 opacity-50"></div>
+                <div class="relative w-24 h-24 sm:w-28 sm:h-28 bg-slate-900 border border-slate-800 rounded-[2.5rem] flex items-center justify-center shadow-2xl transform rotate-3">
+                    <i data-lucide="shield-alert" class="w-12 h-12 sm:w-14 sm:h-14 text-cyan-400"></i>
+                </div>
+            </div>
+
+            <!-- Message Section -->
+            <div class="text-center space-y-3 sm:space-y-4">
+                <div class="space-y-1 sm:space-y-2">
+                    <h1 class="text-3xl sm:text-4xl font-black hero-text tracking-tight">نظام محمي</h1>
+                    <p class="text-cyan-400 font-black text-[10px] sm:text-xs uppercase tracking-[0.4em]">Maintenance Protocol</p>
+                </div>
+                
+                <p class="text-slate-400 text-sm sm:text-base font-medium leading-relaxed max-w-[260px] sm:max-w-[280px] mx-auto">
+                    نحن نجري بعض التحسينات التقنية لضمان أفضل أداء للفعالية. <span class="text-slate-200">سنعود للعمل فوراً.</span>
+                </p>
+            </div>
+
+            <!-- Action Card -->
+            <div class="glass w-full rounded-[2.5rem] p-7 sm:p-8 space-y-6 shadow-2xl">
+                <div class="flex items-center justify-center gap-2 text-emerald-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Update in Progress</span>
+                </div>
+
+                <div class="h-px bg-slate-800 w-full"></div>
+
+                <div class="space-y-4">
+                    <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 text-center uppercase tracking-widest">للمساعدة والدعم الفني</p>
+                    <a href="{{ facebook_url }}" target="_blank" 
+                       class="flex items-center justify-center gap-3 w-full py-3.5 sm:py-4 bg-white text-slate-950 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-xl">
+                        <i data-lucide="facebook" class="w-5 h-5"></i>
+                        تواصل عبر فيسبوك
+                    </a>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex flex-col items-center gap-2 sm:gap-3 opacity-30">
+                <div class="flex items-center gap-2">
+                    <div class="w-1 h-1 rounded-full bg-slate-500"></div>
+                    <span class="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Qalyubia Tech Team</span>
+                    <div class="w-1 h-1 rounded-full bg-slate-500"></div>
+                </div>
+                <p class="text-[9px] font-bold">Tech Day System © 2026</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

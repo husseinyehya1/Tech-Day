@@ -53,6 +53,13 @@
                 </button>
             </form>
 
+            <!-- Clearance All Action -->
+            <a href="{% url 'dashboard:admin_clearance_all' %}" target="_blank"
+               class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-black transition-all shadow-xl shadow-amber-500/20 active:scale-95 group">
+                <i data-lucide="file-text" class="w-4 h-4 group-hover:rotate-12 transition-transform"></i>
+                <span>طباعة إخلاءات الطرف</span>
+            </a>
+
             <!-- Verification Pages -->
             <form method="post" action="{% url 'dashboard:admin_export_verification_pages' %}" class="contents">
                 {% csrf_token %}
@@ -76,7 +83,7 @@
             </div>
             <div class="relative z-10">
                 <div class="text-4xl font-black text-slate-100 mb-1">{{ total_students }}</div>
-                <p class="text-xs font-bold text-slate-500">إجمالي عدد الطلاب في النظام</p>
+                <p class="text-xs font-bold text-slate-500">الطلاب المسجلين في الفعالية الحالية</p>
             </div>
         </div>
 

@@ -16,8 +16,17 @@
             </div>
         </div>
         <div class="flex items-center gap-3">
+            <form method="get" class="flex items-center gap-2">
+                <input type="hidden" name="status" value="{{ status }}">
+                <input name="q" value="{{ q }}" placeholder="بحث (اسم / بريد / مدرسة / هاتف)"
+                       class="w-64 max-w-[60vw] px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-bold text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/40 transition-all">
+                <button type="submit"
+                        class="px-4 py-2 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-[11px] font-black transition-all">
+                    بحث
+                </button>
+            </form>
             <div class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-bold text-slate-400">
-                إجمالي الطلبات: <span class="text-cyan-400">{{ registrations|length }}</span>
+                إجمالي الطلبات: <span class="text-cyan-400">{{ total_count }}</span>
             </div>
         </div>
     </div>
@@ -134,6 +143,27 @@
             </table>
         </div>
     </div>
+
+    {% if registrations.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-between gap-3 pt-2">
+        <div class="text-[11px] text-slate-500 font-bold">
+            صفحة {{ registrations.number }} من {{ registrations.paginator.num_pages }}
+        </div>
+        <div class="flex items-center gap-2">
+            {% if registrations.has_previous %}
+            <a href="?status={{ status }}&q={{ q }}&page={{ registrations.previous_page_number }}"
+               class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+                السابق
+            </a>
+            {% endif %}
+            {% if registrations.has_next %}
+            <a href="?status={{ status }}&q={{ q }}&page={{ registrations.next_page_number }}"
+               class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+                التالي
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
-

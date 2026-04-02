@@ -157,6 +157,60 @@
                 اتخاذ إجراء بشأن الطلب
             </h3>
 
+            {% if possible_student_matches or possible_registration_matches %}
+            <div class="p-6 rounded-3xl bg-amber-500/5 border border-amber-500/10 space-y-5">
+                <div class="flex items-center gap-2 text-amber-400">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                    <div class="text-xs font-black uppercase tracking-widest">تطابق محتمل (منع الدوبليكيت)</div>
+                </div>
+
+                {% if possible_student_matches %}
+                <div class="space-y-3">
+                    <div class="text-xs font-black text-slate-200">طلاب موجودين بنفس البيانات</div>
+                    <div class="space-y-2">
+                        {% for s in possible_student_matches %}
+                        <label class="flex items-start gap-3 p-4 rounded-2xl bg-slate-950/50 border border-slate-800 hover:border-amber-500/30 transition-all cursor-pointer">
+                            <input type="radio" name="link_student_id" value="{{ s.id }}" class="mt-1 w-4 h-4 accent-amber-500">
+                            <div class="min-w-0">
+                                <div class="text-sm font-black text-white">{{ s.name }} <span class="text-slate-500 font-bold">({{ s.student_id }})</span></div>
+                                <div class="text-[11px] text-slate-400 font-bold truncate">{{ s.school|default:"—" }} • {{ s.education_admin|default:"—" }} • {{ s.grade|default:"—" }}</div>
+                                <div class="text-[11px] text-slate-500 font-bold truncate">{{ s.email|default:"—" }} • {{ s.phone_number|default:"—" }}</div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-bold">اختيار طالب هنا هيعمل ربط الطلب بالطالب الموجود بدل إنشاء طالب جديد.</div>
+                </div>
+                {% endif %}
+
+                {% if possible_registration_matches %}
+                <div class="space-y-3">
+                    <div class="text-xs font-black text-slate-200">طلبات مشابهة في نفس الفعالية</div>
+                    <div class="space-y-2">
+                        {% for r in possible_registration_matches %}
+                        <div class="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="text-sm font-black text-slate-100 truncate">{{ r.full_name_ar }}</div>
+                                    <div class="text-[11px] text-slate-500 font-bold truncate">{{ r.school }} • {{ r.email }} • {{ r.phone_number|default:"—" }}</div>
+                                </div>
+                                <span class="shrink-0 px-3 py-1 rounded-xl border text-[10px] font-black uppercase tracking-widest {% if r.status == 'approved' %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300{% elif r.status == 'pending' %}bg-amber-500/10 border-amber-500/20 text-amber-300{% else %}bg-rose-500/10 border-rose-500/20 text-rose-300{% endif %}">
+                                    {{ r.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <label class="flex items-center gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                    <input type="checkbox" name="force_new" value="1" class="w-5 h-5 accent-rose-500">
+                    <span class="text-sm font-bold text-slate-200">إنشاء طالب جديد رغم وجود تطابق</span>
+                </label>
+            </div>
+            {% endif %}
+
             <div class="grid gap-8 md:grid-cols-2">
                 <div class="space-y-4">
                     <div class="flex items-center gap-2 px-1">
@@ -217,4 +271,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

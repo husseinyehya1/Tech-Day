@@ -1,0 +1,116 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}إصدارات التطبيق - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
+                <i data-lucide="smartphone" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">إصدارات التطبيق</h1>
+                <p class="text-sm text-slate-400 font-medium">إضافة/تعديل الإصدارات ورفع ملف APK للأندرويد</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'dashboard:admin_app_version_create' %}"
+               class="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-black transition-all shadow-lg shadow-emerald-500/20">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>إضافة إصدار</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="{% url 'dashboard:admin_app_versions' %}"
+           class="px-4 py-2 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all {% if not platform %}bg-cyan-500/10 border-cyan-500/20 text-cyan-300{% else %}bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900/60{% endif %}">
+            الكل
+        </a>
+        <a href="{% url 'dashboard:admin_app_versions' %}?platform=android"
+           class="px-4 py-2 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all {% if platform == 'android' %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300{% else %}bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900/60{% endif %}">
+            Android
+        </a>
+        <a href="{% url 'dashboard:admin_app_versions' %}?platform=ios"
+           class="px-4 py-2 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all {% if platform == 'ios' %}bg-sky-500/10 border-sky-500/20 text-sky-300{% else %}bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900/60{% endif %}">
+            iOS
+        </a>
+    </div>
+
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-950/40 border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">المنصة</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">الإصدار</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Build</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Min Build</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">تحميل</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">الحالة</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">التاريخ</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for v in versions %}
+                    <tr class="hover:bg-slate-950/30 transition-colors">
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border {% if v.platform == 'android' %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300{% else %}bg-sky-500/10 border-sky-500/20 text-sky-300{% endif %}">
+                                {{ v.platform|upper }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm font-black text-slate-100">{{ v.version_code }}</td>
+                        <td class="px-6 py-4 text-sm font-black text-slate-200">{{ v.build_number }}</td>
+                        <td class="px-6 py-4 text-sm font-black text-slate-200">{{ v.min_build_number }}</td>
+                        <td class="px-6 py-4">
+                            {% if v.download_url %}
+                            <a href="{{ v.download_url }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 hover:border-cyan-500/40 hover:text-cyan-300 transition-all text-[10px] font-black uppercase tracking-widest">
+                                <i data-lucide="link" class="w-4 h-4"></i>
+                                رابط
+                            </a>
+                            {% elif v.apk_file %}
+                            <a href="{{ v.apk_file.url }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all text-[10px] font-black uppercase tracking-widest">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                APK
+                            </a>
+                            {% else %}
+                            <span class="inline-flex items-center px-4 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-widest">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if v.is_force_update %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[10px] font-black uppercase tracking-widest">إجباري</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-xl bg-slate-950/40 border border-slate-800 text-slate-400 text-[10px] font-black uppercase tracking-widest">عادي</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-xs text-slate-400 font-bold">{{ v.created_at|date:"Y-m-d" }}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <a href="{% url 'dashboard:admin_app_version_update' v.id %}"
+                                   class="p-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300 hover:text-cyan-300 hover:border-cyan-500/40 transition-all"
+                                   title="تعديل">
+                                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                                </a>
+                                <a href="{% url 'dashboard:admin_app_version_delete' v.id %}"
+                                   class="p-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300 hover:text-rose-300 hover:border-rose-500/40 transition-all"
+                                   title="حذف">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-10 text-center text-slate-500 text-sm">لا توجد إصدارات مضافة بعد.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

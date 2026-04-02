@@ -81,7 +81,7 @@
                             <i data-lucide="calendar-range" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors pointer-events-none"></i>
                             <select id="period" name="period" required
                                     class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm appearance-none cursor-pointer">
-                                {% for value,label in session.PERIOD_CHOICES %}
+                                {% for value,label in period_choices %}
                                 <option value="{{ value }}" {% if session.period == value %}selected{% endif %}>
                                     {{ label }}
                                 </option>

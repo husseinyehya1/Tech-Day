@@ -99,6 +99,10 @@
                                    class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 transition-all border border-slate-700">
                                     <i data-lucide="edit-3" class="w-4 h-4"></i>
                                 </a>
+                                <a href="{% url 'dashboard:admin_workshop_delete' workshop.pk %}" title="حذف الورشة"
+                                   class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-all border border-slate-700">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>

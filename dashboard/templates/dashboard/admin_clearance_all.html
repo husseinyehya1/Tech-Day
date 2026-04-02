@@ -1,0 +1,193 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إخلاء طرف طلاب - {{ event.name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --page-width: 210mm;
+            --page-height: 148mm;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #f0f0f0;
+            font-family: 'Amiri', serif;
+            line-height: 1.4;
+            color: #000;
+        }
+
+        .page {
+            width: var(--page-width);
+            height: var(--page-height);
+            background: white;
+            margin: 10px auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            page-break-after: always;
+        }
+
+        .clearance-form {
+            height: 100%;
+            padding: 10mm 15mm;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .header-info {
+            font-size: 13pt;
+            font-weight: bold;
+        }
+
+        .logo-container {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .school-logo {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 22pt;
+            text-decoration: underline;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .content {
+            font-size: 15pt;
+            text-align: justify;
+            flex-grow: 1;
+        }
+
+        .content p {
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: flex-end;
+            padding-left: 20px;
+            padding-bottom: 10px;
+        }
+
+        .signature-box {
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .footer-title {
+            font-size: 15pt;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        /* إعدادات الطباعة */
+        @media print {
+            @page {
+                size: A5 landscape;
+                margin: 0;
+            }
+            body {
+                background-color: white;
+            }
+            .page {
+                margin: 0;
+                box-shadow: none;
+                width: var(--page-width);
+                height: var(--page-height);
+            }
+            .no-print {
+                display: none;
+            }
+        }
+
+        /* زر طباعة للمعاينة فقط */
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: sans-serif;
+            z-index: 100;
+        }
+        .print-btn:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <button class="print-btn no-print" onclick="window.print()">طباعة الكل</button>
+
+    {% for student in students %}
+    <div class="page">
+        <section class="clearance-form">
+            <header>
+                <div class="header-info">
+                    <p>محافظة القليوبية</p>
+                    <p>إدارة بنها التعليمية</p>
+                    <p>مدرسة مصطفي كامل الرسمية المتميزة للغات</p>
+                </div>
+                <div class="logo-container">
+                    <img src="{% static '123.png' %}" alt="شعار المدرسة" class="school-logo">
+                </div>
+            </header>
+
+            <h1>إخلاء طرف</h1>
+
+            <div class="content">
+                <p>السيد الأستاذ مدير إدارة {{ student.education_admin }} التعليمية </p>
+                <p>تحية طيبة وبعد،</p>
+                <p>
+                    نحيط علم سيادتكم بأن الطالب / {{ student.short_name }} مدرسة {{ student.school }}
+                    قد حضر يوم {% if event.start_datetime %}{{ event.start_datetime|date:"l" }} الموافق {{ event.start_datetime|date:"Y/n/j" }}{% else %}الأحد الموافق 2026/3/8{% endif %} إلى مدرسة مصطفي كامل الرسمية المتميزة للغات لحضور فعالية يوم تكنولوجي، بتنظيم توجيه عام الحاسب الآلي بالمديرية، مع اعتباره تدريب رسمي.
+                </p>
+                <p>هذا للعلم، ولسيادتكم جزيل الشكر.</p>
+            </div>
+
+            <div class="footer">
+                <div class="signature-box">
+                    <p class="footer-title">مدير المدرسة</p>
+                    <p class="footer-title">أ/ أماني غريب</p>
+                </div>
+            </div>
+        </section>
+    </div>
+    {% endfor %}
+
+</body>
+</html>
