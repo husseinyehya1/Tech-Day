@@ -46,6 +46,21 @@ class Student(models.Model):
     def __str__(self):
         return f'{self.name} ({self.student_id})'
 
+    def is_registered_for_event(self, event):
+        return self.registrations.filter(
+            event=event,
+            status=StudentRegistration.Status.APPROVED,
+            removed_at__isnull=True,
+        ).exists()
+
+    @property
+    def is_registered_for_current_event(self):
+        from dashboard.models import Event
+        event = Event.get_current()
+        if not event:
+            return False
+        return self.is_registered_for_event(event)
+
 
 class StudentRegistration(models.Model):
     class Status(models.TextChoices):
@@ -53,6 +68,14 @@ class StudentRegistration(models.Model):
         APPROVED = 'approved', 'تمت الموافقة'
         REJECTED = 'rejected', 'مرفوض'
 
+    event = models.ForeignKey(
+        'dashboard.Event',
+        on_delete=models.CASCADE,
+        related_name='registrations',
+        verbose_name='الفعالية',
+        null=True,
+        blank=True
+    )
     full_name_ar = models.CharField(max_length=200, verbose_name='الاسم الكامل (عربي)')
     full_name_en = models.CharField(max_length=200, verbose_name='الاسم الكامل (إنجليزي)')
     email = models.EmailField(verbose_name='البريد الإلكتروني')
@@ -67,12 +90,12 @@ class StudentRegistration(models.Model):
         default=Status.PENDING,
         verbose_name='حالة الطلب',
     )
-    student = models.OneToOneField(
+    student = models.ForeignKey(
         Student,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='registration',
+        related_name='registrations',
         verbose_name='الطالب المرتبط',
     )
     approved_by = models.ForeignKey(
@@ -83,6 +106,16 @@ class StudentRegistration(models.Model):
         related_name='approved_registrations',
         verbose_name='تمت الموافقة بواسطة',
     )
+    removed_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الإزالة من الفعالية')
+    removed_reason = models.TextField(blank=True, verbose_name='سبب الإزالة من الفعالية')
+    removed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='removed_registrations',
+        verbose_name='تمت الإزالة بواسطة',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ إنشاء الطلب')
     approved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الموافقة')
 
@@ -90,6 +123,11 @@ class StudentRegistration(models.Model):
         verbose_name = 'طلب تسجيل طالب'
         verbose_name_plural = 'طلبات تسجيل الطلاب'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['event', 'status', 'removed_at']),
+            models.Index(fields=['email']),
+            models.Index(fields=['phone_number']),
+        ]
 
     def __str__(self):
         return self.full_name_ar
@@ -101,6 +139,14 @@ class Badge(models.Model):
         ATTENDANCE_RATE = 'attendance_rate', 'نسبة حضور'
         MANUAL = 'manual', 'يدوي (بواسطة الأدمن)'
 
+    event = models.ForeignKey(
+        'dashboard.Event',
+        on_delete=models.CASCADE,
+        related_name='badges',
+        verbose_name='الفعالية',
+        null=True,
+        blank=True
+    )
     name = models.CharField(max_length=100, verbose_name='اسم الوسام')
     description = models.TextField(verbose_name='وصف الوسام')
     icon = models.CharField(max_length=50, default='award', verbose_name='أيقونة الوسام (Lucide)')
@@ -119,6 +165,33 @@ class Badge(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class StudentEventStats(models.Model):
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='event_stats',
+        verbose_name='الطالب',
+    )
+    event = models.ForeignKey(
+        'dashboard.Event',
+        on_delete=models.CASCADE,
+        related_name='student_stats',
+        verbose_name='الفعالية',
+    )
+    points = models.PositiveIntegerField(default=0, verbose_name='النقاط في هذه الفعالية')
+    checked_in = models.BooleanField(default=False, verbose_name='تم تسجيل الحضور')
+    checked_in_at = models.DateTimeField(null=True, blank=True, verbose_name='وقت تسجيل الحضور')
+    is_certificate_generated = models.BooleanField(default=False, verbose_name='تم إصدار الشهادة')
+
+    class Meta:
+        verbose_name = 'إحصائيات طالب في فعالية'
+        verbose_name_plural = 'إحصائيات الطلاب في الفعاليات'
+        unique_together = ('student', 'event')
+
+    def __str__(self):
+        return f'{self.student.name} - {self.event.location_name}'
 
 
 class StudentBadge(models.Model):
@@ -144,3 +217,29 @@ class StudentBadge(models.Model):
 
     def __str__(self):
         return f'{self.student.name} - {self.badge.name}'
+
+
+class StudentWorkshopNote(models.Model):
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='workshop_notes',
+        verbose_name='الطالب',
+    )
+    workshop = models.ForeignKey(
+        'workshops.Workshop',
+        on_delete=models.CASCADE,
+        related_name='student_notes',
+        verbose_name='الورشة',
+    )
+    content = models.TextField(verbose_name='محتوى الملاحظة')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الكتابة')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='آخر تحديث')
+
+    class Meta:
+        verbose_name = 'مذكرة تعلم طالب'
+        verbose_name_plural = 'مذكرات تعلم الطلاب'
+        unique_together = ('student', 'workshop')
+
+    def __str__(self):
+        return f'مذكرة {self.student.name} لورشة {self.workshop.title}'

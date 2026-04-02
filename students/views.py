@@ -1,22 +1,25 @@
 import io
 import ssl
+from types import SimpleNamespace
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
 from weasyprint import HTML, CSS
 
+from techday.utils import send_email_async, get_styled_email_html, send_registration_confirmation_email
+
 from attendance.models import Attendance
-from dashboard.models import Notification, EventSettings, StudentSupportRequest
+from dashboard.models import Notification, Event, StudentSupportRequest
 from workshops.models import Workshop, WorkshopSession, WorkshopFeedback, WorkshopResource
 
-from .models import Student, Badge, StudentBadge
+from .models import Student, Badge, StudentBadge, StudentEventStats, StudentRegistration, StudentWorkshopNote
 
 
 @login_required
@@ -38,27 +41,92 @@ def student_list(request):
 @login_required
 def student_detail(request, pk):
     student = get_object_or_404(Student.objects.select_related('group'), pk=pk)
+    current_event = Event.get_current()
+
+    is_registered_for_current_event = False
+    if current_event:
+        is_registered_for_current_event = StudentRegistration.objects.filter(
+            student=student,
+            event=current_event,
+            status=StudentRegistration.Status.APPROVED,
+            removed_at__isnull=True,
+        ).exists()
     
-    # Get student's badges
-    student_badges = student.badges.select_related('badge').order_by('-earned_at')
+    # Get participation history from registrations (and attach stats if available)
+    stats_by_event_id = {
+        s.event_id: s for s in student.event_stats.select_related('event').all()
+    }
+    approved_regs = (
+        StudentRegistration.objects.filter(
+            student=student,
+            status=StudentRegistration.Status.APPROVED,
+        )
+        .select_related('event')
+        .order_by('-approved_at', '-created_at')
+    )
+    past_events = []
+    seen_event_ids = set()
+    for reg in approved_regs:
+        if not reg.event_id:
+            continue
+        if current_event and reg.event_id == current_event.id:
+            continue
+        if reg.event_id in seen_event_ids:
+            continue
+        seen_event_ids.add(reg.event_id)
+        stats = stats_by_event_id.get(reg.event_id)
+        past_events.append(stats or SimpleNamespace(event=reg.event, points=0))
+    for event_id, stats in stats_by_event_id.items():
+        if current_event and event_id == current_event.id:
+            continue
+        if event_id in seen_event_ids:
+            continue
+        past_events.append(stats)
+    
+    # Get student's badges for CURRENT event
+    student_badges = student.badges.filter(badge__event=current_event).select_related('badge').order_by('-earned_at')
     unseen_badges_count = student_badges.filter(is_seen_by_student=False).count()
     
     now = timezone.localtime()
     current_session = None
     next_session = None
-    notifications = Notification.objects.filter(is_active=True).filter(
-        Q(target=Notification.Target.ALL)
-        | Q(target=Notification.Target.GROUP, group=student.group)
-    ).order_by('-created_at')[:10]
-    attendance_qs = Attendance.objects.filter(student=student).select_related('session__workshop')
+    
+    notifications = Notification.objects.none()
+    if current_event and is_registered_for_current_event and student.group and getattr(student.group, 'event_id', None) == current_event.id:
+        notifications = Notification.objects.filter(event=current_event, is_active=True).filter(
+            Q(target=Notification.Target.ALL)
+            | Q(target=Notification.Target.GROUP, group=student.group)
+        ).order_by('-created_at')[:10]
+    
+    attendance_qs = Attendance.objects.none()
+    if current_event and is_registered_for_current_event:
+        attendance_qs = Attendance.objects.filter(
+            student=student,
+            session__group__event=current_event,
+        ).select_related('session__workshop')
     attendance_by_session = {a.session_id: a for a in attendance_qs}
     group_sessions = []
-    if student.group:
+    if current_event and is_registered_for_current_event and student.group and getattr(student.group, 'event_id', None) == current_event.id:
+        # Get all sessions for current group
         group_sessions = list(
             WorkshopSession.objects.filter(group=student.group)
             .select_related('workshop')
             .order_by('start_time')
         )
+        
+        # Add any OTHER sessions the student attended (in case of group change during the event)
+        attended_session_ids = [s.id for s in group_sessions]
+        other_attended_sessions = list(
+            WorkshopSession.objects.filter(attendance_records__student=student, group__event=current_event)
+            .exclude(id__in=attended_session_ids)
+            .select_related('workshop')
+            .order_by('start_time')
+        )
+        if other_attended_sessions:
+            group_sessions.extend(other_attended_sessions)
+            # Re-sort the combined list by start_time
+            group_sessions.sort(key=lambda x: x.start_time)
+
         for session in group_sessions:
             record = attendance_by_session.get(session.id)
             if record:
@@ -83,12 +151,18 @@ def student_detail(request, pk):
             .first()
         )
     total_sessions = len(group_sessions)
+    # Count both present and late as "attended" for statistics
     attended_count = attendance_qs.filter(status=Attendance.Status.PRESENT).count()
     late_count = attendance_qs.filter(status=Attendance.Status.LATE).count()
     absent_count = attendance_qs.filter(status=Attendance.Status.ABSENT).count()
+    
+    # Combined count for the progress bar and "0/4" display
+    completed_count = attended_count + late_count
+    remaining_count = max(0, total_sessions - (completed_count + absent_count))
+    
     attendance_rate = 0
-    if total_sessions > 0 and attended_count > 0:
-        attendance_rate = int(attended_count * 100 / total_sessions)
+    if total_sessions > 0 and completed_count > 0:
+        attendance_rate = int(completed_count * 100 / total_sessions)
 
     # التقييمات التي قام بها الطالب بالفعل
     feedbacks = WorkshopFeedback.objects.filter(student=student).select_related('workshop')
@@ -98,20 +172,41 @@ def student_detail(request, pk):
     for session in group_sessions:
         session.feedback = feedbacks_by_workshop.get(session.workshop_id)
 
-    # ورش حضرها الطالب لإتاحة تقييمها أو تعديله
-    attended_workshop_ids = attendance_qs.filter(status=Attendance.Status.PRESENT).values_list('session__workshop_id', flat=True)
+    # ورش حضرها الطالب لإتاحة تقييمها أو تعديله (بما في ذلك الحضور المتأخر)
+    attended_workshop_ids = attendance_qs.filter(
+        status__in=[Attendance.Status.PRESENT, Attendance.Status.LATE]
+    ).values_list('session__workshop_id', flat=True)
     
     # جميع الورش التي حضرها الطالب لتظهر في قسم التقييم (سواء قيمها أو لا)
     all_attended_workshops = Workshop.objects.filter(
         id__in=attended_workshop_ids
     )
     
-    # إضافة التقييم الحالي لكل ورشة (إن وجد) لتسهيل العرض في القالب
+    # إضافة التقييم الحالي والمذكرات لكل ورشة في قائمة الحضور
+    student_notes = StudentWorkshopNote.objects.filter(student=student).select_related('workshop')
+    notes_by_workshop = {n.workshop_id: n for n in student_notes}
+    
+    # ربط المذكرات والتقييمات بكل جلسة في القائمة لتسهيل العرض المباشر
+    for session in group_sessions:
+        session.existing_feedback = feedbacks_by_workshop.get(session.workshop_id)
+        session.existing_note = notes_by_workshop.get(session.workshop_id)
+
+    # جميع الورش التي حضرها الطالب لتظهر في الأقسام السفلية (كاحتياطي)
     for workshop in all_attended_workshops:
         workshop.existing_feedback = feedbacks_by_workshop.get(workshop.id)
+        workshop.existing_note = notes_by_workshop.get(workshop.id)
 
-    # ترتيب الطالب في لوحة الشرف
-    rank = Student.objects.filter(points__gt=student.points).count() + 1
+    event_stats = None
+    if current_event and is_registered_for_current_event:
+        event_stats, _ = StudentEventStats.objects.get_or_create(student=student, event=current_event)
+    
+    # نقاط الطالب في الفعالية الحالية بدلاً من النقاط العامة
+    current_points = event_stats.points if event_stats else 0
+
+    # ترتيب الطالب في لوحة الشرف (خاص بالفعالية الحالية)
+    rank = 0
+    if current_event and is_registered_for_current_event:
+        rank = StudentEventStats.objects.filter(event=current_event, points__gt=current_points).count() + 1
 
     # المصادر التعليمية المتاحة للطالب (من الورش التي يحضرها)
     workshop_ids = [session.workshop_id for session in group_sessions]
@@ -126,32 +221,49 @@ def student_detail(request, pk):
         from groups.models import Group
         group_rank = Group.objects.filter(points__gt=student.group.points).count() + 1
         
-    event = EventSettings.get_solo()
-
     # طلبات الدعم الخاصة بالطالب
     support_requests = student.support_requests.all().order_by('-created_at')
 
+    # لوحة الشرف - أفضل الطلاب (خاص بالفعالية الحالية)
+    top_stats = StudentEventStats.objects.none()
+    if current_event:
+        top_stats = StudentEventStats.objects.filter(event=current_event, points__gt=0).select_related('student', 'student__group').order_by('-points')[:10]
+    
+    # لوحة الشرف - أفضل المجموعات (خاص بالفعالية الحالية)
+    from groups.models import Group
+    top_groups = Group.objects.none()
+    if current_event:
+        top_groups = Group.objects.filter(event=current_event, points__gt=0).order_by('-points')[:10]
+
     context = {
         'student': student,
+        'current_event': current_event,
+        'past_events': past_events,
         'current_session': current_session,
         'next_session': next_session,
         'notifications': notifications,
         'group_sessions': group_sessions,
         'total_sessions': total_sessions,
-        'attended_count': attended_count,
+        'attended_count': attended_count, # Just PRESENT
+        'completed_count': completed_count, # PRESENT + LATE for progress
         'late_count': late_count,
         'absent_count': absent_count,
+        'remaining_count': remaining_count,
         'attendance_rate': attendance_rate,
         'all_attended_workshops': all_attended_workshops,
         'rank': rank,
+        'current_points': current_points,
         'group_rank': group_rank,
         'violations': violations,
-        'event': event,
+        'event': current_event, # For backward compatibility in templates
         'resources': resources,
         'student_badges': student_badges,
         'unseen_badges_count': unseen_badges_count,
         'support_requests': support_requests,
         'support_categories': StudentSupportRequest.Category.choices,
+        'is_registered_for_current_event': is_registered_for_current_event,
+        'top_stats': top_stats,
+        'top_groups': top_groups,
     }
     return render(request, 'students/detail.html', context)
 
@@ -178,6 +290,119 @@ def student_submit_support_request(request):
             )
             messages.success(request, 'تم إرسال طلبك بنجاح، سيقوم فريق الدعم بمراجعته والرد عليك قريباً.')
             
+    return redirect('students:detail', pk=student.pk)
+
+
+@login_required
+def register_current_event(request):
+    student = getattr(request.user, 'student_profile', None)
+    if not student:
+        return redirect('dashboard:admin_dashboard')
+    
+    event = Event.get_current()
+    if not event:
+        messages.error(request, 'لا توجد فعالية نشطة حالياً.')
+        return redirect('students:detail', pk=student.pk)
+
+    if not event.allow_existing_students_registration:
+        messages.error(request, 'التسجيل عبر حسابات الطلاب الحاليين غير متاح حالياً.')
+        return redirect('students:detail', pk=student.pk)
+    
+    if event.is_registration_closed or event.is_finished:
+        messages.error(request, 'عذراً، باب التسجيل في هذه الفعالية مغلق حالياً.')
+        return redirect('students:detail', pk=student.pk)
+        
+    already_registered = StudentRegistration.objects.filter(
+        student=student,
+        event=event,
+        status=StudentRegistration.Status.APPROVED,
+        removed_at__isnull=True,
+    ).exists()
+    
+    if already_registered:
+        messages.info(request, 'أنت مسجل بالفعل في هذه الفعالية.')
+        return redirect('students:detail', pk=student.pk)
+    
+    # بدلاً من التسجيل المباشر، نحول الطالب لصفحة تأكيد البيانات
+    return redirect('students:event_confirmation')
+
+
+@login_required
+def event_confirmation(request):
+    student = getattr(request.user, 'student_profile', None)
+    if not student:
+        return redirect('dashboard:admin_dashboard')
+    
+    event = Event.get_current()
+    if not event:
+        messages.error(request, 'لا توجد فعالية نشطة حالياً.')
+        return redirect('students:detail', pk=student.pk)
+
+    if not event.allow_existing_students_registration:
+        messages.error(request, 'التسجيل عبر حسابات الطلاب الحاليين غير متاح حالياً.')
+        return redirect('students:detail', pk=student.pk)
+    
+    # التحقق من أن الطالب لم يسجل بالفعل
+    if StudentRegistration.objects.filter(
+        student=student,
+        event=event,
+        status=StudentRegistration.Status.APPROVED,
+        removed_at__isnull=True,
+    ).exists():
+        return redirect('students:detail', pk=student.pk)
+        
+    return render(request, 'students/event_confirmation.html', {
+        'student': student,
+        'event': event,
+    })
+
+
+@login_required
+def confirm_registration(request):
+    if request.method != 'POST':
+        return redirect('students:event_confirmation')
+        
+    student = getattr(request.user, 'student_profile', None)
+    if not student:
+        return redirect('dashboard:admin_dashboard')
+    
+    event = Event.get_current()
+    if not event or event.is_registration_closed or event.is_finished:
+        messages.error(request, 'عذراً، باب التسجيل مغلق حالياً.')
+        return redirect('students:detail', pk=student.pk)
+        
+    already_registered = StudentRegistration.objects.filter(
+        student=student,
+        event=event,
+        status=StudentRegistration.Status.APPROVED,
+        removed_at__isnull=True,
+    ).exists()
+    
+    if already_registered:
+        messages.info(request, 'أنت مسجل بالفعل في هذه الفعالية.')
+        return redirect('students:detail', pk=student.pk)
+        
+    # تسجيل الطالب في الفعالية
+    StudentRegistration.objects.create(
+        event=event,
+        student=student,
+        full_name_ar=student.name,
+        email=student.email,
+        phone_number=student.phone_number,
+        school=student.school,
+        education_admin=student.education_admin,
+        grade=student.grade,
+        status=StudentRegistration.Status.APPROVED,
+        approved_at=timezone.now()
+    )
+    
+    # تهيئة إحصائيات الطالب لهذه الفعالية
+    StudentEventStats.objects.get_or_create(student=student, event=event)
+    
+    # إرسال تفاصيل الفعالية والـ QR
+    send_registration_confirmation_email(student, event)
+    
+    messages.success(request, 'تم حجز مكانك في الفعالية بنجاح! تم إرسال رمز الـ QR وتفاصيل الفعالية إلى بريدك الإلكتروني.')
     return redirect('students:detail', pk=student.pk)
 
 
@@ -224,7 +449,7 @@ def student_verify(request, identifier):
     if not student.checked_in:
         return render(request, '403.html', {'message': 'عذراً، يجب تسجيل حضور الطالب للفعالية أولاً ليتم تفعيل صفحة التحقق.'}, status=403)
     
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     attendance_qs = Attendance.objects.filter(
         student=student,
         status=Attendance.Status.PRESENT,
@@ -283,7 +508,7 @@ def student_certificate(request, student_id):
     if not student.checked_in:
         return render(request, '403.html', {'message': 'يجب تسجيل الحضور أولاً'}, status=403)
     
-    event = EventSettings.get_solo()
+    event = Event.get_current()
     student_identifier = student.student_id or student.id
     qr_payload = f'https://verify.edutech-egy.com/td/{student_identifier}'
     
@@ -296,6 +521,29 @@ def student_certificate(request, student_id):
             'qr_payload': qr_payload,
         }
     )
+
+
+@login_required
+def submit_workshop_note(request):
+    student = getattr(request.user, 'student_profile', None)
+    if not student:
+        return redirect('dashboard:admin_dashboard')
+    
+    if request.method == 'POST':
+        workshop_id = request.POST.get('workshop_id')
+        content = request.POST.get('content', '').strip()
+        
+        if not content:
+            messages.error(request, 'يرجى كتابة الملاحظة قبل الحفظ.')
+        else:
+            StudentWorkshopNote.objects.update_or_create(
+                student=student,
+                workshop_id=workshop_id,
+                defaults={'content': content}
+            )
+            messages.success(request, 'تم حفظ مذكرة التعلم بنجاح.')
+            
+    return redirect('students:detail', pk=student.pk)
 
 
 @login_required
@@ -342,7 +590,7 @@ def send_certificate_email(request, pk):
         
     context = {
         'student': student,
-        'event': EventSettings.get_solo(),
+        'event': Event.get_current(),
         'site_url': settings.SITE_BASE_URL,
     }
     

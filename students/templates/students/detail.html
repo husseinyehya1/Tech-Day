@@ -17,73 +17,127 @@
     </div>
     {% endif %}
 
-    <!-- Header / Hero Section (Full Width) -->
-    <div class="relative overflow-hidden rounded-[3rem] bg-slate-900 border border-slate-800 p-8 md:p-12 shadow-2xl shadow-slate-950/50 group">
+    <!-- Event Registration Prompt -->
+    {% if event and event.allow_existing_students_registration and not is_registered_for_current_event and not event.is_registration_closed and not event.is_finished %}
+    <div class="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-indigo-600 to-blue-700 p-8 md:p-10 shadow-2xl group animate-in slide-in-from-top-4 duration-700">
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-white/10 blur-[80px] rounded-full group-hover:bg-white/20 transition-all duration-1000"></div>
+        <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-right">
+            <div class="space-y-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-wider text-white">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> فعالية قادمة
+                </div>
+                <h2 class="text-3xl font-black text-white tracking-tight">هل أنت مستعد للمشاركة في {{ event.location_name }}؟</h2>
+                <p class="text-sm text-white/80 font-medium">باب التسجيل مفتوح الآن لفعالية <b>{{ event.name }}</b>. احجز مكانك الآن بضغطة واحدة!</p>
+            </div>
+            <form action="{% url 'students:register_current_event' %}" method="POST" class="shrink-0">
+                {% csrf_token %}
+                <button type="submit" class="px-10 py-5 bg-white text-blue-700 rounded-[2rem] text-sm font-black transition-all hover:scale-105 hover:shadow-2xl shadow-xl flex items-center gap-3 group/btn">
+                    <span>التسجيل في الفعالية</span>
+                    <i data-lucide="arrow-left" class="w-5 h-5 group-hover/btn:translate-x-[-4px] transition-transform"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Header / Hero Section (Full Width Profile Design) -->
+    <div class="relative overflow-hidden rounded-[4rem] bg-slate-900 border border-slate-800 p-8 md:p-12 shadow-2xl shadow-slate-950/50 group">
         <!-- Animated Background Elements -->
         <div class="absolute -top-24 -right-24 w-96 h-96 bg-cyan-500/10 blur-[120px] -z-10 rounded-full group-hover:bg-cyan-500/20 transition-all duration-1000"></div>
         <div class="absolute -bottom-24 -left-24 w-80 h-80 bg-blue-600/10 blur-[100px] -z-10 rounded-full group-hover:bg-blue-600/20 transition-all duration-1000"></div>
         
-        <div class="flex flex-col lg:flex-row items-center justify-between gap-12 relative z-10">
+        <div class="flex flex-col lg:flex-row items-center gap-12 relative z-10">
+            <!-- Student Avatar/Profile Image Area -->
+            <div class="relative group/avatar shrink-0">
+                <div class="absolute -inset-1.5 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-[3rem] blur opacity-30 group-hover/avatar:opacity-60 transition duration-500"></div>
+                <div class="relative w-40 h-40 md:w-56 md:h-56 rounded-[2.5rem] bg-slate-950 border-4 border-slate-800 overflow-hidden flex items-center justify-center shadow-2xl">
+                    {% if student.avatar %}
+                        <img src="{{ student.avatar.url }}" alt="{{ student.name }}" class="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-700">
+                    {% else %}
+                        <div class="flex flex-col items-center justify-center text-slate-700 group-hover/avatar:text-cyan-500 transition-colors">
+                            <i data-lucide="user-circle-2" class="w-24 h-24 md:w-32 md:h-32 stroke-[1]"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Online/Status Badge -->
+                    <div class="absolute bottom-4 right-4 w-6 h-6 rounded-full bg-emerald-500 border-4 border-slate-950 shadow-lg shadow-emerald-500/20"></div>
+                </div>
+            </div>
+
             <!-- Student Profile Info -->
-            <div class="flex-1 text-center lg:text-right space-y-8 w-full">
+            <div class="flex-1 text-center lg:text-right space-y-6 w-full">
                 <div class="space-y-4">
-                    <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-slate-950/50 backdrop-blur-md text-cyan-400 border border-cyan-500/20 text-[11px] font-black uppercase tracking-widest shadow-inner">
-                        <span class="relative flex h-2 w-2">
+                    <div class="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-slate-950/50 backdrop-blur-md text-cyan-400 border border-cyan-500/20 text-[11px] font-black uppercase tracking-widest shadow-inner">
+                        <span class="relative flex h-2.5 w-2.5">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
                         </span>
-                        {% if event.is_finished %}الفعالية انتهت بنجاح{% else %}مشارك نشط في Tech Day{% endif %}
+                        {% if event %}
+                            {% if is_registered_for_current_event %}
+                                {% if event.is_finished %}الفعالية انتهت بنجاح{% else %}مشارك نشط في Tech Day {{ event.year }}{% endif %}
+                            {% else %}
+                                غير مسجل في الفعالية الحالية
+                            {% endif %}
+                        {% else %}
+                            لا توجد فعالية حالياً
+                        {% endif %}
                     </div>
-                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-none tracking-tight">
+                    
+                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-tight tracking-tight">
                         {{ student.name }}
                     </h1>
+                    
                     <div class="flex flex-wrap justify-center lg:justify-start items-center gap-4">
-                        <span class="bg-slate-950/80 text-slate-400 px-4 py-2 rounded-xl border border-slate-800 font-mono text-sm shadow-sm">ID: {{ student.student_id }}</span>
-                        <span class="bg-slate-950/80 text-slate-400 px-4 py-2 rounded-xl border border-slate-800 font-bold text-sm shadow-sm">{{ student.education_admin }}</span>
+                        <span class="bg-slate-950/80 text-slate-400 px-5 py-2.5 rounded-2xl border border-slate-800 font-bold text-sm shadow-sm flex items-center gap-2 transition-all hover:border-cyan-500/30">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-indigo-500"></i>
+                            {{ student.education_admin }}
+                        </span>
+                        {% if student.grade %}
+                        <span class="bg-slate-950/80 text-slate-400 px-5 py-2.5 rounded-2xl border border-slate-800 font-bold text-sm shadow-sm flex items-center gap-2 transition-all hover:border-emerald-500/30">
+                            <i data-lucide="graduation-cap" class="w-4 h-4 text-emerald-500"></i>
+                            {{ student.grade }}
+                        </span>
+                        {% endif %}
+                        <span class="bg-slate-950/80 text-slate-400 px-5 py-2.5 rounded-2xl border border-slate-800 font-bold text-sm shadow-sm flex items-center gap-2 transition-all hover:border-amber-500/30">
+                            <i data-lucide="calendar" class="w-4 h-4 text-amber-500"></i>
+                            منذ {{ student.created_at|date:"M Y" }}
+                        </span>
                     </div>
                 </div>
                 
-                <div class="flex flex-wrap justify-center lg:justify-start gap-6">
+                <div class="flex flex-wrap justify-center lg:justify-start gap-4">
                     {% if student.group %}
-                    <div class="group relative px-8 py-4 rounded-[2rem] bg-slate-950/80 border border-slate-800 flex items-center gap-5 transition-all hover:border-cyan-500/50 shadow-xl overflow-hidden" style="border-right: 6px solid {{ student.group.color }};">
-                        <div class="absolute inset-0 bg-gradient-to-l from-transparent to-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:rotate-12 transition-transform" style="background-color: {{ student.group.color }}20;">
-                            <span class="text-2xl font-black" style="color: {{ student.group.color }};">{{ student.group.code }}</span>
+                    <div class="group/grp relative px-6 py-4 rounded-3xl bg-slate-950/80 border border-slate-800 flex items-center gap-4 transition-all hover:border-cyan-500/50 shadow-xl overflow-hidden">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform group-hover/grp:rotate-12 transition-transform" style="background-color: {{ student.group.color }}20;">
+                            <span class="text-xl font-black" style="color: {{ student.group.color }};">{{ student.group.code }}</span>
                         </div>
                         <div class="text-right">
-                            <div class="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">مجموعتي</div>
-                            <div class="text-base font-black text-white">{{ student.group.name }}</div>
+                            <div class="text-[9px] text-slate-500 font-black uppercase tracking-wider">مجموعتي</div>
+                            <div class="text-sm font-black text-white">{{ student.group.name }}</div>
                         </div>
                     </div>
                     {% endif %}
 
                     {% if student.checked_in %}
-                    <div class="px-8 py-4 rounded-[2rem] bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-4 shadow-xl">
-                        <div class="p-3 bg-emerald-500/20 rounded-2xl text-emerald-400">
-                            <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                    <div class="px-6 py-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-4 shadow-xl group/check transition-all hover:bg-emerald-500/20">
+                        <div class="p-2 bg-emerald-500/20 rounded-xl text-emerald-400 group-hover/check:scale-110 transition-transform">
+                            <i data-lucide="check-circle-2" class="w-5 h-5"></i>
                         </div>
                         <div class="text-right">
-                            <div class="text-[10px] text-emerald-500/70 font-black uppercase tracking-widest mb-1">حالة الحضور</div>
-                            <div class="text-base font-black text-emerald-400">تم تسجيل حضورك</div>
+                            <div class="text-[9px] text-emerald-500/70 font-black uppercase tracking-wider">الحالة</div>
+                            <div class="text-sm font-black text-emerald-400">حاضر الآن</div>
                         </div>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Digital ID Card (QR) -->
-            <div class="relative group">
-                <div class="absolute -inset-2 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 rounded-[3rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                <div class="relative flex flex-col items-center gap-6 bg-white p-8 rounded-[3rem] shadow-2xl transition-all duration-500 group-hover:scale-[1.03] group-hover:-rotate-1">
-                    <div id="qrcode" class="p-3 bg-slate-50 rounded-2xl border-4 border-slate-100"></div>
-                    <div class="text-center space-y-1">
-                        <p class="text-[11px] text-slate-500 font-black uppercase tracking-[0.3em]">Digital Access Key</p>
-                        <div class="flex items-center justify-center gap-2">
-                            <span class="w-8 h-px bg-slate-200"></span>
-                            <p class="text-[9px] text-slate-400 font-mono font-bold">EduTech Egypt</p>
-                            <span class="w-8 h-px bg-slate-200"></span>
-                        </div>
-                    </div>
+            <!-- Profile Summary / Rank -->
+            <div class="shrink-0 hidden xl:flex flex-col gap-4">
+                <div class="p-8 rounded-[3rem] bg-slate-950 border border-slate-800 flex flex-col items-center justify-center text-center shadow-2xl">
+                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">ترتيبي الحالي</div>
+                    <div class="text-6xl font-black text-cyan-400 mb-1 tracking-tighter">#{{ rank }}</div>
+                    <div class="text-[10px] font-black text-slate-600 uppercase tracking-widest">على مستوى الفعالية</div>
                 </div>
             </div>
         </div>
@@ -92,49 +146,53 @@
     <!-- 2-Column Desktop Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        <!-- Right Column: Timeline & Stats (Main Focus) -->
-        <div class="lg:col-span-8 space-y-8 order-2 lg:order-1">
+        <!-- Right Column: Main Content (Stats, Journey, Diary) -->
+        <div class="lg:col-span-8 space-y-8 order-2 lg:order-2">
             
-            <!-- Quick Stats Grid -->
+            <!-- Professional Stats Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Personal Points -->
-                <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-cyan-500/30 transition-all shadow-xl">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400"><i data-lucide="zap" class="w-6 h-6"></i></div>
-                        <span class="text-xs font-mono text-slate-600 font-bold">#{{ rank }} Global</span>
+                <div class="bg-slate-900/50 border border-slate-800 p-7 rounded-[2.5rem] group hover:border-cyan-500/30 transition-all shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-cyan-500/5 rounded-full blur-2xl"></div>
+                    <div class="flex items-start justify-between mb-5 relative z-10">
+                        <div class="p-3.5 rounded-2xl bg-cyan-500/10 text-cyan-400 group-hover:scale-110 transition-transform"><i data-lucide="zap" class="w-6 h-6"></i></div>
+                        <span class="px-2 py-1 rounded-lg bg-slate-950 text-[9px] font-mono text-slate-500 font-bold border border-slate-800">#{{ rank }} Global</span>
                     </div>
-                    <div class="text-3xl font-black text-white mb-1 group-hover:text-cyan-400 transition-colors">{{ student.points }}</div>
+                    <div class="text-4xl font-black text-white mb-1 group-hover:text-cyan-400 transition-colors tracking-tighter">{{ current_points }}</div>
                     <div class="text-[10px] text-slate-500 font-black uppercase tracking-widest">نقاطي المحصلة</div>
                 </div>
 
                 <!-- Attendance Rate -->
-                <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-emerald-500/30 transition-all shadow-xl">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400"><i data-lucide="check-square" class="w-6 h-6"></i></div>
-                        <span class="text-xs font-mono text-slate-600 font-bold">{{ attendance_rate }}% Rate</span>
+                <div class="bg-slate-900/50 border border-slate-800 p-7 rounded-[2.5rem] group hover:border-emerald-500/30 transition-all shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl"></div>
+                    <div class="flex items-start justify-between mb-5 relative z-10">
+                        <div class="p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform"><i data-lucide="check-square" class="w-6 h-6"></i></div>
+                        <span class="px-2 py-1 rounded-lg bg-slate-950 text-[9px] font-mono text-slate-500 font-bold border border-slate-800">{{ attendance_rate }}% Rate</span>
                     </div>
-                    <div class="text-3xl font-black text-white mb-1 group-hover:text-emerald-400 transition-colors">{{ attended_count }}/{{ total_sessions }}</div>
+                    <div class="text-4xl font-black text-white mb-1 group-hover:text-emerald-400 transition-colors tracking-tighter">{{ completed_count }}/{{ total_sessions }}</div>
                     <div class="text-[10px] text-slate-500 font-black uppercase tracking-widest">الجلسات المكتملة</div>
                 </div>
 
                 <!-- Group Performance -->
-                <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-violet-500/30 transition-all shadow-xl">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="p-3 rounded-2xl bg-violet-500/10 text-violet-400"><i data-lucide="users" class="w-6 h-6"></i></div>
-                        <span class="text-xs font-mono text-slate-600 font-bold">#{{ group_rank }} Rank</span>
+                <div class="bg-slate-900/50 border border-slate-800 p-7 rounded-[2.5rem] group hover:border-violet-500/30 transition-all shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-violet-500/5 rounded-full blur-2xl"></div>
+                    <div class="flex items-start justify-between mb-5 relative z-10">
+                        <div class="p-3.5 rounded-2xl bg-violet-500/10 text-violet-400 group-hover:scale-110 transition-transform"><i data-lucide="users" class="w-6 h-6"></i></div>
+                        <span class="px-2 py-1 rounded-lg bg-slate-950 text-[9px] font-mono text-slate-500 font-bold border border-slate-800">#{{ group_rank }} Rank</span>
                     </div>
-                    <div class="text-3xl font-black text-white mb-1 group-hover:text-violet-400 transition-colors">{{ student.group.points|default:0 }}</div>
+                    <div class="text-4xl font-black text-white mb-1 group-hover:text-violet-400 transition-colors tracking-tighter">{{ student.group.points|default:0 }}</div>
                     <div class="text-[10px] text-slate-500 font-black uppercase tracking-widest">نقاط المجموعة</div>
                 </div>
 
                 <!-- Certificate Status -->
-                <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-amber-500/30 transition-all shadow-xl">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="p-3 rounded-2xl bg-amber-500/10 text-amber-400">
+                <div class="bg-slate-900/50 border border-slate-800 p-7 rounded-[2.5rem] group hover:border-amber-500/30 transition-all shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-amber-500/5 rounded-full blur-2xl"></div>
+                    <div class="flex items-start justify-between mb-5 relative z-10">
+                        <div class="p-3.5 rounded-2xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
                             <i data-lucide="award" class="w-6 h-6"></i>
                         </div>
                         {% if student.checked_in and not student.is_certificate_banned and student.cert_emails_sent < 3 %}
-                        <a href="{% url 'students:send_certificate_email' student.pk %}" class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all group/btn relative" title="إرسال الشهادة للبريد">
+                        <a href="{% url 'students:send_certificate_email' student.pk %}" class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all group/btn relative shadow-lg" title="إرسال الشهادة للبريد">
                             <i data-lucide="mail" class="w-5 h-5"></i>
                             <span class="absolute -top-8 right-0 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap">إرسال للبريد</span>
                         </a>
@@ -145,7 +203,7 @@
                         <div class="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">بسبب مخالفات إدارية</div>
                     {% elif student.checked_in %}
                         <div class="text-xl font-black text-amber-400 mb-1">مؤهل للشهادة</div>
-                        <div class="text-[10px] text-slate-500 font-bold uppercase">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
                             {% if student.cert_emails_sent > 0 %}أرسلت {{ student.cert_emails_sent }}/3 مرات{% else %}متاحة الآن للطلب{% endif %}
                         </div>
                     {% else %}
@@ -155,41 +213,133 @@
                 </div>
             </div>
 
+            <!-- Day Progress Section -->
+            {% if total_sessions > 0 %}
+            <div class="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 shadow-xl">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-indigo-500/10 rounded-2xl text-indigo-400 border border-indigo-500/20">
+                            <i data-lucide="trending-up" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-white tracking-tight">تقدمك خلال اليوم التقني</h2>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">عرض بصري للإنجاز الحالي</p>
+                        </div>
+                    </div>
+                    <div class="px-5 py-2 rounded-2xl bg-slate-950 border border-slate-800 flex items-center gap-3">
+                        <span class="text-2xl font-black text-indigo-400">{{ attendance_rate }}%</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">مكتمل<br>حتى الآن</span>
+                    </div>
+                </div>
+                
+                <div class="relative h-4 bg-slate-950 rounded-full border border-slate-800 p-1 overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-blue-600 rounded-full transition-all duration-1000 relative group/progress" style="width: {{ attendance_rate }}%">
+                        <div class="absolute inset-0 bg-white/20 animate-pulse rounded-full"></div>
+                        <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full border-4 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)] z-10 group-hover/progress:scale-125 transition-transform"></div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    <div class="p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 text-center">
+                        <div class="text-xl font-black text-white">{{ attended_count }}</div>
+                        <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">حاضر</div>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 text-center">
+                        <div class="text-xl font-black text-amber-400">{{ late_count }}</div>
+                        <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">متأخر</div>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 text-center">
+                        <div class="text-xl font-black text-rose-500">{{ absent_count }}</div>
+                        <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">غائب</div>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 text-center">
+                        <div class="text-xl font-black text-slate-500">{{ remaining_count }}</div>
+                        <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">متبقي</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Training Journey -->
             <div class="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 shadow-xl">
                 <div class="flex items-center justify-between mb-8">
-                    <h2 class="text-2xl font-black text-white flex items-center gap-4">
-                        <span class="w-2 h-10 bg-cyan-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.5)]"></span>
-                        مساري التدريبي المعتمد
-                    </h2>
-                    <div class="text-xs font-mono text-slate-500">{{ group_sessions|length }} Sessions</div>
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-cyan-500/10 rounded-2xl text-cyan-400 border border-cyan-500/20">
+                            <i data-lucide="map" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-white tracking-tight">مساري التدريبي المعتمد</h2>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">جدول الورش والجلسات الخاصة بك</p>
+                        </div>
+                    </div>
+                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">{{ group_sessions|length }} Sessions</div>
                 </div>
 
                 <div class="space-y-4 relative before:absolute before:right-[3.25rem] before:top-4 before:bottom-4 before:w-px before:bg-slate-800">
                     {% for session in group_sessions %}
-                    <div class="relative flex items-center gap-6 p-5 rounded-2xl bg-slate-950/50 border border-slate-800/50 transition-all hover:bg-slate-900 group">
+                    <div class="relative flex items-center gap-6 p-6 rounded-3xl bg-slate-950/50 border border-slate-800/50 transition-all hover:bg-slate-900 hover:border-cyan-500/30 group">
                         <div class="w-20 text-right space-y-1">
-                            <div class="text-[10px] text-slate-500 font-black uppercase">{{ session.get_period_display }}</div>
+                            <div class="text-[9px] text-slate-500 font-black uppercase tracking-tighter">{{ session.get_period_display }}</div>
                             <div class="text-sm font-black text-slate-300">{{ session.start_time|time:"H:i" }}</div>
                         </div>
-                        <div class="relative z-10 w-3 h-3 rounded-full bg-slate-800 border-2 border-slate-950 shadow-sm group-hover:scale-125 transition-transform duration-300 
-                            {% if session.attendance_status_value == 'present' %}bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]{% elif session.attendance_status_value == 'late' %}bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]{% endif %}">
+                        
+                        <!-- Status Indicator Point -->
+                        <div class="relative z-10 w-4 h-4 rounded-full bg-slate-800 border-2 border-slate-950 shadow-sm group-hover:scale-125 transition-all duration-300 
+                            {% if session.attendance_status_value == 'present' %}bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)] border-emerald-400/20
+                            {% elif session.attendance_status_value == 'late' %}bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)] border-amber-400/20
+                            {% elif session.attendance_status_value == 'absent' %}bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)] border-rose-400/20
+                            {% else %}bg-slate-700 group-hover:bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.3)]{% endif %}">
                         </div>
-                        <div class="flex-1">
-                            <h4 class="text-base font-black text-slate-100 group-hover:text-cyan-400 transition-colors">{{ session.workshop.title }}</h4>
-                            <div class="flex items-center gap-3 mt-1.5">
-                                <span class="text-[11px] text-slate-500 font-bold bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">القاعة {{ session.workshop.room }}</span>
+
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-base md:text-lg font-black text-slate-100 group-hover:text-cyan-400 transition-colors leading-tight truncate">{{ session.workshop.title }}</h4>
+                            <div class="flex flex-wrap items-center gap-3 mt-2">
+                                <span class="text-[10px] text-slate-400 font-bold bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800 flex items-center gap-1.5">
+                                    <i data-lucide="map-pin" class="w-3 h-3 text-indigo-400"></i>
+                                    القاعة: {{ session.workshop.room }}
+                                </span>
+                                {% if session.workshop.supervisor %}
+                                <span class="text-[10px] text-slate-400 font-bold bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800 flex items-center gap-1.5">
+                                    <i data-lucide="user" class="w-3 h-3 text-cyan-400"></i>
+                                    {{ session.workshop.supervisor.get_full_name|default:session.workshop.supervisor.username }}
+                                </span>
+                                {% endif %}
                             </div>
+                            
+                            {% if session.attendance_status_value == "present" or session.attendance_status_value == "late" %}
+                            <div class="flex gap-3 mt-4">
+                                <button onclick="openNoteModal({{ session.workshop.id }}, '{{ session.workshop.title|escapejs }}', '{{ session.existing_note.content|default:''|escapejs }}')"
+                                        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] font-black {% if session.existing_note %}text-amber-400 border-amber-500/20{% else %}text-slate-400 hover:text-white{% endif %} transition-all active:scale-95">
+                                    <i data-lucide="{% if session.existing_note %}edit-3{% else %}plus-circle{% endif %}" class="w-3.5 h-3.5"></i>
+                                    {% if session.existing_note %}تعديل المذكرة{% else %}مذكرة التعلم{% endif %}
+                                </button>
+                                <button onclick="openFeedbackModal({{ session.workshop.id }}, '{{ session.workshop.title|escapejs }}', {{ session.existing_feedback.rating|default:0 }}, '{{ session.existing_feedback.comment|default:''|escapejs }}')"
+                                        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] font-black {% if session.existing_feedback %}text-emerald-400 border-emerald-500/20{% else %}text-cyan-400 hover:bg-cyan-500/5{% endif %} transition-all active:scale-95">
+                                    <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                                    {% if session.existing_feedback %}تم التقييم{% else %}تقييم الورشة{% endif %}
+                                </button>
+                            </div>
+                            {% endif %}
                         </div>
-                        <div class="text-right">
+
+                        <div class="text-right shrink-0">
                             {% if session.attendance_status_value == "present" %}
-                                <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">حاضر</span>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">تم الحضور</span>
+                                    <span class="text-[8px] text-slate-600 font-bold uppercase">+ {{ session.workshop.points_per_session|default:10 }} Points</span>
+                                </div>
                             {% elif session.attendance_status_value == "late" %}
-                                <span class="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-black border border-amber-500/20">متأخر</span>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-black border border-amber-500/20">حضور متأخر</span>
+                                    <span class="text-[8px] text-slate-600 font-bold uppercase">+ {{ session.workshop.points_per_session|default:10 }} Points</span>
+                                </div>
                             {% elif session.attendance_status_value == "absent" %}
-                                <span class="px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-black border border-rose-500/20">غائب</span>
+                                <span class="px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-black border border-rose-500/20">لم يحضر</span>
                             {% else %}
-                                <span class="px-3 py-1 rounded-full bg-slate-800 text-slate-500 text-[10px] font-black">قادم</span>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="px-3 py-1 rounded-full bg-slate-800 text-slate-500 text-[10px] font-black group-hover:bg-cyan-500/10 group-hover:text-cyan-400 group-hover:border-cyan-500/20 transition-all">بانتظارك</span>
+                                    <span class="text-[8px] text-slate-700 font-bold uppercase">قريباً</span>
+                                </div>
                             {% endif %}
                         </div>
                     </div>
@@ -197,94 +347,36 @@
                 </div>
             </div>
 
-            <!-- Workshop Feedback -->
-            {% if all_attended_workshops %}
-            <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-[2.5rem] p-8 shadow-xl overflow-hidden relative">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center justify-between mb-8">
-                        <div class="flex items-center gap-4 text-indigo-400">
-                            <div class="p-2.5 rounded-2xl bg-indigo-500/20 border border-indigo-500/30">
-                                <i data-lucide="star" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-black uppercase tracking-widest text-white">تقييم الورش التدريبية</h3>
-                                <p class="text-[10px] text-indigo-300/60 font-bold mt-1 uppercase tracking-tighter">رأيك يساعدنا على التطوير المستمر</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {% for workshop in all_attended_workshops %}
-                        <div class="group p-6 rounded-[2rem] bg-slate-950/40 border border-slate-800/60 hover:border-indigo-500/40 transition-all duration-500 flex flex-col h-full shadow-lg hover:shadow-indigo-500/5">
-                            <div class="flex justify-between items-start gap-4 mb-6">
-                                <div class="min-w-0">
-                                    <div class="text-xs font-black text-indigo-400/80 uppercase tracking-widest mb-1">ورشة عمل</div>
-                                    <div class="text-sm font-black text-white leading-snug truncate">{{ workshop.title }}</div>
-                                </div>
-                                {% if workshop.existing_feedback %}
-                                <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black shrink-0">
-                                    <span class="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
-                                    تم التقييم
-                                </div>
-                                {% endif %}
-                            </div>
-                            <form action="{% url 'workshops:submit_feedback' %}" method="POST" class="flex flex-col flex-1 space-y-5">
-                                {% csrf_token %}
-                                <input type="hidden" name="workshop_id" value="{{ workshop.id }}">
-                                <div class="flex flex-col items-center gap-4 py-6 bg-slate-900/40 rounded-3xl border border-slate-800/40">
-                                    <div class="star-rating">
-                                        {% for i in "54321" %}
-                                            <input type="radio" id="star-{{ workshop.id }}-{{ i }}" name="rating" value="{{ i }}" 
-                                                   required {% if workshop.existing_feedback and workshop.existing_feedback.rating|stringformat:"s" == i %}checked{% endif %}>
-                                            <label for="star-{{ workshop.id }}-{{ i }}" class="star-label"><i data-lucide="star" class="w-8 h-8"></i></label>
-                                        {% endfor %}
-                                    </div>
-                                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] rating-hint">
-                                        {% if workshop.existing_feedback %}تقييمك الحالي: <span class="text-amber-400">{{ workshop.existing_feedback.rating }}</span>/5{% else %}اضغط لتقييم الورشة{% endif %}
-                                    </div>
-                                </div>
-                                <textarea name="comment" rows="2" class="w-full px-5 py-3 rounded-2xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500/50 resize-none" placeholder="شاركنا ملاحظاتك...">{{ workshop.existing_feedback.comment|default:'' }}</textarea>
-                                <button type="submit" class="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 text-slate-950 text-[10px] font-black uppercase tracking-[0.2em] transition-all">
-                                    {% if workshop.existing_feedback %}تحديث تقييمي{% else %}إرسال التقييم الآن{% endif %}
-                                </button>
-                            </form>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Digital Resources Hub (Beautiful Grid) -->
-            <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group/hub">
+            <!-- Digital Resources Hub -->
+            <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-[3rem] p-8 md:p-10 shadow-xl relative overflow-hidden group/hub">
                 <div class="absolute -right-24 -top-24 w-64 h-64 bg-cyan-500/5 blur-[80px] rounded-full group-hover/hub:bg-cyan-500/10 transition-all duration-700"></div>
                 
                 <div class="relative z-10">
                     <div class="flex items-center justify-between mb-8">
                         <div class="flex items-center gap-4 text-cyan-400">
-                            <div class="p-2.5 rounded-2xl bg-cyan-500/20 border border-cyan-500/30">
-                                <i data-lucide="library" class="w-6 h-6"></i>
+                            <div class="p-3 rounded-2xl bg-cyan-500/20 border border-cyan-500/30">
+                                <i data-lucide="library" class="w-7 h-7"></i>
                             </div>
                             <div>
-                                <h3 class="text-lg font-black uppercase tracking-widest text-white">بنك الموارد الرقمية</h3>
-                                <p class="text-[10px] text-cyan-300/60 font-bold mt-1 uppercase tracking-tighter">مكتبة الوسائط والملفات التعليمية الخاصة بك</p>
+                                <h3 class="text-xl font-black uppercase tracking-widest text-white">بنك الموارد الرقمية</h3>
+                                <p class="text-[10px] text-cyan-300/60 font-bold mt-1 uppercase tracking-widest">حقيبتك التدريبية والملفات التعليمية</p>
                             </div>
                         </div>
                     </div>
                     
                     {% if resources %}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         {% for resource in resources %}
                         {% if resource.file %}
                         <a href="{{ resource.file.url }}" download="{{ resource.file.name|basename }}"
-                           class="block p-5 rounded-3xl bg-slate-950/50 border border-slate-800/50 hover:border-emerald-500/30 transition-all group/res shadow-lg hover:shadow-emerald-500/5">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-emerald-400 border border-slate-800 group-hover/res:scale-110 transition-all duration-500">
-                                    <i data-lucide="download-cloud" class="w-6 h-6"></i>
+                           class="block p-6 rounded-[2rem] bg-slate-950/50 border border-slate-800/50 hover:border-emerald-500/30 transition-all group/res shadow-xl hover:shadow-emerald-500/10">
+                            <div class="flex items-center gap-5">
+                                <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-emerald-400 border border-slate-800 group-hover/res:scale-110 group-hover/res:bg-emerald-500/10 transition-all duration-500">
+                                    <i data-lucide="download-cloud" class="w-7 h-7"></i>
                                 </div>
                                 <div class="flex-1 min-w-0 text-right">
-                                    <h4 class="text-xs font-black text-white truncate group-hover/res:text-emerald-400 transition-colors">{{ resource.title }}</h4>
-                                    <p class="text-[9px] text-slate-500 font-bold mt-1 uppercase tracking-tighter">{{ resource.workshop.title }} (ملف للتحميل)</p>
+                                    <h4 class="text-sm font-black text-white truncate group-hover/res:text-emerald-400 transition-colors">{{ resource.title }}</h4>
+                                    <p class="text-[9px] text-slate-500 font-bold mt-1.5 uppercase tracking-tighter">{{ resource.workshop.title }} • ملف PDF</p>
                                 </div>
                             </div>
                         </a>
@@ -292,91 +384,135 @@
                         
                         {% if resource.url %}
                         <a href="{{ resource.url }}" target="_blank" 
-                           class="block p-5 rounded-3xl bg-slate-950/50 border border-slate-800/50 hover:border-cyan-500/30 transition-all group/res shadow-lg hover:shadow-cyan-500/5">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-cyan-400 border border-slate-800 group-hover/res:scale-110 transition-all duration-500">
-                                    {% if resource.resource_type == 'link' %}<i data-lucide="external-link" class="w-6 h-6"></i>
-                                    {% elif resource.resource_type == 'code' %}<i data-lucide="code-2" class="w-6 h-6"></i>
-                                    {% elif resource.resource_type == 'presentation' %}<i data-lucide="presentation" class="w-6 h-6"></i>
-                                    {% elif resource.resource_type == 'video' %}<i data-lucide="play-circle" class="w-6 h-6"></i>
-                                    {% else %}<i data-lucide="link-2" class="w-6 h-6"></i>{% endif %}
+                           class="block p-6 rounded-[2rem] bg-slate-950/50 border border-slate-800/50 hover:border-cyan-500/30 transition-all group/res shadow-xl hover:shadow-cyan-500/10">
+                            <div class="flex items-center gap-5">
+                                <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-cyan-400 border border-slate-800 group-hover/res:scale-110 group-hover/res:bg-cyan-500/10 transition-all duration-500">
+                                    {% if resource.resource_type == 'link' %}<i data-lucide="external-link" class="w-7 h-7"></i>
+                                    {% elif resource.resource_type == 'code' %}<i data-lucide="code-2" class="w-7 h-7"></i>
+                                    {% elif resource.resource_type == 'presentation' %}<i data-lucide="presentation" class="w-7 h-7"></i>
+                                    {% elif resource.resource_type == 'video' %}<i data-lucide="play-circle" class="w-7 h-7"></i>
+                                    {% else %}<i data-lucide="link-2" class="w-7 h-7"></i>{% endif %}
                                 </div>
                                 <div class="flex-1 min-w-0 text-right">
-                                    <h4 class="text-xs font-black text-white truncate group-hover/res:text-cyan-400 transition-colors">{{ resource.title }}</h4>
-                                    <p class="text-[9px] text-slate-500 font-bold mt-1 uppercase tracking-tighter">{{ resource.workshop.title }}</p>
+                                    <h4 class="text-sm font-black text-white truncate group-hover/res:text-cyan-400 transition-colors">{{ resource.title }}</h4>
+                                    <p class="text-[9px] text-slate-500 font-bold mt-1.5 uppercase tracking-tighter">{{ resource.workshop.title }} • رابط خارجي</p>
                                 </div>
-                                <i data-lucide="chevron-left" class="w-4 h-4 text-slate-700 group-hover/res:translate-x-[-4px] transition-transform"></i>
+                                <i data-lucide="chevron-left" class="w-5 h-5 text-slate-700 group-hover/res:translate-x-[-6px] transition-transform"></i>
                             </div>
                         </a>
                         {% endif %}
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="py-12 text-center opacity-40">
-                        <i data-lucide="folder-search" class="w-12 h-12 text-slate-600 mb-3 mx-auto"></i>
-                        <p class="text-[10px] font-black uppercase tracking-widest">لا توجد موارد متاحة حالياً</p>
+                    <div class="py-20 text-center relative overflow-hidden bg-slate-950/30 rounded-[3rem] border-2 border-dashed border-slate-800/50 group/empty">
+                        <div class="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent opacity-0 group-hover/empty:opacity-100 transition-opacity"></div>
+                        <div class="relative z-10">
+                            <div class="w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto mb-6 shadow-2xl group-hover/empty:scale-110 transition-transform">
+                                <i data-lucide="folder-search" class="w-10 h-10 text-slate-600"></i>
+                            </div>
+                            <h4 class="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-2">الحقيبة الرقمية فارغة</h4>
+                            <p class="text-[10px] text-slate-600 font-bold uppercase tracking-widest">سيقوم المدربون برفع الملفات قريباً</p>
+                        </div>
                     </div>
                     {% endif %}
                 </div>
             </div>
+
         </div>
 
-        <!-- Left Column: Sidebar Actions & Widgets -->
-        <div class="lg:col-span-4 space-y-8 order-1 lg:order-2">
+        <!-- Left Column: Sidebar (Identity, QR, Leaderboard, Notifications, Violations, Support) -->
+        <div class="lg:col-span-4 space-y-8 order-1 lg:order-1">
             
             <!-- Dynamic Status Widget -->
-            {% if current_session and not event.is_finished %}
-            <div class="group relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-cyan-600 to-blue-700 p-8 text-white shadow-2xl">
-                <div class="relative z-10 space-y-4">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-wider">
-                        <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                        الجلسة الحالية
+            {% if event and current_session and not event.is_finished %}
+            <div class="group relative overflow-hidden rounded-[3rem] bg-gradient-to-br from-cyan-600 to-blue-700 p-8 text-white shadow-2xl">
+                <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
+                <div class="relative z-10 space-y-5">
+                    <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest border border-white/10">
+                        <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                        ورشة العمل الحالية
                     </div>
-                    <h3 class="text-xl font-black">{{ current_session.workshop.title }}</h3>
-                    <div class="flex flex-col gap-2 text-white/80 text-xs">
-                        <span class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i> القاعة: {{ current_session.workshop.room }}</span>
-                        <span class="flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> {{ current_session.start_time|time:"H:i" }} - {{ current_session.end_time|time:"H:i" }}</span>
+                    <h3 class="text-2xl font-black leading-tight tracking-tight">{{ current_session.workshop.title }}</h3>
+                    <div class="flex flex-col gap-3 text-white/80 text-xs font-bold">
+                        <span class="flex items-center gap-3"><i data-lucide="map-pin" class="w-4.5 h-4.5"></i> القاعة التدريبية: {{ current_session.workshop.room }}</span>
+                        <span class="flex items-center gap-3"><i data-lucide="clock" class="w-4.5 h-4.5"></i> {{ current_session.start_time|time:"H:i" }} - {{ current_session.end_time|time:"H:i" }}</span>
                     </div>
-                    <div class="pt-4 flex flex-col items-center p-4 bg-white/10 rounded-2xl border border-white/20">
-                        <div id="countdown" class="text-3xl font-black font-mono">00:00</div>
-                        <div class="text-[9px] font-bold uppercase tracking-widest text-white/60">الوقت المتبقي</div>
+                    <div class="pt-4">
+                        <div class="flex flex-col items-center p-6 bg-slate-950/20 rounded-[2rem] border border-white/10 backdrop-blur-sm shadow-inner">
+                            <div id="countdown" class="text-4xl font-black font-mono tracking-widest">00:00</div>
+                            <div class="text-[9px] font-black uppercase tracking-[0.3em] text-white/50 mt-2">الوقت المتبقي للجلسة</div>
+                        </div>
                     </div>
                 </div>
             </div>
             {% endif %}
 
             <!-- Next Session Countdown -->
-            {% if next_session and not event.is_finished %}
-            <div class="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden group hover:border-amber-500/30 transition-all">
-                <div class="relative z-10 flex flex-col gap-4">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider">
-                        <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i> القادمة
+            {% if event and next_session and not event.is_finished %}
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-7 shadow-xl relative overflow-hidden group hover:border-amber-500/30 transition-all">
+                <div class="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all"></div>
+                <div class="relative z-10 flex flex-col gap-5">
+                    <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest">
+                        <i data-lucide="calendar-days" class="w-4 h-4"></i> الجلسة القادمة
                     </div>
-                    <h3 class="text-sm font-black text-slate-100">{{ next_session.workshop.title }}</h3>
-                    <div class="flex flex-col items-center p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10">
-                        <div id="next-countdown" class="text-2xl font-black font-mono text-amber-500">00:00:00</div>
-                        <div class="text-[9px] font-bold uppercase tracking-widest text-amber-500/60 mt-1">تبدأ خلال</div>
+                    <h3 class="text-base font-black text-slate-100 group-hover:text-amber-400 transition-colors">{{ next_session.workshop.title }}</h3>
+                    <div class="flex flex-col items-center p-5 bg-amber-500/5 rounded-[1.5rem] border border-amber-500/10 shadow-inner">
+                        <div id="next-countdown" class="text-3xl font-black font-mono text-amber-500 tracking-tighter">00:00:00</div>
+                        <div class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/50 mt-2">تبدأ خلال</div>
                     </div>
                 </div>
             </div>
             {% endif %}
+
+            <!-- Digital ID Card (QR) -->
+            <div class="relative group overflow-hidden rounded-[3rem] bg-white p-8 shadow-2xl transition-all duration-500 hover:scale-[1.02] border-8 border-slate-100/50">
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-slate-50 rounded-full"></div>
+                <div class="relative z-10 flex flex-col items-center gap-6">
+                    <div class="text-center">
+                        <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Access Pass</h3>
+                        <div class="text-lg font-black text-slate-900 tracking-tight">معرف الدخول الرقمي</div>
+                    </div>
+                    <div id="qrcode" class="p-4 bg-white rounded-3xl border-2 border-slate-50 shadow-inner group-hover:scale-105 transition-transform duration-500"></div>
+                    <div class="w-full space-y-4">
+                        <div class="flex items-center justify-center gap-1 group/id">
+                            <span id="student-id-display" class="bg-slate-50 text-slate-500 px-5 py-2.5 rounded-2xl border border-slate-100 font-mono text-xs shadow-sm flex items-center gap-2 transition-all group-hover/id:border-cyan-500/30">
+                                <i data-lucide="hash" class="w-3.5 h-3.5 text-cyan-500"></i>
+                                ID: {{ student.student_id }}
+                            </span>
+                            <button onclick="copyToClipboard('{{ student.student_id }}', this)" class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-all active:scale-90" title="نسخ المعرف">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="downloadQR()" class="py-3.5 rounded-2xl bg-slate-900 text-white hover:bg-cyan-600 text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                تحميل
+                            </button>
+                            <button onclick="window.print()" class="py-3.5 rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                                طباعة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Achievements (Badge Showcase) -->
             {% if student_badges %}
-            <div class="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-[40px] rounded-full group-hover:bg-amber-500/10 transition-all duration-700"></div>
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-xl relative overflow-hidden group">
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-amber-500/5 rounded-full blur-[50px] group-hover:bg-amber-500/10 transition-all duration-1000"></div>
                 <div class="relative z-10">
-                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                        <i data-lucide="medal" class="w-4 h-4"></i> أوسمة الإنجاز
+                    <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
+                        <i data-lucide="medal" class="w-5 h-5 text-amber-500"></i> أوسمة الإنجاز والتميز
                     </h3>
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-3 gap-5">
                         {% for sb in student_badges %}
-                        <div class="group/badge relative flex flex-col items-center gap-2">
-                            <div class="w-16 h-16 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center group-hover/badge:border-amber-500/50 group-hover/badge:scale-110 transition-all duration-500 shadow-lg shadow-slate-950/50 overflow-hidden">
-                                <img src="{{ sb.badge.image.url }}" alt="{{ sb.badge.name }}" class="w-10 h-10 object-contain">
-                                {% if not sb.is_seen_by_student %}<span class="absolute top-1 right-1 w-3 h-3 bg-rose-500 rounded-full animate-ping"></span>{% endif %}
+                        <div class="group/badge relative flex flex-col items-center gap-3">
+                            <div class="w-20 h-20 rounded-[1.5rem] bg-slate-950 border border-slate-800 flex items-center justify-center group-hover/badge:border-amber-500/50 group-hover/badge:scale-110 group-hover/badge:rotate-3 transition-all duration-500 shadow-2xl shadow-slate-950/50 overflow-hidden p-3.5">
+                                <img src="{{ sb.badge.image.url }}" alt="{{ sb.badge.name }}" class="w-full h-full object-contain">
+                                {% if not sb.is_seen_by_student %}<span class="absolute top-2 right-2 w-3.5 h-3.5 bg-rose-500 rounded-full border-2 border-slate-950 animate-ping"></span>{% endif %}
                             </div>
-                            <span class="text-[9px] font-black text-slate-500 text-center line-clamp-1 group-hover/badge:text-amber-400 transition-colors">{{ sb.badge.name }}</span>
+                            <span class="text-[9px] font-black text-slate-500 text-center leading-tight group-hover/badge:text-amber-400 transition-colors px-1">{{ sb.badge.name }}</span>
                         </div>
                         {% endfor %}
                     </div>
@@ -384,45 +520,105 @@
             </div>
             {% endif %}
 
-            <!-- Notifications -->
-            <div class="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden group">
-                <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-cyan-500/5 blur-[40px] rounded-full group-hover:bg-cyan-500/10 transition-all duration-700"></div>
+            <!-- Tech Day Leaderboard -->
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-xl relative overflow-hidden group">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-cyan-500/5 rounded-full blur-[50px] group-hover:bg-cyan-500/10 transition-all duration-1000"></div>
                 <div class="relative z-10">
-                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                        <i data-lucide="bell" class="w-4 h-4"></i> آخر التنبيهات
-                    </h3>
-                    <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                        {% for notification in notifications %}
-                        <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-cyan-500/30 transition-all shadow-sm">
-                            <div class="text-xs font-black text-white mb-1 leading-snug">{{ notification.title }}</div>
-                            <p class="text-[10px] text-slate-500 leading-relaxed line-clamp-2">{{ notification.body }}</p>
-                            <div class="text-[8px] text-slate-700 mt-2 font-mono flex justify-between">
-                                <span>EduTech Egypt</span>
-                                <span>{{ notification.created_at|date:"H:i" }}</span>
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                            <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i> لوحة الشرف والتميز
+                        </h3>
+                        <div class="flex gap-2">
+                            <button onclick="switchTab('top-students')" id="tab-btn-students" class="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-[9px] font-black uppercase tracking-widest transition-all">الطلاب</button>
+                            <button onclick="switchTab('top-groups')" id="tab-btn-groups" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-500 border border-slate-800 text-[9px] font-black uppercase tracking-widest transition-all">المجموعات</button>
+                        </div>
+                    </div>
+
+                    <!-- Top Students Tab -->
+                    <div id="tab-top-students" class="space-y-4">
+                        {% for stats in top_stats %}
+                        <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 hover:border-cyan-500/30 transition-all group/top">
+                            <div class="relative">
+                                <div class="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-800 group-hover/top:scale-110 transition-transform">
+                                    <span class="text-lg font-black text-white">{{ forloop.counter }}</span>
+                                </div>
+                                {% if forloop.first %}<i data-lucide="crown" class="absolute -top-2 -right-2 w-5 h-5 text-amber-500 fill-amber-500 drop-shadow-lg"></i>{% endif %}
+                            </div>
+                            <div class="flex-1 min-w-0 text-right">
+                                <div class="text-xs font-black text-white truncate group-hover/top:text-cyan-400 transition-colors">{{ stats.student.name }}</div>
+                                <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{{ stats.student.group.name|default:"مشارك فردي" }}</div>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-sm font-black text-cyan-400">{{ stats.points }}</div>
+                                <div class="text-[8px] text-slate-600 font-bold uppercase">PTS</div>
                             </div>
                         </div>
-                        {% empty %}
-                        <div class="text-center py-12 opacity-30">
-                            <i data-lucide="bell-off" class="w-8 h-8 mx-auto mb-2"></i>
-                            <p class="text-[10px] font-black uppercase tracking-widest">لا توجد تنبيهات</p>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Top Groups Tab (Hidden by default) -->
+                    <div id="tab-top-groups" class="space-y-4 hidden">
+                        {% for top_g in top_groups %}
+                        <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 hover:border-violet-500/30 transition-all group/top">
+                            <div class="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-800 group-hover/top:scale-110 transition-transform" style="border-right: 4px solid {{ top_g.color }};">
+                                <span class="text-lg font-black text-white" style="color: {{ top_g.color }};">{{ top_g.code }}</span>
+                            </div>
+                            <div class="flex-1 min-w-0 text-right">
+                                <div class="text-xs font-black text-white truncate group-hover/top:text-violet-400 transition-colors">{{ top_g.name }}</div>
+                                <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{{ top_g.student_count|default:0 }} طالب</div>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-sm font-black text-violet-400">{{ top_g.points }}</div>
+                                <div class="text-[8px] text-slate-600 font-bold uppercase">PTS</div>
+                            </div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
 
-            <!-- Violations Sidebar (If any) -->
-            {% if violations %}
-            <div class="bg-rose-500/5 border border-rose-500/20 rounded-[2.5rem] p-6 shadow-xl">
-                <div class="flex items-center gap-3 mb-4 text-rose-500">
-                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-                    <h3 class="text-sm font-black uppercase tracking-widest">سجل المخالفات</h3>
+            <!-- Notifications -->
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-xl relative overflow-hidden group">
+                <div class="absolute -top-10 -left-10 w-40 h-40 bg-cyan-500/5 rounded-full blur-[50px] group-hover:bg-cyan-500/10 transition-all duration-1000"></div>
+                <div class="relative z-10">
+                    <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
+                        <i data-lucide="bell" class="w-5 h-5 text-cyan-500"></i> إشعارات وتنبيهات الفعالية
+                    </h3>
+                    <div class="space-y-5 max-h-[400px] overflow-y-auto pr-3 custom-scrollbar">
+                        {% for notification in notifications %}
+                        <div class="p-5 rounded-[1.5rem] bg-slate-950 border border-slate-800 hover:border-cyan-500/30 transition-all shadow-inner group/notif">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></div>
+                                <div class="text-xs font-black text-white group-hover/notif:text-cyan-400 transition-colors leading-snug">{{ notification.title }}</div>
+                            </div>
+                            <p class="text-[10px] text-slate-500 leading-relaxed font-medium">{{ notification.body }}</p>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-12 opacity-30">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">لا توجد تنبيهات</p>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <div class="space-y-3">
+            </div>
+
+            <!-- Violations Sidebar -->
+            {% if violations %}
+            <div class="bg-rose-500/5 border border-rose-500/20 rounded-[3rem] p-8 shadow-xl group">
+                <div class="flex items-center gap-4 mb-6 text-rose-500">
+                    <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 group-hover:scale-110 transition-transform">
+                        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-sm font-black uppercase tracking-[0.2em]">سجل المخالفات</h3>
+                </div>
+                <div class="space-y-4">
                     {% for violation in violations %}
-                    <div class="p-4 rounded-2xl bg-slate-950/50 border border-rose-500/10 shadow-inner">
-                        <div class="text-[10px] font-black text-rose-400 mb-1 uppercase tracking-wider">{{ violation.get_type_display }}</div>
-                        <p class="text-[10px] text-slate-400 leading-relaxed font-bold">{{ violation.reason }}</p>
+                    <div class="p-5 rounded-[1.5rem] bg-slate-950 border border-rose-500/10 shadow-inner">
+                        <div class="text-[10px] font-black text-rose-400 mb-2 uppercase tracking-widest flex items-center gap-2">
+                            <span class="w-1 h-1 rounded-full bg-rose-500"></span>
+                            {{ violation.get_type_display }}
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-relaxed font-bold">{{ violation.reason }}</p>
                     </div>
                     {% endfor %}
                 </div>
@@ -430,50 +626,27 @@
             {% endif %}
 
             <!-- Support Requests Sidebar -->
-            <div class="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden group">
-                <div class="absolute -top-10 -left-10 w-32 h-32 bg-indigo-500/5 blur-[40px] rounded-full group-hover:bg-indigo-500/10 transition-all duration-700"></div>
+            <div class="bg-slate-900 border border-slate-800 rounded-[3rem] p-8 shadow-xl relative overflow-hidden group">
+                <div class="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-[50px] group-hover:bg-indigo-500/10 transition-all duration-1000"></div>
                 <div class="relative z-10">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
-                            <i data-lucide="help-circle" class="w-4 h-4"></i> الدعم والمساعدة
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-indigo-500"></i> الدعم الفني والمساعدة
                         </h3>
                         <button onclick="document.getElementById('support-modal').classList.remove('hidden')" 
-                                class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
+                                class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all shadow-lg active:scale-90">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
                         </button>
                     </div>
-                    
-                    <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div class="space-y-5 max-h-[400px] overflow-y-auto pr-3 custom-scrollbar">
                         {% for req in support_requests %}
-                        <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-indigo-500/30 transition-all shadow-sm group/req">
+                        <div class="p-5 rounded-[1.5rem] bg-slate-950 border border-slate-800 hover:border-indigo-500/30 transition-all shadow-inner">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="px-2 py-0.5 rounded-lg bg-slate-900 text-[8px] font-black text-slate-500 uppercase">{{ req.get_category_display }}</span>
-                                {% if req.status == 'pending' %}
-                                    <span class="w-2 h-2 rounded-full bg-amber-500" title="قيد الانتظار"></span>
-                                {% elif req.status == 'solved' %}
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500" title="تم الحل"></span>
-                                {% else %}
-                                    <span class="w-2 h-2 rounded-full bg-indigo-500" title="{{ req.get_status_display }}"></span>
-                                {% endif %}
+                                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">{{ req.get_category_display }}</span>
+                                <span class="w-2 h-2 rounded-full {% if req.status == 'solved' %}bg-emerald-500{% else %}bg-amber-500{% endif %}"></span>
                             </div>
-                            <div class="text-xs font-black text-white mb-1 leading-snug">{{ req.subject }}</div>
+                            <div class="text-xs font-black text-white mb-1">{{ req.subject }}</div>
                             <p class="text-[10px] text-slate-500 leading-relaxed line-clamp-2">{{ req.message }}</p>
-                            
-                            {% if req.admin_reply %}
-                            <div class="mt-3 p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
-                                <div class="text-[8px] font-black text-indigo-400 uppercase mb-1">رد الإدارة:</div>
-                                <p class="text-[10px] text-slate-300 leading-relaxed">{{ req.admin_reply }}</p>
-                            </div>
-                            {% endif %}
-                            
-                            <div class="text-[8px] text-slate-700 mt-2 font-mono text-left">
-                                {{ req.created_at|date:"Y-m-d H:i" }}
-                            </div>
-                        </div>
-                        {% empty %}
-                        <div class="text-center py-12 opacity-30">
-                            <i data-lucide="message-square-dashed" class="w-8 h-8 mx-auto mb-2"></i>
-                            <p class="text-[10px] font-black uppercase tracking-widest">لا توجد طلبات سابقة</p>
                         </div>
                         {% endfor %}
                     </div>
@@ -483,65 +656,276 @@
     </div>
 
     <!-- Support Request Modal -->
-    <div id="support-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
-        <div class="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl animate-in zoom-in-95 duration-300 relative">
+    <div id="support-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
+        <div class="bg-slate-900 border border-slate-800 rounded-[3.5rem] w-full max-w-xl p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            
             <button onclick="document.getElementById('support-modal').classList.add('hidden')" 
-                    class="absolute top-6 left-6 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all">
-                <i data-lucide="x" class="w-5 h-5"></i>
+                    class="absolute top-8 left-8 p-3 rounded-2xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-rose-500/20 hover:text-rose-500 transition-all active:scale-90">
+                <i data-lucide="x" class="w-6 h-6"></i>
             </button>
             
-            <div class="flex items-center gap-4 mb-8">
-                <div class="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-indigo-400">
-                    <i data-lucide="help-circle" class="w-8 h-8"></i>
+            <div class="flex items-center gap-6 mb-10">
+                <div class="p-5 bg-indigo-500/10 rounded-[1.5rem] border border-indigo-500/20 text-indigo-400 shadow-xl">
+                    <i data-lucide="help-circle" class="w-10 h-10"></i>
                 </div>
                 <div>
-                    <h3 class="text-2xl font-black text-white">إبلاغ عن مشكلة</h3>
-                    <p class="text-sm text-slate-400">سنقوم بمراجعة طلبك والرد في أسرع وقت</p>
+                    <h3 class="text-3xl font-black text-white tracking-tight">إبلاغ عن مشكلة</h3>
+                    <p class="text-sm text-slate-400 font-bold mt-1">فريق الدعم الفني هنا لمساعدتك في أي وقت</p>
                 </div>
             </div>
 
-            <form action="{% url 'students:submit_support_request' %}" method="POST" class="space-y-6">
+            <form action="{% url 'students:submit_support_request' %}" method="POST" class="space-y-8">
                 {% csrf_token %}
-                <div class="space-y-2 text-right">
-                    <label class="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">نوع المشكلة</label>
-                    <select name="category" required class="w-full px-5 py-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
-                        {% for code, name in support_categories %}
-                            <option value="{{ code }}">{{ name }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="space-y-3 text-right">
+                    <label class="text-[10px] font-black text-slate-500 mr-2 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="tag" class="w-3.5 h-3.5"></i> نوع المشكلة أو الطلب
+                    </label>
+                    <div class="relative">
+                        <select name="category" required class="w-full px-6 py-4 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer font-bold shadow-inner">
+                            {% for code, name in support_categories %}
+                                <option value="{{ code }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-slate-500">
+                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="space-y-2 text-right">
-                    <label class="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">عنوان المشكلة</label>
-                    <input type="text" name="subject" required placeholder="مثال: لم تصلني الشهادة"
-                           class="w-full px-5 py-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all">
+                <div class="space-y-3 text-right">
+                    <label class="text-[10px] font-black text-slate-500 mr-2 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="type" class="w-3.5 h-3.5"></i> عنوان مختصر للمشكلة
+                    </label>
+                    <input type="text" name="subject" required placeholder="مثال: مشكلة في تحميل الملفات التعليمية"
+                           class="w-full px-6 py-4 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all font-bold shadow-inner placeholder:text-slate-700">
                 </div>
 
-                <div class="space-y-2 text-right">
-                    <label class="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">تفاصيل المشكلة</label>
-                    <textarea name="message" required rows="4" placeholder="اشرح لنا المشكلة بالتفصيل لنتمكن من مساعدتك..."
-                              class="w-full px-5 py-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all resize-none"></textarea>
+                <div class="space-y-3 text-right">
+                    <label class="text-[10px] font-black text-slate-500 mr-2 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-3.5 h-3.5"></i> تفاصيل المشكلة بدقة
+                    </label>
+                    <textarea name="message" required rows="4" placeholder="اشرح لنا المشكلة بالتفصيل لنتمكن من مساعدتك بأفضل شكل ممكن..."
+                              class="w-full px-6 py-4 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all resize-none font-medium shadow-inner placeholder:text-slate-700"></textarea>
                 </div>
 
-                <button type="submit" class="w-full py-5 bg-indigo-500 hover:bg-indigo-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40">
-                    إرسال الطلب الآن
+                <button type="submit" class="group relative w-full py-5 bg-indigo-500 hover:bg-indigo-400 text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] text-sm transition-all shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 active:scale-95 flex items-center justify-center gap-3">
+                    <span>إرسال الطلب الآن</span>
+                    <i data-lucide="send" class="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Footer Credit -->
-    <div class="pt-12 text-center">
-        <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-slate-900 border border-slate-800 shadow-2xl">
-            <span class="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">Developed with 💙 by</span>
-            <span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
-            <span class="text-xs text-white font-black uppercase tracking-widest">EduTech Egypt Team</span>
+    <!-- Participation History Section -->
+    <div class="mt-16 space-y-8 pb-12">
+        <div class="flex items-center gap-4">
+            <div class="w-2 h-8 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)]"></div>
+            <h2 class="text-2xl font-black text-white tracking-tight">أرشيف رحلتي التقنية (History)</h2>
         </div>
+
+        <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <!-- Current Event Card -->
+            {% if is_registered_for_current_event %}
+            <div class="group relative overflow-hidden bg-slate-900/40 backdrop-blur-xl border border-emerald-500/30 p-10 rounded-[3rem] hover:border-emerald-500/50 transition-all duration-500 shadow-2xl">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-[60px] group-hover:bg-emerald-500/10 transition-all duration-700"></div>
+                <div class="relative flex flex-col gap-8">
+                    <div class="flex items-center justify-between">
+                        <div class="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 group-hover:scale-110 group-hover:rotate-6 transition-all shadow-xl">
+                            <i data-lucide="calendar" class="w-10 h-10 text-emerald-400"></i>
+                        </div>
+                        <span class="px-5 py-2 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 animate-pulse">أنت مشارك الآن</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-black text-white tracking-tight leading-tight">{{ current_event.location_name }}</h3>
+                        <p class="text-[11px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">{{ current_event.name }} {{ current_event.year }}</p>
+                    </div>
+                    <div class="pt-8 border-t border-slate-800/50 flex items-center justify-between">
+                        <div class="text-[10px] text-slate-500 font-mono font-bold">{{ current_event.created_at|date:"Y-m-d" }}</div>
+                        <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2.5">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            مشاركة فعالة
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Past Events from StudentEventStats -->
+            {% for stats in past_events %}
+            <div class="group relative overflow-hidden bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-10 rounded-[3rem] hover:border-indigo-500/40 transition-all duration-500 shadow-2xl opacity-80 hover:opacity-100">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-[60px] group-hover:bg-indigo-500/10 transition-all duration-700"></div>
+                <div class="relative flex flex-col gap-8">
+                    <div class="flex items-center justify-between">
+                        <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 group-hover:scale-110 group-hover:rotate-6 transition-all shadow-xl">
+                            <i data-lucide="archive" class="w-10 h-10 text-indigo-400"></i>
+                        </div>
+                        <span class="px-5 py-2 rounded-full bg-slate-950 border border-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-widest shadow-inner">مؤرشفة</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-black text-white tracking-tight leading-tight">{{ stats.event.location_name }}</h3>
+                        <p class="text-[11px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">{{ stats.event.name }} {{ stats.event.year }}</p>
+                    </div>
+                    <div class="pt-8 border-t border-slate-800/50 flex items-center justify-between">
+                        <div class="flex flex-col gap-1.5">
+                            <div class="text-[10px] text-slate-500 font-mono font-bold">{{ stats.event.created_at|date:"Y-m-d" }}</div>
+                            <div class="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
+                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                {{ stats.points }} نقطة
+                            </div>
+                        </div>
+                        {% if stats.event.slug %}
+                        <a href="{% url 'dashboard:admin_archived_event_detail' stats.event.slug %}" class="px-6 py-3 bg-slate-950 border border-slate-800 hover:border-indigo-500/50 text-slate-400 hover:text-indigo-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95">
+                            عرض التفاصيل
+                        </a>
+                        {% else %}
+                        <span class="px-6 py-3 bg-slate-950/50 border border-slate-800/50 text-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed">
+                            غير متوفر
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Footer Credit -->
+    <div class="pt-16 text-center">
+        <div class="inline-flex items-center gap-4 px-8 py-4 rounded-full bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden group/footer">
+            <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-white/5 to-cyan-500/0 -translate-x-full group-hover/footer:translate-x-full transition-transform duration-1000"></div>
+            <span class="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em]">Designed & Developed with 💙 by</span>
+            <span class="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></span>
+            <span class="text-xs text-white font-black uppercase tracking-[0.2em]">EduTech Egypt Team</span>
+        </div>
+    </div>
+</div>
+
+<!-- Note Modal -->
+<div id="note-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
+    <div class="bg-slate-900 border border-slate-800 rounded-[3rem] w-full max-w-lg p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
+        <button onclick="closeNoteModal()" class="absolute top-8 left-8 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <div class="flex items-center gap-4 mb-8">
+            <div class="p-3 bg-amber-500/10 rounded-2xl text-amber-500 border border-amber-500/20"><i data-lucide="pen-tool" class="w-6 h-6"></i></div>
+            <div>
+                <h3 class="text-xl font-black text-white">مذكرة التعلم</h3>
+                <p id="note-workshop-title" class="text-[10px] text-slate-500 font-bold uppercase mt-1">اسم الورشة</p>
+            </div>
+        </div>
+        <form action="{% url 'students:submit_workshop_note' %}" method="POST" class="space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="workshop_id" id="note-workshop-id">
+            <textarea name="content" id="note-content" rows="5" required class="w-full px-6 py-4 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-amber-500/50 transition-all resize-none shadow-inner" placeholder="ما هي أهم المهارات التي اكتسبتها؟"></textarea>
+            <button type="submit" class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-amber-500/20 active:scale-95">حفظ المذكرة الآن</button>
+        </form>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedback-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
+    <div class="bg-slate-900 border border-slate-800 rounded-[3rem] w-full max-w-lg p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
+        <button onclick="closeFeedbackModal()" class="absolute top-8 left-8 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <div class="flex items-center gap-4 mb-8">
+            <div class="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500 border border-emerald-500/20"><i data-lucide="star" class="w-6 h-6"></i></div>
+            <div>
+                <h3 class="text-xl font-black text-white">تقييم الورشة</h3>
+                <p id="feedback-workshop-title" class="text-[10px] text-slate-500 font-bold uppercase mt-1">اسم الورشة</p>
+            </div>
+        </div>
+        <form action="{% url 'workshops:submit_feedback' %}" method="POST" class="space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="workshop_id" id="feedback-workshop-id">
+            <div class="flex flex-col items-center gap-4 py-6 bg-slate-950 rounded-2xl border border-slate-800 shadow-inner">
+                <div class="star-rating">
+                    {% for i in "54321" %}
+                        <input type="radio" id="m-star-{{ i }}" name="rating" value="{{ i }}" required>
+                        <label for="m-star-{{ i }}" class="star-label"><i data-lucide="star" class="w-8 h-8"></i></label>
+                    {% endfor %}
+                </div>
+                <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest">اضغط لتحديد التقييم</div>
+            </div>
+            <textarea name="comment" id="feedback-comment" rows="3" class="w-full px-6 py-4 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-all resize-none shadow-inner" placeholder="رأيك يهمنا (اختياري)"></textarea>
+            <button type="submit" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-emerald-500/20 active:scale-95">إرسال التقييم</button>
+        </form>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+    // Modal Logic
+    function openNoteModal(id, title, content) {
+        document.getElementById('note-workshop-id').value = id;
+        document.getElementById('note-workshop-title').textContent = title;
+        document.getElementById('note-content').value = content;
+        document.getElementById('note-modal').classList.remove('hidden');
+        lucide.createIcons();
+    }
+    function closeNoteModal() { document.getElementById('note-modal').classList.add('hidden'); }
+
+    function openFeedbackModal(id, title, rating, comment) {
+        document.getElementById('feedback-workshop-id').value = id;
+        document.getElementById('feedback-workshop-title').textContent = title;
+        document.getElementById('feedback-comment').value = comment;
+        if (rating > 0) {
+            const radio = document.getElementById(`m-star-${rating}`);
+            if (radio) radio.checked = true;
+        } else {
+            // Uncheck all
+            document.querySelectorAll('input[name="rating"]').forEach(r => r.checked = false);
+        }
+        document.getElementById('feedback-modal').classList.remove('hidden');
+        lucide.createIcons();
+    }
+    function closeFeedbackModal() { document.getElementById('feedback-modal').classList.add('hidden'); }
+
+    // Copy to Clipboard
+    function copyToClipboard(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            const icon = btn.querySelector('i');
+            const originalData = icon.getAttribute('data-lucide');
+            icon.setAttribute('data-lucide', 'check');
+            lucide.createIcons();
+            btn.classList.add('text-emerald-400', 'border-emerald-500/30');
+            setTimeout(() => {
+                icon.setAttribute('data-lucide', originalData);
+                lucide.createIcons();
+                btn.classList.remove('text-emerald-400', 'border-emerald-500/30');
+            }, 2000);
+        });
+    }
+
+    // Download QR Code
+    function downloadQR() {
+        const qrImg = document.querySelector('#qrcode img');
+        if (qrImg) {
+            const link = document.createElement('a');
+            link.href = qrImg.src;
+            link.download = 'TechDay-Access-Pass-{{ student.student_id }}.png';
+            link.click();
+        }
+    }
+
+    // Leaderboard Tabs
+    function switchTab(tab) {
+        const studentTab = document.getElementById('tab-top-students');
+        const groupTab = document.getElementById('tab-top-groups');
+        const studentBtn = document.getElementById('tab-btn-students');
+        const groupBtn = document.getElementById('tab-btn-groups');
+
+        if (tab === 'top-students') {
+            studentTab.classList.remove('hidden');
+            groupTab.classList.add('hidden');
+            studentBtn.className = 'px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-[9px] font-black uppercase tracking-widest transition-all';
+            groupBtn.className = 'px-3 py-1.5 rounded-xl bg-slate-950 text-slate-500 border border-slate-800 text-[9px] font-black uppercase tracking-widest transition-all';
+        } else {
+            studentTab.classList.add('hidden');
+            groupTab.classList.remove('hidden');
+            groupBtn.className = 'px-3 py-1.5 rounded-xl bg-violet-500 text-slate-950 text-[9px] font-black uppercase tracking-widest transition-all';
+            studentBtn.className = 'px-3 py-1.5 rounded-xl bg-slate-950 text-slate-500 border border-slate-800 text-[9px] font-black uppercase tracking-widest transition-all';
+        }
+        lucide.createIcons();
+    }
+
     // QR Code
     var qrelement = document.getElementById('qrcode');
     if (qrelement) {
@@ -554,7 +938,7 @@
     }
 
     // Countdown
-    {% if current_session and not event.is_finished %}
+    {% if event and current_session and not event.is_finished %}
     function updateCountdown() {
         const endTimeStr = "{{ current_session.end_time|time:'H:i' }}";
         const [h, m] = endTimeStr.split(':');
@@ -565,12 +949,14 @@
             const mins = Math.floor(diff / 60000);
             const secs = Math.floor((diff % 60000) / 1000);
             display.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        } else if (display) {
+            display.textContent = "00:00";
         }
     }
     setInterval(updateCountdown, 1000); updateCountdown();
     {% endif %}
 
-    {% if next_session and not event.is_finished %}
+    {% if event and next_session and not event.is_finished %}
     function updateNextCountdown() {
         const startTimeStr = "{{ next_session.start_time|time:'H:i' }}";
         const [h, m] = startTimeStr.split(':');
@@ -582,6 +968,8 @@
             const mins = Math.floor((diff % 3600000) / 60000);
             const secs = Math.floor((diff % 60000) / 1000);
             display.textContent = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        } else if (display) {
+            display.textContent = "00:00:00";
         }
     }
     setInterval(updateNextCountdown, 1000); updateNextCountdown();
@@ -595,22 +983,31 @@
         });
     }, 5000);
     {% endif %}
+    
+    // Initialize Lucide icons
+    lucide.createIcons();
 </script>
 
 <style>
     /* Reliable Star Rating */
-    .star-rating { display: flex; flex-direction: row-reverse; justify-content: center; gap: 0.6rem; }
+    .star-rating { display: flex; flex-direction: row-reverse; justify-content: center; gap: 0.8rem; }
     .star-rating input { display: none; }
-    .star-label { cursor: pointer; color: #475569; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .star-label i { fill: transparent; stroke: currentColor; transition: all 0.3s; }
+    .star-label { cursor: pointer; color: #334155; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .star-label i { fill: transparent; stroke: currentColor; stroke-width: 1.5; transition: all 0.3s; }
     .star-rating input:checked ~ .star-label, .star-rating input:checked + .star-label { color: #fbbf24 !important; }
-    .star-rating input:checked ~ .star-label i, .star-rating input:checked + .star-label i { fill: #fbbf24 !important; }
-    .star-label:hover, .star-label:hover ~ .star-label { color: #fbbf24 !important; transform: scale(1.2) rotate(5deg); }
+    .star-rating input:checked ~ .star-label i, .star-rating input:checked + .star-label i { fill: #fbbf24 !important; stroke: #fbbf24; }
+    .star-label:hover, .star-label:hover ~ .star-label { color: #fbbf24 !important; transform: scale(1.2) rotate(8deg); }
     .star-label:hover i { fill: rgba(251, 191, 36, 0.2) !important; }
     
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.3); border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+    @keyframes pulse-soft {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    .animate-pulse-soft { animation: pulse-soft 3s infinite; }
 </style>
 {% endblock %}

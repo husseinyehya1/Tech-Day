@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}تأكيد حجز مكان في الفعالية - Tech Day{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pt-20 pb-12 px-4 sm:px-6">
+    <div class="max-w-3xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8 text-center">
+            <div class="inline-flex p-4 rounded-3xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-6 shadow-2xl shadow-indigo-500/20">
+                <i data-lucide="sparkles" class="w-10 h-10 animate-pulse"></i>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-3">تأكيد الرغبة في الحضور</h1>
+            <p class="text-slate-400 text-lg">يسعدنا انضمامك إلينا! يرجى مراجعة تفاصيل الفعالية أدناه وتأكيد حضورك.</p>
+        </div>
+
+        <!-- Event Details Card -->
+        <div class="relative group">
+            <!-- Background Glow -->
+            <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+            
+            <div class="relative bg-slate-900/80 backdrop-blur-2xl border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <!-- Top Banner -->
+                <div class="h-32 bg-gradient-to-br from-indigo-600/20 to-cyan-600/20 border-b border-slate-800 flex items-center justify-center relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+                    <div class="relative z-10 flex flex-col items-center">
+                        <span class="px-4 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">الفعالية القادمة</span>
+                        <h2 class="text-2xl font-black text-white">{{ event.name }}</h2>
+                    </div>
+                </div>
+
+                <div class="p-8 sm:p-10 space-y-8">
+                    <!-- Event Info Grid -->
+                    <div class="grid sm:grid-cols-2 gap-6">
+                        <!-- Location -->
+                        <div class="flex items-start gap-4 p-5 rounded-3xl bg-slate-950/50 border border-slate-800/50 hover:border-indigo-500/30 transition-colors">
+                            <div class="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                <i data-lucide="map-pin" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">المكان</div>
+                                <div class="text-white font-bold">{{ event.location_name }}</div>
+                                {% if event.location_link %}
+                                <a href="{{ event.location_link }}" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-1 transition-colors">
+                                    <span>فتح في الخرائط</span>
+                                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Time -->
+                        <div class="flex items-start gap-4 p-5 rounded-3xl bg-slate-950/50 border border-slate-800/50 hover:border-cyan-500/30 transition-colors">
+                            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                                <i data-lucide="clock" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">وقت الحضور</div>
+                                <div class="text-white font-bold">{{ event.arrival_time_text|default:"09:00 صباحاً" }}</div>
+                                <div class="text-[10px] text-slate-500 mt-1">{{ event.start_datetime|date:"l، d F Y" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    {% if event.event_instructions %}
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-1.5 h-6 bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)]"></div>
+                            <h3 class="text-xl font-black text-white">تعليمات هامة</h3>
+                        </div>
+                        <div class="p-6 rounded-3xl bg-slate-950/50 border border-slate-800/50 text-slate-300 leading-relaxed text-sm prose prose-invert max-w-none">
+                            {{ event.event_instructions|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Confirm Action -->
+                    <div class="pt-6 border-t border-slate-800">
+                        <div class="bg-indigo-500/5 border border-indigo-500/10 rounded-3xl p-6 mb-8 text-center">
+                            <p class="text-sm text-indigo-300 font-medium leading-relaxed">
+                                بمجرد تأكيد رغبتك في الحضور، سيتم حجز مكانك في الفعالية وإرسال رمز الـ QR الخاص بك إلى بريدك الإلكتروني 
+                                <span class="font-bold text-white">({{ student.email }})</span>.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center gap-4">
+                            <form action="{% url 'students:confirm_registration' %}" method="POST" class="w-full sm:flex-1">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full group relative inline-flex items-center justify-center gap-3 px-8 py-5 rounded-2xl bg-indigo-500 hover:bg-indigo-400 text-slate-950 font-black text-lg transition-all active:scale-95 shadow-2xl shadow-indigo-500/20">
+                                    <span>تأكيد الحضور الآن</span>
+                                    <i data-lucide="check-circle" class="w-6 h-6 group-hover:scale-110 transition-transform"></i>
+                                </button>
+                            </form>
+                            <a href="{% url 'students:detail' student.pk %}" class="w-full sm:w-auto px-8 py-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-center transition-all">
+                                إلغاء
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+</script>
+{% endblock %}
