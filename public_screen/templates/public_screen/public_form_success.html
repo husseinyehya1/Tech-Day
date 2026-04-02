@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}تم الإرسال{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-16">
+  <div class="rounded-3xl bg-slate-900/60 border border-slate-800 p-10 text-center space-y-4">
+    <div class="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+      <i data-lucide="check-circle" class="w-8 h-8"></i>
+    </div>
+    <h1 class="text-2xl font-black text-slate-100">تم إرسال الاستمارة بنجاح</h1>
+    <p class="text-sm text-slate-400">شكرًا لك. تم استلام بياناتك.</p>
+  </div>
+  <script>lucide.createIcons();</script>
+</div>
+{% endblock %}
+

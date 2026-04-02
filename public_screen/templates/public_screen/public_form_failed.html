@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}فشل الإرسال{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-16">
+  <div class="rounded-3xl bg-slate-900/60 border border-slate-800 p-10 text-center space-y-4">
+    <div class="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto text-rose-400">
+      <i data-lucide="x-circle" class="w-8 h-8"></i>
+    </div>
+    <h1 class="text-2xl font-black text-slate-100">فشل إرسال الاستمارة</h1>
+    <p class="text-sm text-slate-400">حدثت مشكلة أثناء الإرسال. راجع البيانات والمرفقات ثم حاول مرة أخرى.</p>
+    <div class="pt-2">
+      <a href="{% url 'public_screen:public_form' form_obj.custom_slug|default:form_obj.token %}"
+         class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-black transition-all">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        العودة للاستمرار
+      </a>
+    </div>
+  </div>
+  <script>lucide.createIcons();</script>
+</div>
+{% endblock %}
+

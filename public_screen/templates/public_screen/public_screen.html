@@ -2,31 +2,66 @@
 
 {% block title %}شاشة العرض العامة - Tech Day{% endblock %}
 
+{% block extra_css %}
+<style>
+    @media (max-width: 640px) {
+        .backdrop-blur,
+        .backdrop-blur-sm,
+        .backdrop-blur-xl {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+        }
+        .transition-all,
+        .duration-500,
+        .duration-300,
+        .duration-200 {
+            transition: none !important;
+            animation: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="min-h-[70vh] flex flex-col gap-4">
+<div class="min-h-[70vh] max-w-7xl mx-auto w-full px-3 sm:px-4 lg:px-6 flex flex-col gap-5">
     <!-- Header with Logos and Text -->
-    <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 md:p-6">
+    <div class="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-5 sm:p-6 shadow-2xl shadow-black/20 backdrop-blur-xl">
         <div class="flex flex-col md:flex-row items-center justify-between gap-6">
             <!-- Logos -->
             <div class="flex items-center gap-4">
-                <img src="/static/Ministry_of_Education_(Egypt)_logo.png" alt="وزارة التربية والتعليم" class="h-16 md:h-20 w-auto bg-white rounded-full p-1">
-                <img src="/static/edutech-logo.png" alt="الفريق التقني" class="h-16 md:h-20 w-auto bg-white rounded-full p-1">
-                <div class="h-16 md:h-20 w-16 md:w-20 bg-white rounded-full flex items-center justify-center border border-slate-200 overflow-hidden">
-                    <img src="/static/school-logo.webp" alt="لوجو المدرسة" class="h-full w-full object-contain p-1" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                    <span class="text-[10px] text-center text-slate-600 px-1 hidden">لوجو المدرسة</span>
-                </div>
+                <img src="/static/Ministry_of_Education_(Egypt)_logo.png" alt="وزارة التربية والتعليم" class="h-14 sm:h-16 md:h-20 w-auto bg-white rounded-full p-1 shadow-lg">
+                <img src="/static/edutech-logo.png" alt="الفريق التقني" class="h-14 sm:h-16 md:h-20 w-auto bg-white rounded-full p-1 shadow-lg">
             </div>
             
             <!-- Text Content -->
             <div class="text-center md:text-right flex-1">
                 <h1 class="text-xl md:text-2xl font-bold text-slate-50 mb-2">مديرية التربية والتعليم بالقليوبية</h1>
                 <h2 class="text-lg md:text-xl font-semibold text-cyan-400 mb-2">متمثلة في الفريق التقني بالقليوبية</h2>
-                <p class="text-base md:text-lg text-slate-300">في مدرسة مصطفي كامل الرسمية المتميزة للغات</p>
+                <p class="text-base md:text-lg text-slate-300">في إدارة غرب شبرا التعليمية</p>
             </div>
         </div>
     </div>
 
-    <div id="public-registration-card" class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+    <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-5 sm:p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center">
+                    <i data-lucide="download" class="w-6 h-6 text-emerald-400"></i>
+                </div>
+                <div>
+                    <div class="text-lg md:text-xl font-black text-white">تنزيل تطبيق الهاتف المحمول</div>
+                    <div class="text-xs md:text-sm text-slate-400">آخر إصدار متاح للتنزيل (Android + iOS)</div>
+                </div>
+            </div>
+            <a href="{% url 'public_screen:mobile_app_download' %}"
+               class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20">
+                <i data-lucide="smartphone" class="w-4 h-4"></i>
+                <span>فتح صفحة التحميل</span>
+            </a>
+        </div>
+    </div>
+
+    <div id="public-registration-card" class="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-4 sm:p-6 shadow-2xl shadow-black/15 backdrop-blur-xl">
         {% if event.is_finished %}
         <div class="space-y-12 py-6">
             <!-- Hero Section -->
@@ -299,7 +334,7 @@
             <p class="text-slate-400 text-sm">نعتذر عن عدم استقبال طلبات جديدة حالياً لوصولنا للحد الأقصى المسموح به للطلاب.</p>
         </div>
         {% else %}
-        <div class="relative overflow-hidden p-6 md:p-10 rounded-3xl bg-slate-900/40 border border-slate-800/50 backdrop-blur-xl">
+        <div class="relative overflow-hidden p-5 sm:p-6 lg:p-10 rounded-3xl bg-slate-900/50 border border-slate-800/70 shadow-2xl shadow-black/10 backdrop-blur-xl">
             <!-- Decorative Elements -->
             <div class="absolute -top-24 -left-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl"></div>
             <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl"></div>
@@ -389,15 +424,8 @@
                                        class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
                             </div>
 
-                            <!-- School -->
-                            <div class="space-y-2 group">
-                                <label for="school" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
-                                    <i data-lucide="school" class="w-3.5 h-3.5"></i>
-                                    المدرسة
-                                </label>
-                                <input id="school" name="school" type="text" required placeholder="اسم مدرستك الحالية"
-                                       class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
-                            </div>
+                            <input type="hidden" name="school_choice" value="__fixed__">
+                            <input type="hidden" name="school_other" value="إدارة غرب شبرا التعليمية">
 
                             <!-- Education Admin -->
                             <div class="space-y-2 group">
@@ -406,11 +434,16 @@
                                     الإدارة التعليمية
                                 </label>
                                 <div class="relative">
-                                    <select id="education_admin" name="education_admin" required
+                                    {% if event.is_education_admin_locked %}
+                                    <input type="hidden" name="education_admin" value="{{ event.locked_education_admin|default:'العبور' }}">
+                                    {% endif %}
+                                    <select id="education_admin" name="education_admin" required {% if event.is_education_admin_locked %}disabled{% endif %}
                                             class="appearance-none w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                                        {% if not event.is_education_admin_locked %}
                                         <option value="" disabled selected>اختر الإدارة التعليمية</option>
+                                        {% endif %}
                                         {% for admin_name in education_admins %}
-                                        <option value="{{ admin_name }}">{{ admin_name }}</option>
+                                        <option value="{{ admin_name }}" {% if event.is_education_admin_locked %}selected{% endif %}>{{ admin_name }}</option>
                                         {% endfor %}
                                     </select>
                                     <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-500">
@@ -429,6 +462,7 @@
                                     <select id="grade" name="grade" required
                                             class="appearance-none w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
                                         <option value="" disabled selected>اختر السنة الدراسية</option>
+                                        
                                         <optgroup label="المرحلة الإعدادية" class="bg-slate-900">
                                             <option value="1-prep">الأول الإعدادي</option>
                                             <option value="2-prep">الثاني الإعدادي</option>
@@ -458,10 +492,16 @@
                         </div>
 
                         <!-- Submit Button -->
-                        <div class="flex items-center justify-between gap-6 pt-4">
-                            <p class="text-[10px] text-slate-500 max-w-[200px] leading-relaxed">
-                                بالضغط على إرسال، أنت توافق على شروط الانضمام لفعالية Tech Day.
-                            </p>
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4">
+                            <div class="space-y-1">
+                                <p class="text-[10px] text-slate-500 max-w-[200px] leading-relaxed">
+                                    بالضغط على إرسال، أنت توافق على شروط الانضمام لفعالية Tech Day.
+                                </p>
+                                <a href="{% url 'public_screen:terms' %}" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold underline flex items-center gap-1">
+                                    <i data-lucide="external-link" class="w-2.5 h-2.5"></i>
+                                    عرض شروط الانضمام كاملة
+                                </a>
+                            </div>
                             <button type="submit"
                                     class="group relative inline-flex items-center gap-3 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:-translate-y-1">
                                 <span>إرسال الطلب</span>
@@ -476,13 +516,13 @@
     </div>
 
     {% if not event.is_finished %}
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div class="grid gap-3 sm:grid-cols-3 w-full md:w-auto">
-            <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-3">
+    <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div class="grid gap-4 sm:grid-cols-3 w-full md:w-auto">
+            <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-4 shadow-xl shadow-black/10">
                 <div class="text-xs text-slate-400 mb-1">الوقت الآن</div>
                 <div class="text-2xl md:text-3xl font-mono" id="clock">{{ now|date:"H:i" }}</div>
             </div>
-            <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-3">
+            <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-4 shadow-xl shadow-black/10">
                 <div class="text-xs text-slate-400 mb-1">تاريخ الفعالية</div>
                 {% if event and event.start_datetime %}
                 <div class="text-sm md:text-base text-slate-200">
@@ -494,7 +534,7 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-3">
+            <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-4 shadow-xl shadow-black/10">
                 <div class="text-xs text-slate-400 mb-1">موعد بدء الفعالية</div>
                 {% if event and event.start_datetime %}
                 <div class="text-sm md:text-base text-slate-200">
@@ -507,14 +547,14 @@
                 {% endif %}
             </div>
         </div>
-        <div class="rounded-2xl bg-emerald-500/10 border border-emerald-500/40 px-6 py-3 text-center w-full md:w-auto">
+        <div class="rounded-3xl bg-emerald-500/10 border border-emerald-500/30 px-6 py-4 text-center w-full md:w-auto shadow-xl shadow-emerald-500/5">
             <div class="text-xs text-emerald-300">إجمالي عدد الطلاب</div>
             <div class="text-3xl font-bold">{{ total_students }}</div>
         </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+    <div class="grid gap-5 md:grid-cols-2">
+        <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-5 shadow-xl shadow-black/10">
             <div class="text-xs text-slate-400 mb-1">الورشة الحالية</div>
             {% if current_session %}
                 <div class="text-2xl font-semibold mb-1">{{ current_session.workshop.title }}</div>
@@ -524,7 +564,7 @@
                 <div class="text-sm text-slate-400">لا توجد ورشة حالية الآن</div>
             {% endif %}
         </div>
-        <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+        <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-5 shadow-xl shadow-black/10">
             <div class="text-xs text-slate-400 mb-1">الورشة القادمة</div>
             {% if next_session %}
                 <div class="text-2xl font-semibold mb-1">{{ next_session.workshop.title }}</div>
@@ -590,123 +630,242 @@
                 </div>
                 <div>
                     <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">الجدول الزمني للفعاليات</h2>
-                    <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">عرض مباشر للمسارات والورش لجميع المجموعات</p>
+                    <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">EDU-TECH | Modern Avenue School | 8:30 - 2:00</p>
                 </div>
             </div>
             <div class="flex items-center gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-2xl bg-slate-950/50 border border-slate-800/50">
                 <div class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-cyan-500 animate-pulse"></div>
-                <span class="text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Live Schedule</span>
+                <span class="text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Official Schedule</span>
             </div>
         </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-slate-800/50 relative custom-scrollbar">
-            <table class="w-full text-right border-separate border-spacing-0">
+        <div class="overflow-x-auto rounded-2xl border border-slate-800/50 relative custom-scrollbar bg-white/5">
+            <table class="w-full text-center border-collapse">
                 <thead>
-                    <tr class="bg-slate-950/50 border-b border-slate-800">
-                        <th class="px-4 py-4 md:px-6 md:py-5 text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest border-l border-slate-800 sticky right-0 bg-slate-950/90 backdrop-blur-md z-20 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.5)]">الفترة الزمنية</th>
-                        {% for group in groups %}
-                        <th class="px-4 py-4 md:px-6 md:py-5 min-w-[160px] md:min-w-[240px]">
-                            <div class="flex items-center gap-2 justify-center">
-                                <div class="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" style="background-color: {{ group.color }}"></div>
-                                <span class="text-xs md:text-sm font-black text-slate-100">{{ group.name }}</span>
-                                <span class="px-1.5 py-0.5 rounded-lg bg-slate-800 text-[8px] md:text-[9px] font-black text-slate-500 uppercase">{{ group.code }}</span>
-                            </div>
-                        </th>
-                        {% endfor %}
+                    <tr class="bg-slate-950/60">
+                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 w-[120px] md:w-[160px]">الوقت</th>
+                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">A – Vision Team</th>
+                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">B – Knights Team</th>
+                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">C – Wisdom Team</th>
+                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">D – Warriors Team</th>
+                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">E – Pioneers Team</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/50">
-                    {% for value, label in periods %}
-                    <tr class="group/row transition-colors hover:bg-slate-800/10">
-                        <td class="px-4 py-5 md:px-6 md:py-6 border-l border-slate-800 font-bold sticky right-0 bg-slate-900/90 backdrop-blur-md z-10 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.5)]">
-                            <div class="flex flex-col gap-1">
-                                <span class="text-slate-100 text-xs md:text-sm font-black whitespace-nowrap">{{ label }}</span>
-                                <span class="text-[10px] md:text-[11px] text-slate-500 font-mono font-bold tracking-tighter">
-                                    {{ value }}
-                                </span>
+                    <tr class="bg-slate-900/30">
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm border-b border-slate-800" dir="ltr">8:30 – 8:45</td>
+                        <td colspan="5" class="px-4 py-4 border-b border-slate-800">
+                            <div class="inline-flex flex-col items-center gap-2">
+                                <div class="text-sm md:text-base font-black text-amber-200">تسجيل الدخول وتنظيم المجموعات</div>
+                                <div class="text-[11px] text-slate-400 font-bold">استقبال الطلاب – تسجيل الحضور – توزيع المجموعات – التوجيه لنقطة الانطلاق</div>
                             </div>
                         </td>
-
-                        {% if 'تسجيل' in label or 'راحة' in label or 'ترفيهي' in label or 'الختام' in label %}
-                        <td colspan="{{ groups.count }}" class="px-3 py-3 md:px-4 md:py-4">
-                            <div class="w-full py-4 md:py-5 rounded-2xl md:rounded-[1.5rem] bg-slate-950/30 border border-dashed border-slate-800 flex items-center justify-center gap-3 md:gap-5 group/special">
-                                {% if 'تسجيل' in label %}
-                                    <div class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-blue-500/10 text-blue-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="log-in" class="w-5 h-5 md:w-6 md:h-6"></i>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-xs md:text-base font-black text-slate-200">تسجيل الدخول وتنظيم المجموعات</div>
-                                        <div class="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">General Activity - All Teams</div>
-                                    </div>
-                                {% elif 'راحة' in label %}
-                                    <div class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-amber-500/10 text-amber-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="coffee" class="w-5 h-5 md:w-6 md:h-6"></i>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-xs md:text-base font-black text-slate-200">استراحة قصيرة وانتقال</div>
-                                        <div class="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">10 Minutes Break</div>
-                                    </div>
-                                {% elif 'ترفيهي' in label %}
-                                    <div class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-violet-500/10 text-violet-400 group-hover/special:scale-110 transition-transform animate-pulse">
-                                        <i data-lucide="party-popper" class="w-6 h-6 md:w-7 md:h-7"></i>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-sm md:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 uppercase tracking-wider">نشاط ترفيهي ولعب جماعي</div>
-                                        <div class="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Fun & Games - All Teams</div>
-                                    </div>
-                                {% elif 'الختام' in label %}
-                                    <div class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-emerald-500/10 text-emerald-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="award" class="w-5 h-5 md:w-6 md:h-6"></i>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-xs md:text-base font-black text-slate-200">الجلسة الختامية وتوزيع الشهادات</div>
-                                        <div class="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Closing Ceremony</div>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </td>
-                        {% else %}
-                            {% for group in groups %}
-                            <td class="px-3 py-4 md:px-4 md:py-4 align-top">
-                                {% for session in sessions %}
-                                    {% if session.period == value and session.group_id == group.id %}
-                                    <div class="group/session relative p-4 md:p-5 rounded-2xl md:rounded-3xl bg-slate-950 border border-slate-800 hover:border-cyan-500/30 transition-all shadow-xl hover:shadow-cyan-500/5 group-hover/row:translate-y-[-2px]">
-                                        <!-- Session Status/Icon -->
-                                        <div class="flex items-center justify-between mb-3 md:mb-4">
-                                            <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 group-hover/session:scale-110 transition-transform">
-                                                <i data-lucide="monitor-play" class="w-4 h-4 md:w-5 md:h-5"></i>
-                                            </div>
-                                            <span class="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Workshop</span>
-                                        </div>
-                                        
-                                        <!-- Workshop Details -->
-                                        <div class="space-y-3 md:space-y-4">
-                                            <div>
-                                                <h3 class="text-xs md:text-sm font-black text-white leading-tight mb-1.5 md:mb-2 group-hover/session:text-cyan-400 transition-colors line-clamp-2">{{ session.workshop.title }}</h3>
-                                                <div class="flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] font-bold text-slate-500">
-                                                    <i data-lucide="map-pin" class="w-3 h-3 md:w-3.5 md:h-3.5 text-violet-500"></i>
-                                                    <span class="uppercase tracking-widest">قاعة:</span>
-                                                    <span class="text-slate-300">{{ session.workshop.room }}</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Time Footer -->
-                                            <div class="pt-3 md:pt-4 border-t border-slate-800/50 flex items-center justify-between">
-                                                <div class="flex items-center gap-1.5 text-[8px] md:text-[9px] font-black text-slate-600">
-                                                    <i data-lucide="clock" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>
-                                                    {{ session.start_time|time:"H:i" }} – {{ session.end_time|time:"H:i" }}
-                                                </div>
-                                                <div class="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-cyan-500/50 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </td>
-                            {% endfor %}
-                        {% endif %}
                     </tr>
-                    {% endfor %}
+
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">8:45 – 9:30</td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Python Programming Basics</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Journey in The World of Games</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">From Idea To Design</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Robotics World</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr class="bg-slate-950/30">
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">9:30 – 9:35</td>
+                        <td colspan="5" class="px-4 py-4 text-slate-400 font-bold italic">فترة راحة وانتقال (5 دقائق)</td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">9:35 – 10:20</td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Journey in The World of Games</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">From Idea To Design</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Robotics World</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Python Programming Basics</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr class="bg-slate-950/30">
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">10:20 – 10:25</td>
+                        <td colspan="5" class="px-4 py-4 text-slate-400 font-bold italic">فترة راحة وانتقال (5 دقائق)</td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">10:25 – 11:10</td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">From Idea To Design</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Robotics World</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Python Programming Basics</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Journey in The World of Games</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr class="bg-amber-500/10">
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm border-t border-amber-500/10" dir="ltr">11:10 – 11:55</td>
+                        <td colspan="5" class="px-4 py-4 border-t border-amber-500/10">
+                            <div class="inline-flex flex-col items-center gap-2">
+                                <div class="text-sm md:text-base font-black text-amber-200">فترة الألعاب والنشاط الترفيهي</div>
+                                <div class="text-[11px] text-slate-300 font-bold">ألعاب جماعية – مسابقات خفيفة – نشاط حركي – استراحة مياه</div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">11:55 – 12:40</td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Robotics World</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Python Programming Basics</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Journey in The World of Games</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">From Idea To Design</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr class="bg-slate-950/30">
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">12:40 – 12:45</td>
+                        <td colspan="5" class="px-4 py-4 text-slate-400 font-bold italic">فترة راحة وانتقال (5 دقائق)</td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">12:45 – 1:30</td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Python Programming Basics</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Journey in The World of Games</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">From Idea To Design</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="font-black text-slate-100">Robotics World</div>
+                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr class="bg-amber-500/10">
+                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm border-t border-amber-500/10" dir="ltr">1:30 – 2:00</td>
+                        <td colspan="5" class="px-4 py-4 border-t border-amber-500/10">
+                            <div class="inline-flex flex-col items-center gap-2">
+                                <div class="text-sm md:text-base font-black text-amber-200">الختام</div>
+                                <div class="text-[11px] text-slate-300 font-bold">تجميع الطلاب – كلمة قصيرة – شكر المنظمين والمحاضرين – صورة جماعية – خروج منظم</div>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>

@@ -1,0 +1,473 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_obj.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-shell {
+    background: radial-gradient(1200px 500px at 80% -10%, rgba(34, 211, 238, 0.14), transparent 55%),
+                radial-gradient(900px 500px at 15% -20%, rgba(56, 189, 248, 0.10), transparent 50%);
+  }
+  .form-card {
+    border-radius: 1.25rem;
+  }
+  .choice-card.is-selected {
+    border-color: rgba(6, 182, 212, .65);
+    background: rgba(6, 182, 212, .12);
+    box-shadow: 0 0 0 1px rgba(6, 182, 212, .20) inset;
+  }
+  .choice-card.is-focused {
+    outline: 2px solid rgba(34, 211, 238, .55);
+    outline-offset: 2px;
+  }
+  .field-box :is(input[type="text"], input[type="email"], input[type="number"], input[type="tel"], select, textarea, input[type="file"]) {
+    width: 100%;
+    background: rgba(2, 6, 23, .45);
+    border: 1px solid rgba(51, 65, 85, .9);
+    border-radius: 0.95rem;
+    padding: .8rem .9rem;
+    color: #e2e8f0;
+    font-size: .92rem;
+    line-height: 1.4rem;
+  }
+  .field-box :is(input, select, textarea):focus {
+    outline: none;
+    border-color: rgba(34, 211, 238, .5);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .15);
+  }
+  .field-box input::file-selector-button {
+    border: 0;
+    margin-inline-end: .75rem;
+    border-radius: .65rem;
+    background: rgba(6, 182, 212, .2);
+    color: #67e8f9;
+    padding: .45rem .65rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mobile-submit {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    padding: .6rem;
+    margin: .25rem -.5rem -.5rem;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(to top, rgba(2, 6, 23, .95), rgba(2, 6, 23, .35));
+  }
+  @media (min-width: 1024px) {
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+      align-items: start;
+    }
+    .form-section {
+      grid-column: 1 / -1;
+      border-radius: 1rem;
+      background: linear-gradient(90deg, rgba(6, 182, 212, .08), rgba(15, 23, 42, .25));
+      border-color: rgba(56, 189, 248, .2);
+    }
+    .question-card {
+      background: rgba(2, 6, 23, .28);
+      border: 1px solid rgba(51, 65, 85, .45);
+      border-radius: 1rem;
+      padding: 1rem;
+      box-shadow: 0 10px 25px rgba(2, 6, 23, .2);
+    }
+    .question-span-2 {
+      grid-column: 1 / -1;
+    }
+    .mobile-submit {
+      grid-column: 1 / -1;
+      position: static;
+      margin: .25rem 0 0;
+      padding: 0;
+      background: transparent;
+      backdrop-filter: none;
+    }
+  }
+  @media (max-width: 640px) {
+    .transition-all,
+    .duration-500,
+    .duration-300,
+    .duration-200 {
+      transition: none !important;
+      animation: none !important;
+    }
+    .backdrop-blur,
+    .backdrop-blur-xl,
+    .mobile-submit {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+    .form-shell {
+      background: none;
+    }
+    .form-shell {
+      border-radius: 1.2rem;
+      padding-inline: .1rem;
+    }
+    .choice-card {
+      min-height: 3rem;
+      align-items: flex-start;
+      padding-top: .8rem;
+      padding-bottom: .8rem;
+    }
+    .choice-card input[type="radio"],
+    .choice-card input[type="checkbox"] {
+      margin-top: .1rem;
+      transform: scale(1.1);
+    }
+    .form-card {
+      border-radius: 1rem;
+    }
+    .form-card,
+    .mobile-submit {
+      backdrop-filter: none;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto pb-10 md:pb-16 form-shell rounded-[2.5rem] px-2">
+  <div class="form-card rounded-[2rem] bg-slate-900/70 border border-slate-800 p-4 sm:p-6 md:p-8 shadow-2xl shadow-black/30 backdrop-blur-xl">
+    <div class="flex flex-col md:flex-row md:items-center gap-5">
+      <div class="h-14 w-14 sm:h-16 sm:w-16 bg-white rounded-2xl p-2 sm:p-2.5 flex items-center justify-center border border-slate-200 shadow-lg">
+        <img src="/static/edutech-logo.png" alt="الفريق التقني" class="h-full w-full object-contain" />
+      </div>
+      <div class="flex-1">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] mb-3">
+          Tech Form
+        </div>
+        <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-slate-100 leading-tight">{{ form_obj.title }}</h1>
+        {% if form_obj.description %}
+        <p class="text-xs sm:text-sm md:text-base text-slate-400 mt-3 leading-relaxed">{{ form_obj.description }}</p>
+        {% endif %}
+      </div>
+      <div class="shrink-0">
+        <div class="rounded-2xl bg-slate-950/70 border border-slate-800 px-4 py-3 text-center">
+          <div class="text-[10px] text-slate-500 font-black uppercase tracking-wider">الأسئلة</div>
+          <div class="text-xl font-black text-cyan-300 mt-1">{{ render_fields|length }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="mt-4 sm:mt-6 form-card rounded-[2rem] bg-slate-900/55 border border-slate-800 p-4 sm:p-6 md:p-8 space-y-8 sm:space-y-9 shadow-2xl shadow-black/20 backdrop-blur lg:space-y-0 form-grid">
+    {% csrf_token %}
+    <input type="hidden" name="_submit_token" value="{{ submit_token }}">
+
+    {% if form.non_field_errors %}
+    <div class="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-5 py-4 text-sm text-rose-200 font-bold">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    {% for rf in render_fields %}
+    {% with f=rf.def field=rf.field %}
+    {% if f.key == 'full_name' %}
+    <div class="form-section rounded-3xl bg-slate-950/35 border border-slate-800 px-5 py-4">
+      <div class="text-sm font-black text-cyan-300">القسم الأول: البيانات الأساسية</div>
+    </div>
+    {% elif f.key == 'phone' %}
+    <div class="form-section rounded-3xl bg-slate-950/35 border border-slate-800 px-5 py-4">
+      <div class="text-sm font-black text-cyan-300">القسم الثاني: وسائل التواصل</div>
+    </div>
+    {% elif f.key == 'profile_photo' or f.key == 'id_photo' and not has_profile_photo %}
+    <div class="form-section rounded-3xl bg-slate-950/35 border border-slate-800 px-5 py-4">
+      <div class="text-sm font-black text-cyan-300">القسم الثالث: المستندات</div>
+    </div>
+    {% elif f.key == 'position' %}
+    <div class="form-section rounded-3xl bg-slate-950/35 border border-slate-800 px-5 py-4">
+      <div class="text-sm font-black text-cyan-300">القسم الرابع: البيانات التنظيمية والمهارية</div>
+    </div>
+    {% elif f.key == 'agreement' %}
+    <div class="form-section rounded-3xl bg-slate-950/35 border border-slate-800 px-5 py-4">
+      <div class="text-sm font-black text-cyan-300">الإقرار</div>
+    </div>
+    {% endif %}
+
+    <div class="space-y-3 question-card {% if f.field_type == 'radio' or f.field_type == 'checkboxes' or f.field_type == 'agreement' or f.field_type == 'paragraph' %}question-span-2{% endif %}">
+      <label class="text-sm font-black text-slate-100 flex items-center gap-2" for="{{ field.id_for_label }}">
+        <span class="inline-flex items-center justify-center h-6 min-w-6 px-1 rounded-full bg-slate-800 border border-slate-700 text-[10px] text-slate-300 font-black">{{ forloop.counter }}</span>
+        <span>{{ field.label }}</span>
+        {% if field.field.required %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-[10px] text-rose-300 font-black">مطلوب</span>
+        {% endif %}
+      </label>
+
+      {% if f.field_type == 'agreement' %}
+      <div class="field-box rounded-2xl bg-slate-950/55 border border-slate-800 p-4">
+        <label class="flex items-start gap-3 text-sm text-slate-200 cursor-pointer">
+          {{ field }}
+          <span class="leading-relaxed">{{ field.help_text }}</span>
+        </label>
+      </div>
+      {% elif f.field_type == 'radio' %}
+      <div class="grid gap-2">
+        {% for opt in field %}
+        <label class="choice-card flex items-center gap-3 rounded-2xl bg-slate-950/40 border border-slate-800 px-4 py-3.5 cursor-pointer hover:border-cyan-500/40 transition-all">
+          {{ opt.tag }}
+          <span class="text-sm font-bold text-slate-200">{{ opt.choice_label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% elif f.field_type == 'checkboxes' %}
+      <div class="grid gap-2">
+        {% for opt in field %}
+        <label class="choice-card flex items-center gap-3 rounded-2xl bg-slate-950/40 border border-slate-800 px-4 py-3.5 cursor-pointer hover:border-cyan-500/40 transition-all">
+          {{ opt.tag }}
+          <span class="text-sm font-bold text-slate-200">{{ opt.choice_label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="field-box rounded-2xl bg-slate-950/50 border border-slate-800 p-3 sm:p-4 focus-within:border-cyan-500/40 focus-within:ring-2 focus-within:ring-cyan-500/15 transition-all">
+        {{ field }}
+      </div>
+      {% if f.field_type == 'file' %}
+      <div class="text-[11px] text-cyan-300 font-bold px-1">
+        {% if f.key == 'profile_photo' %}
+        الامتدادات المسموحة: JPG, JPEG, PNG, WEBP, HEIC, HEIF — ملف واحد فقط.
+        {% elif f.key == 'id_photo' %}
+        الامتدادات المسموحة: صور + PDF — حتى ملفين كحد أقصى.
+        {% else %}
+        الامتدادات المسموحة: صور + PDF — ملف واحد فقط.
+        {% endif %}
+      </div>
+      {% endif %}
+      {% endif %}
+
+      {% if field.errors %}
+      <div class="text-[11px] text-rose-300 font-bold bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-2">{{ field.errors|striptags }}</div>
+      {% endif %}
+
+      {% if f.help_text and f.field_type != 'agreement' %}
+      <div class="text-[11px] text-slate-500 font-bold px-1">{{ field.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endwith %}
+    {% endfor %}
+
+    <div class="mobile-submit sm:pt-3">
+      <button type="submit"
+              id="submitFormBtn"
+              class="w-full py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950 font-black uppercase tracking-widest text-xs sm:text-sm transition-all active:scale-[0.99] shadow-xl shadow-cyan-500/25">
+        إرسال الاستمارة
+      </button>
+      <div id="uploadingState" class="hidden mt-3 text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-black">
+          <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.2" stroke-width="4"></circle>
+            <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="4" stroke-linecap="round"></path>
+          </svg>
+          <span id="uploadingText">جاري تجهيز الملفات...</span>
+        </div>
+        <div class="max-w-md mx-auto mt-2">
+          <div class="h-2 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
+            <div id="uploadProgressBar" class="h-full w-0 bg-gradient-to-r from-cyan-500 to-sky-500 transition-all"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-2 sm:mt-3 text-center text-[10px] sm:text-[11px] text-slate-500 font-bold">بإرسالك الاستمارة أنت توافق على استخدام البيانات للأغراض التنظيمية الخاصة بالفريق.</div>
+    </div>
+  </form>
+</div>
+<script>
+  const formEl = document.querySelector('form[enctype="multipart/form-data"]');
+  const submitBtn = document.getElementById('submitFormBtn');
+  const uploadingState = document.getElementById('uploadingState');
+  const uploadingText = document.getElementById('uploadingText');
+  const uploadProgressBar = document.getElementById('uploadProgressBar');
+  const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  const supportsStableClone = !!(window.File && window.Blob && File.prototype && File.prototype.arrayBuffer);
+
+  function syncChoiceCards() {
+    const cards = document.querySelectorAll('.choice-card');
+    cards.forEach((card) => {
+      const input = card.querySelector('input[type="radio"], input[type="checkbox"]');
+      if (!input) return;
+      card.classList.toggle('is-selected', !!input.checked);
+    });
+  }
+  document.querySelectorAll('.choice-card input[type="radio"], .choice-card input[type="checkbox"]').forEach((input) => {
+    input.addEventListener('change', syncChoiceCards);
+    input.addEventListener('focus', () => input.closest('.choice-card')?.classList.add('is-focused'));
+    input.addEventListener('blur', () => input.closest('.choice-card')?.classList.remove('is-focused'));
+  });
+  syncChoiceCards();
+
+  const nationalIdInput = formEl?.querySelector('input[name="national_id"]');
+  const birthDateInput = formEl?.querySelector('input[name="birth_date"]');
+  const birthGovInput = formEl?.querySelector('input[name="birth_governorate"]');
+  const govMap = {
+    '01': 'القاهرة', '02': 'الإسكندرية', '03': 'بورسعيد', '04': 'السويس',
+    '11': 'دمياط', '12': 'الدقهلية', '13': 'الشرقية', '14': 'القليوبية',
+    '15': 'كفر الشيخ', '16': 'الغربية', '17': 'المنوفية', '18': 'البحيرة',
+    '19': 'الإسماعيلية', '21': 'الجيزة', '22': 'بني سويف', '23': 'الفيوم',
+    '24': 'المنيا', '25': 'أسيوط', '26': 'سوهاج', '27': 'قنا',
+    '28': 'أسوان', '29': 'الأقصر', '31': 'البحر الأحمر', '32': 'الوادي الجديد',
+    '33': 'مطروح', '34': 'شمال سيناء', '35': 'جنوب سيناء', '88': 'خارج الجمهورية'
+  };
+
+  function lockDerivedInputs() {
+    [birthDateInput, birthGovInput].forEach((el) => {
+      if (!el) return;
+      el.readOnly = true;
+      el.tabIndex = -1;
+      el.style.pointerEvents = 'none';
+      el.style.opacity = '0.85';
+    });
+  }
+
+  function extractFromNationalId(nidRaw) {
+    const nid = (nidRaw || '').replace(/\D/g, '');
+    if (nid.length !== 14) return null;
+    const century = nid[0] === '2' ? 1900 : (nid[0] === '3' ? 2000 : null);
+    if (!century) return null;
+    const year = century + parseInt(nid.slice(1, 3), 10);
+    const month = parseInt(nid.slice(3, 5), 10);
+    const day = parseInt(nid.slice(5, 7), 10);
+    const dt = new Date(year, month - 1, day);
+    if (Number.isNaN(dt.getTime()) || dt.getFullYear() !== year || (dt.getMonth() + 1) !== month || dt.getDate() !== day) {
+      return null;
+    }
+    const govCode = nid.slice(7, 9);
+    const gov = govMap[govCode] || 'غير معروف';
+    const mm = String(month).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    return { nid, birthDate: `${year}-${mm}-${dd}`, governorate: gov };
+  }
+
+  function syncNationalIdDerived() {
+    if (!nationalIdInput) return true;
+    const data = extractFromNationalId(nationalIdInput.value);
+    if (!data) {
+      if (birthDateInput) birthDateInput.value = '';
+      if (birthGovInput) birthGovInput.value = '';
+      nationalIdInput.setCustomValidity('الرقم القومي يجب أن يكون 14 رقم صحيح.');
+      return false;
+    }
+    nationalIdInput.value = data.nid;
+    if (birthDateInput) birthDateInput.value = data.birthDate;
+    if (birthGovInput) birthGovInput.value = data.governorate;
+    nationalIdInput.setCustomValidity('');
+    return true;
+  }
+
+  lockDerivedInputs();
+  if (nationalIdInput) {
+    nationalIdInput.addEventListener('input', () => {
+      const onlyDigits = nationalIdInput.value.replace(/\D/g, '').slice(0, 14);
+      if (nationalIdInput.value !== onlyDigits) nationalIdInput.value = onlyDigits;
+      syncNationalIdDerived();
+    });
+    nationalIdInput.addEventListener('blur', syncNationalIdDerived);
+    syncNationalIdDerived();
+  }
+
+  async function cloneSelectedFiles(form) {
+    const payload = new FormData();
+    const elements = Array.from(form.elements);
+    for (const el of elements) {
+      if (!el.name || el.disabled) continue;
+      if (el.type === 'file') continue;
+      if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) continue;
+      payload.append(el.name, el.value);
+    }
+
+    const fileInputs = form.querySelectorAll('input[type="file"]');
+    for (const input of fileInputs) {
+      if (!input.name || !input.files || !input.files.length) continue;
+      for (const file of Array.from(input.files)) {
+        const ab = await file.arrayBuffer();
+        const stableFile = new File(
+          [ab],
+          file.name,
+          { type: file.type || 'application/octet-stream', lastModified: Date.now() }
+        );
+        payload.append(input.name, stableFile);
+      }
+    }
+    return payload;
+  }
+
+  function setUploadingState(loading, message) {
+    if (!submitBtn || !uploadingState) return;
+    submitBtn.disabled = loading;
+    submitBtn.classList.toggle('opacity-70', loading);
+    submitBtn.classList.toggle('cursor-not-allowed', loading);
+    submitBtn.textContent = loading ? 'يتم الرفع...' : 'إرسال الاستمارة';
+    uploadingState.classList.toggle('hidden', !loading);
+    if (uploadingText && message) uploadingText.textContent = message;
+  }
+
+  function updateProgress(percent) {
+    if (uploadProgressBar) {
+      uploadProgressBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+    }
+  }
+
+  if (formEl && submitBtn && uploadingState) {
+    formEl.addEventListener('submit', async (e) => {
+      if (!syncNationalIdDerived()) {
+        e.preventDefault();
+        nationalIdInput?.focus();
+        return;
+      }
+      if (isMobileUA) {
+        setUploadingState(true, 'جاري رفع الملفات...');
+        updateProgress(35);
+        return;
+      }
+
+      e.preventDefault();
+      setUploadingState(true, 'جاري تجهيز الملفات...');
+      updateProgress(5);
+      try {
+        const payload = supportsStableClone ? await cloneSelectedFiles(formEl) : new FormData(formEl);
+        updateProgress(15);
+        setUploadingState(true, 'جاري رفع الملفات...');
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', formEl.action || window.location.href, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.upload.onprogress = (event) => {
+          if (!event.lengthComputable) return;
+          const p = Math.round((event.loaded / event.total) * 80) + 15;
+          updateProgress(p);
+          if (uploadingText) uploadingText.textContent = `جاري الرفع... ${Math.min(99, p)}%`;
+        };
+        xhr.onreadystatechange = () => {
+          if (xhr.readyState !== XMLHttpRequest.DONE) return;
+          if (xhr.status >= 200 && xhr.status < 400) {
+            updateProgress(100);
+            if (uploadingText) uploadingText.textContent = 'تم الرفع بنجاح، جاري التحويل...';
+            const finalUrl = xhr.responseURL || '';
+            if (finalUrl && finalUrl !== window.location.href) {
+              window.location.assign(finalUrl);
+            } else {
+              window.location.reload();
+            }
+          } else {
+            setUploadingState(false);
+            updateProgress(0);
+            alert('حدثت مشكلة أثناء الرفع. حاول مرة أخرى.');
+          }
+        };
+        xhr.onerror = () => {
+          setUploadingState(false);
+          updateProgress(0);
+          alert('فشل الاتصال أثناء رفع الملفات. حاول مرة أخرى.');
+        };
+        xhr.send(payload);
+      } catch (err) {
+        setUploadingState(false);
+        updateProgress(0);
+        alert('تعذر تجهيز الملفات للرفع. أعد اختيار الملفات وحاول مرة أخرى.');
+      }
+    });
+  }
+</script>
+{% endblock %}
