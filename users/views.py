@@ -32,6 +32,12 @@ def login_view(request):
                 if account is not None:
                     user = authenticate(request, username=account.username, password=password)
         if user is not None:
+            # تسجيل الدخول للطلاب بدون اشتراط التسجيل في الفعالية الحالية
+            if hasattr(user, 'student_profile'):
+                login(request, user)
+                return redirect('students:detail', pk=user.student_profile.pk)
+            
+            # تسجيل الدخول للأدوار الأخرى (أدمن، مشرف، متطوع)
             login(request, user)
             if hasattr(user, 'is_admin') and user.is_admin():
                 return redirect('dashboard:admin_dashboard')
@@ -39,8 +45,6 @@ def login_view(request):
                 return redirect('workshops:list')
             if hasattr(user, 'role') and user.role == 'volunteer':
                 return redirect('attendance:volunteer_dashboard')
-            if hasattr(user, 'student_profile'):
-                return redirect('students:detail', pk=user.student_profile.pk)
             return redirect('dashboard:admin_dashboard')
         error = 'اسم المستخدم أو كلمة المرور غير صحيحة'
     return render(request, 'users/login.html', {'error': error})

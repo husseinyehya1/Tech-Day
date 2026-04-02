@@ -53,6 +53,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
+    'api',
     'users',
     'students',
     'groups',
@@ -60,15 +64,27 @@ INSTALLED_APPS = [
     'attendance',
     'dashboard',
     'public_screen',
+    'fcm_django',
 ]
 
+FCM_DJANGO_SETTINGS = {
+    "APP_VERBOSE_NAME": "Tech Day",
+    "FCM_SERVER_KEY": os.environ.get("FCM_SERVER_KEY", ""),
+    "ONE_DEVICE_PER_USER": True,
+    "DELETE_INACTIVE_DEVICES": True,
+    "FCM_SERVER_CREDENTIALS_FILE": BASE_DIR / 'fcm-service-account.json',
+}
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'dashboard.middleware.MaintenanceMiddleware',
     'students.middleware.EnsurePhoneMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -160,7 +176,21 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+fly_app = os.environ.get('FLY_APP_NAME')
+is_fly_runtime = bool(fly_app or os.environ.get('FLY_MACHINE_ID') or os.environ.get('FLY_REGION'))
+fly_volume_path = Path(os.environ.get('FLY_VOLUME_PATH', '/data'))
+has_fly_volume = fly_volume_path.exists()
+if is_fly_runtime or has_fly_volume:
+    MEDIA_ROOT = Path(os.environ.get('FLY_MEDIA_ROOT', str(fly_volume_path / 'media')))
+    FILE_UPLOAD_TEMP_DIR = str(Path(os.environ.get('FLY_UPLOAD_TEMP_DIR', str(fly_volume_path / 'tmp'))))
+    os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
+else:
+    MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+
+# Upload limits (APK uploads can be large)
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 200 * 1024 * 1024))
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('FILE_UPLOAD_MAX_MEMORY_SIZE', 5 * 1024 * 1024))
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -182,8 +212,41 @@ EMAIL_USE_TLS = False
 EMAIL_HOST_USER = os.environ.get('TECHDAY_EMAIL_USER', 'emailapikey')
 EMAIL_HOST_PASSWORD = os.environ.get('TECHDAY_EMAIL_PASSWORD', '')
 DEFAULT_FROM_EMAIL = 'EduTech Egypt System <noreply@edutech-egy.com>'
-fly_app = os.environ.get('FLY_APP_NAME')
 CSRF_TRUSTED_ORIGINS = ['https://td.edutech-egy.com']
 if fly_app:
     CSRF_TRUSTED_ORIGINS.append(f'https://{fly_app}.fly.dev')
 SITE_BASE_URL = os.environ.get('SITE_BASE_URL', 'https://td.edutech-egy.com')
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# REST Framework Settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/hour'
+    }
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7), # Let's make it long for mobile app
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# CORS Settings
+CORS_ALLOW_ALL_ORIGINS = True

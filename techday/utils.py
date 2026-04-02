@@ -94,6 +94,64 @@ def get_styled_email_html(subject, preview_text, title, main_text, content_block
         footer_extra_html=footer_extra_html
     )
 
+def send_registration_confirmation_email(student, event):
+    """
+    إرسال بريد إلكتروني لتأكيد التسجيل في الفعالية مع رمز الـ QR
+    """
+    subject = f'تأكيد حجز مكان في فعالية {event.name} – EduTech Egypt'
+    whatsapp_block_html = ""
+    if event.whatsapp_group_link:
+        whatsapp_block_html = f"""
+          <tr>
+            <td style="padding:12px 0 0 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-radius:16px;background-color:#020617;border:1px solid #25d366;">
+                <tr>
+                  <td style="padding:14px 16px;text-align:center;">
+                    <p style="margin:0 0 10px;font-size:13px;color:#e5e7eb;font-weight:600;">
+                      💬 مجموعة الواتساب الرسمية
+                    </p>
+                    <a href="{event.whatsapp_group_link}"
+                       style="display:inline-block;padding:10px 18px;border-radius:999px;background-color:#25d366;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;">
+                      الانضمام لمجموعة الواتساب
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        """
+
+    content_blocks = f"""
+        <div class="td-email-box" style="padding:24px;border-radius:24px;background-color:#0f172a;border:1px solid #1e293b;text-align:center;">
+          <p class="td-email-text-main" style="margin:0 0 16px;font-size:15px;color:#e5e7eb;line-height:1.6;">
+            تم تأكيد حجز مكانك في فعالية <b>{event.name}</b> بنجاح. نحن بانتظار رؤيتك!
+          </p>
+          <div class="td-email-box" style="padding:20px;border-radius:20px;background-color:#020617;border:1px solid #1e293b;margin:20px 0;text-align:center;">
+            <p style="margin:0 0 12px;font-size:14px;color:#e5e7eb;font-weight:700;">🎫 رمز الـ QR الخاص بحضورك</p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={student.student_id}" alt="QR Code" style="display:block;margin:0 auto;border-radius:12px;border:4px solid #ffffff;">
+            <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">استخدم هذا الرمز لتسجيل حضورك عند بوابة الدخول.</p>
+          </div>
+          {whatsapp_block_html}
+        </div>
+    """
+    
+    html_body = get_styled_email_html(
+        subject=subject,
+        preview_text=f"تفاصيل حضورك في فعالية {event.name}",
+        title="✅ تم تأكيد حجز مكانك",
+        main_text=f"مرحبًا {student.name}، يسعدنا انضمامك إلينا في فعاليتنا القادمة.",
+        content_blocks_html=content_blocks
+    )
+    
+    message = EmailMultiAlternatives(
+        subject,
+        f"مرحباً {student.name}، تم تأكيد حجز مكانك في الفعالية بنجاح.",
+        settings.DEFAULT_FROM_EMAIL,
+        [student.email],
+    )
+    message.attach_alternative(html_body, 'text/html')
+    send_email_async(message, 'إرسال تأكيد حجز مكان لطالب')
+
 def send_email_async(message, log_prefix=None):
     def _run(msg, prefix):
         from dashboard.models import AdminLog, FailedEmail

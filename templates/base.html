@@ -144,57 +144,57 @@
 <body class="dark bg-slate-950 text-slate-50 font-sans min-h-screen flex flex-col">
     <header class="border-b border-white/5 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-30 shadow-2xl shadow-black/20">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-            <a href="/" class="flex items-center gap-3 group">
-                <div class="h-10 w-10 rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                    <img src="{% static 'tech-day.webp' %}" alt="Tech Day" class="h-10 w-10 object-cover">
+            <a href="/" class="flex items-center gap-3 group shrink-0">
+                <div class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shrink-0">
+                    <img src="{% static 'tech-day.webp' %}" alt="Tech Day" class="h-full w-full object-cover">
                 </div>
-                <div class="hidden xs:block">
-                    <div class="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Event Portal</div>
-                    <div class="text-lg font-black text-white leading-none">Tech Day</div>
+                <div class="flex flex-col">
+                    <div class="text-[8px] sm:text-[10px] text-slate-500 font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] leading-none mb-0.5 sm:mb-1">Event Portal</div>
+                    <div class="text-base sm:text-lg font-black text-white leading-none">Tech Day</div>
                 </div>
             </a>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 min-w-0">
                 {% if request.user.is_authenticated %}
-                <!-- Mobile User Info (Condensed) -->
-                <div class="flex items-center gap-2 bg-slate-900/50 p-1 rounded-2xl border border-slate-800/50">
-                    <div class="hidden md:flex flex-col text-right px-3">
+                <!-- User Quick Actions -->
+                <div class="flex items-center gap-1 sm:gap-2 bg-slate-900/50 p-1 rounded-xl sm:rounded-2xl border border-slate-800/50 min-w-0">
+                    <div class="hidden sm:flex flex-col text-right px-3 shrink-0">
                         <span class="text-[10px] text-slate-500 font-bold uppercase">{{ request.user.username }}</span>
                         <span class="text-xs font-black text-slate-200">{{ request.user.first_name|default:"المستخدم" }}</span>
                     </div>
                     
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-0.5 sm:gap-1">
                         {% if request.user.is_superuser or request.user.is_staff or request.user.is_admin %}
                         <a href="{% url 'dashboard:admin_dashboard' %}" title="لوحة التحكم"
-                           class="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 transition-all border border-cyan-500/20">
-                            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                           class="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 transition-all border border-cyan-500/20">
+                            <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                         </a>
                         {% endif %}
                         
                         {% if request.user.role == 'supervisor' or request.user.is_admin %}
                         <a href="{% url 'workshops:list' %}" title="لوحة المشرف"
-                           class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-slate-950 transition-all border border-indigo-500/20">
-                            <i data-lucide="book-open" class="w-4 h-4"></i>
+                           class="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-slate-950 transition-all border border-indigo-500/20">
+                            <i data-lucide="book-open" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                         </a>
                         {% endif %}
                         
                         {% if request.user.is_volunteer %}
                         <a href="{% url 'attendance:volunteer_dashboard' %}" title="لوحة المتطوع"
-                           class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all border border-emerald-500/20">
-                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                           class="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all border border-emerald-500/20">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                         </a>
                         {% endif %}
 
                         <a href="{% url 'users:logout' %}" title="تسجيل الخروج"
-                           class="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-slate-950 transition-all border border-rose-500/20">
-                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                           class="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-slate-950 transition-all border border-rose-500/20">
+                            <i data-lucide="log-out" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                         </a>
                     </div>
                 </div>
                 {% else %}
                 <a href="{% url 'users:login' %}"
-                   class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-cyan-500/20">
-                    <i data-lucide="log-in" class="w-4 h-4"></i>
+                   class="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs sm:text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-cyan-500/20 whitespace-nowrap">
+                    <i data-lucide="log-in" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                     <span>دخول</span>
                 </a>
                 {% endif %}

@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.shortcuts import redirect
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import re_path
 
 from students import views as student_views
 
@@ -38,6 +39,8 @@ urlpatterns = [
     path('ورش/', include('workshops.urls')),
     path('حضور/', include('attendance.urls')),
     path('لوحة/', include('dashboard.urls')),
+    path('api/', include('api.urls')),
+    re_path(r'^media/(?P<file_path>.+)$', dashboard_views.media_proxy, name='media_proxy'),
     path('', include('public_screen.urls')),
 ]
 
