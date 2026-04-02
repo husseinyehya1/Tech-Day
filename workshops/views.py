@@ -6,24 +6,39 @@ from django.http import HttpResponseForbidden
 from .models import Workshop, WorkshopSession, WorkshopFeedback, WorkshopResource
 
 
+from dashboard.models import Event
+
 @login_required
 def workshop_list(request):
-    qs = Workshop.objects.select_related('supervisor').prefetch_related('sessions__group')
+    current_event = Event.get_current()
     
     # Check if admin is trying to view a specific supervisor's dashboard
     target_supervisor_id = request.GET.get('supervisor_id')
     viewing_as_supervisor = None
+    event_filter = (request.GET.get('event') or '').strip().lower()
     
     if target_supervisor_id and request.user.is_admin():
-        workshops = qs.filter(supervisor_id=target_supervisor_id)
+        workshops = Workshop.objects.filter(supervisor_id=target_supervisor_id)
         from users.models import User
         viewing_as_supervisor = get_object_or_404(User, pk=target_supervisor_id)
-    elif hasattr(request.user, 'is_supervisor') and request.user.is_supervisor():
-        workshops = qs.filter(supervisor=request.user)
+    elif request.user.is_admin():
+        workshops = Workshop.objects.all()
+        if event_filter == 'current' and current_event:
+            workshops = workshops.filter(event=current_event)
+        elif event_filter.isdigit():
+            workshops = workshops.filter(event_id=int(event_filter))
+    elif request.user.is_supervisor():
+        # المشرف يرى الورش المسندة إليه فقط
+        workshops = Workshop.objects.filter(supervisor=request.user)
+        # إذا كان هناك فعالية نشطة، نفضل عرض ورش هذه الفعالية إذا وجدت
+        if current_event and workshops.filter(event=current_event).exists():
+            workshops = workshops.filter(event=current_event)
     else:
-        # Default for admin or others is to see everything
-        workshops = qs
+        # أي مستخدم آخر (متطوع مثلاً) يرى ورش الفعالية الحالية
+        workshops = Workshop.objects.filter(event=current_event)
 
+    workshops = workshops.select_related('supervisor').prefetch_related('sessions__group')
+    
     total_workshops = workshops.count()
     active_workshops = workshops.filter(status='active').count()
     upcoming_workshops = workshops.filter(status='upcoming').count()
