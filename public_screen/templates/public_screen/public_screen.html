@@ -406,8 +406,15 @@
                                        class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
                             </div>
 
-                            <input type="hidden" name="school_choice" value="__fixed__">
-                            <input type="hidden" name="school_other" value="إدارة غرب شبرا التعليمية">
+                            <!-- School Name -->
+                            <div class="space-y-2 group">
+                                <label for="school" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                    <i data-lucide="school" class="w-3.5 h-3.5"></i>
+                                    اسم المدرسة
+                                </label>
+                                <input id="school" name="school" type="text" required placeholder="اكتب اسم مدرستك"
+                                       class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                            </div>
 
                             <!-- Education Admin -->
                             <div class="space-y-2 group">

@@ -145,7 +145,7 @@ def public_screen_view(request):
         full_name_en = (request.POST.get('full_name_en') or '').strip()
         email = (request.POST.get('email') or '').strip()
         phone_number = (request.POST.get('phone_number') or '').strip()
-        school = 'إدارة غرب شبرا التعليمية'
+        school = (request.POST.get('school') or '').strip()
         education_admin = (request.POST.get('education_admin') or '').strip()
         grade = (request.POST.get('grade') or '').strip()
         interests = (request.POST.get('interests') or '').strip()
