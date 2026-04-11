@@ -8,6 +8,9 @@ import tempfile
 import shutil
 import mimetypes
 from urllib.parse import unquote
+import time
+import smtplib
+import ssl
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -22,6 +25,7 @@ from django.db import transaction
 from django.db.models import Count, Max, Q, Avg, F, OuterRef, Subquery
 from django.db.models.functions import Trim
 from django.http import HttpResponseForbidden, HttpResponse, Http404, FileResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -4904,3 +4908,71 @@ def media_proxy(request, file_path):
     content_type, _ = mimetypes.guess_type(normalized)
     response = FileResponse(stream, content_type=content_type or 'application/octet-stream')
     return response
+
+
+@login_required
+def admin_smtp_diagnose(request):
+    if not require_admin(request.user):
+        return HttpResponseForbidden()
+
+    host = settings.EMAIL_HOST
+    port = int(getattr(settings, 'EMAIL_PORT', 0) or 0)
+    use_ssl = bool(getattr(settings, 'EMAIL_USE_SSL', False))
+    use_tls = bool(getattr(settings, 'EMAIL_USE_TLS', False))
+    timeout = int(getattr(settings, 'EMAIL_TIMEOUT', 20) or 20)
+    user = getattr(settings, 'EMAIL_HOST_USER', '') or ''
+    has_password = bool(getattr(settings, 'EMAIL_HOST_PASSWORD', '') or '')
+
+    started = time.monotonic()
+    try:
+        # Create a more robust SSL context
+        try:
+            import certifi
+            context = ssl.create_default_context(cafile=certifi.where())
+        except (ImportError, Exception):
+            context = ssl.create_default_context()
+        
+        # Check for bypass
+        if os.environ.get('SMTP_INSECURE_SSL', '').strip() == '1':
+            context = ssl._create_unverified_context()
+
+        if use_ssl:
+            server = smtplib.SMTP_SSL(host=host, port=port, timeout=timeout, context=context)
+        else:
+            server = smtplib.SMTP(host=host, port=port, timeout=timeout)
+        server.ehlo()
+        if use_tls:
+            server.starttls(context=context)
+            server.ehlo()
+        if user and has_password:
+            server.login(user, settings.EMAIL_HOST_PASSWORD)
+        server.quit()
+        elapsed_ms = int((time.monotonic() - started) * 1000)
+        return JsonResponse(
+            {
+                'ok': True,
+                'host': host,
+                'port': port,
+                'use_ssl': use_ssl,
+                'use_tls': use_tls,
+                'timeout_seconds': timeout,
+                'login_attempted': bool(user and has_password),
+                'elapsed_ms': elapsed_ms,
+            }
+        )
+    except Exception as e:
+        elapsed_ms = int((time.monotonic() - started) * 1000)
+        return JsonResponse(
+            {
+                'ok': False,
+                'host': host,
+                'port': port,
+                'use_ssl': use_ssl,
+                'use_tls': use_tls,
+                'timeout_seconds': timeout,
+                'login_attempted': bool(user and has_password),
+                'elapsed_ms': elapsed_ms,
+                'error': str(e),
+            },
+            status=502,
+        )
