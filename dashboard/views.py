@@ -4919,7 +4919,7 @@ def admin_smtp_diagnose(request):
     port = int(getattr(settings, 'EMAIL_PORT', 0) or 0)
     use_ssl = bool(getattr(settings, 'EMAIL_USE_SSL', False))
     use_tls = bool(getattr(settings, 'EMAIL_USE_TLS', False))
-    timeout = int(getattr(settings, 'EMAIL_TIMEOUT', 20) or 20)
+    timeout = int(getattr(settings, 'EMAIL_TIMEOUT', 60) or 60)
     user = getattr(settings, 'EMAIL_HOST_USER', '') or ''
     has_password = bool(getattr(settings, 'EMAIL_HOST_PASSWORD', '') or '')
 
