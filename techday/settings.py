@@ -216,6 +216,8 @@ DEFAULT_FROM_EMAIL = 'EduTech Egypt System <noreply@edutech-egy.com>'
 
 if os.environ.get('SENDGRID_API_KEY', '').strip():
     EMAIL_BACKEND = 'techday.sendgrid_backend.SendGridEmailBackend'
+elif os.environ.get('BREVO_API_KEY', '').strip():
+    EMAIL_BACKEND = 'techday.brevo_backend.BrevoEmailBackend'
 CSRF_TRUSTED_ORIGINS = ['https://td.edutech-egy.com']
 if fly_app:
     CSRF_TRUSTED_ORIGINS.append(f'https://{fly_app}.fly.dev')
