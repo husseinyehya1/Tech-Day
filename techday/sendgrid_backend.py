@@ -1,9 +1,14 @@
 import json
 import os
+import ssl
 import urllib.request
 
 from django.core.mail.backends.base import BaseEmailBackend
 
+try:
+    import certifi
+except ImportError:
+    certifi = None
 
 class SendGridEmailBackend(BaseEmailBackend):
     def send_messages(self, email_messages):
@@ -13,6 +18,18 @@ class SendGridEmailBackend(BaseEmailBackend):
 
         timeout = int(os.environ.get('SENDGRID_TIMEOUT', '20') or 20)
         sent = 0
+        
+        # إنشاء سياق SSL
+        try:
+            if os.environ.get('SMTP_INSECURE_SSL', '').strip() == '1':
+                context = ssl._create_unverified_context()
+            elif certifi:
+                context = ssl.create_default_context(cafile=certifi.where())
+            else:
+                context = ssl.create_default_context()
+        except Exception:
+            context = None
+
         for message in email_messages:
             payload = _build_sendgrid_payload(message)
             req = urllib.request.Request(
@@ -25,7 +42,7 @@ class SendGridEmailBackend(BaseEmailBackend):
                 method='POST',
             )
             try:
-                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                with urllib.request.urlopen(req, timeout=timeout, context=context) as resp:
                     if 200 <= resp.status < 300:
                         sent += 1
                     else:
