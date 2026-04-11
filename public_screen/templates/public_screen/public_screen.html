@@ -42,24 +42,6 @@
         </div>
     </div>
 
-    <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-5 sm:p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center">
-                    <i data-lucide="download" class="w-6 h-6 text-emerald-400"></i>
-                </div>
-                <div>
-                    <div class="text-lg md:text-xl font-black text-white">تنزيل تطبيق الهاتف المحمول</div>
-                    <div class="text-xs md:text-sm text-slate-400">آخر إصدار متاح للتنزيل (Android + iOS)</div>
-                </div>
-            </div>
-            <a href="{% url 'public_screen:mobile_app_download' %}"
-               class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20">
-                <i data-lucide="smartphone" class="w-4 h-4"></i>
-                <span>فتح صفحة التحميل</span>
-            </a>
-        </div>
-    </div>
 
     <div id="public-registration-card" class="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-4 sm:p-6 shadow-2xl shadow-black/15 backdrop-blur-xl">
         {% if event.is_finished %}
