@@ -423,16 +423,14 @@
                                     الإدارة التعليمية
                                 </label>
                                 <div class="relative">
-                                    {% if event.is_education_admin_locked %}
-                                    <input type="hidden" name="education_admin" value="{{ event.locked_education_admin|default:'العبور' }}">
-                                    {% endif %}
-                                    <select id="education_admin" name="education_admin" required {% if event.is_education_admin_locked %}disabled{% endif %}
+                                    <select id="education_admin" name="education_admin" required
                                             class="appearance-none w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
-                                        {% if not event.is_education_admin_locked %}
-                                        <option value="" disabled selected>اختر الإدارة التعليمية</option>
+                                        {% if education_admins|length > 1 or not event.is_education_admin_locked %}
+                                            <option value="" disabled selected>اختر الإدارة التعليمية</option>
                                         {% endif %}
+                                        
                                         {% for admin_name in education_admins %}
-                                        <option value="{{ admin_name }}" {% if event.is_education_admin_locked %}selected{% endif %}>{{ admin_name }}</option>
+                                            <option value="{{ admin_name }}" {% if education_admins|length == 1 and event.is_education_admin_locked %}selected{% endif %}>{{ admin_name }}</option>
                                         {% endfor %}
                                     </select>
                                     <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-500">

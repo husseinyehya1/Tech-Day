@@ -154,9 +154,14 @@ def public_screen_view(request):
             return redirect('public_screen:public_screen')
 
         if getattr(event, 'is_education_admin_locked', False):
-            locked_admin = (getattr(event, 'locked_education_admin', '') or '').strip() or 'العبور'
-            if education_admin != locked_admin:
-                messages.error(request, f'هذه الفعالية مخصصة لطلاب إدارة {locked_admin} فقط.')
+            locked_admin_str = (getattr(event, 'locked_education_admin', '') or '').strip()
+            locked_admins = [a.strip() for a in locked_admin_str.split(',') if a.strip()]
+            if not locked_admins:
+                locked_admins = ['العبور']
+            
+            if education_admin not in locked_admins:
+                admin_names = " أو ".join(locked_admins)
+                messages.error(request, f'هذه الفعالية مخصصة لطلاب إدارة {admin_names} فقط.')
                 return redirect('public_screen:public_screen')
         
         # التحقق إذا كان الطالب مسجلاً مسبقاً في النظام (لديه حساب)
@@ -407,8 +412,11 @@ def public_screen_view(request):
         'الخصوص', 'العبور',
     ]
     if getattr(event, 'is_education_admin_locked', False):
-        locked_admin = (getattr(event, 'locked_education_admin', '') or '').strip() or 'العبور'
-        education_admins = [locked_admin]
+        locked_admin_str = (getattr(event, 'locked_education_admin', '') or '').strip()
+        locked_admins = [a.strip() for a in locked_admin_str.split(',') if a.strip()]
+        if not locked_admins:
+            locked_admins = ['العبور']
+        education_admins = locked_admins
     else:
         education_admins = all_education_admins
 
