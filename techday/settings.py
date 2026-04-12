@@ -34,7 +34,7 @@ SECRET_KEY = os.environ.get(
     'django-insecure-ggtpe=k$ltr!i1lu#dcol9z)$own#@&ch4ow-z_m@pnxl(4&=c',
 )
 
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '')
 if allowed_hosts_env:
