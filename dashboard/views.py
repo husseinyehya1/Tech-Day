@@ -398,7 +398,9 @@ def admin_event_settings(request):
             allow_group_points = request.POST.get('allow_group_points') == 'on'
             is_maintenance_mode = request.POST.get('is_maintenance_mode') == 'on'
             is_admin_locked = request.POST.get('is_education_admin_locked') == 'on'
-            locked_admin = (request.POST.get('locked_education_admin') or '').strip()
+            locked_admin_list = request.POST.getlist('locked_education_admin')
+            locked_admin = ','.join(locked_admin_list).strip()
+            
             if is_admin_locked and not locked_admin:
                 locked_admin = 'العبور'
 
@@ -467,6 +469,10 @@ def admin_event_settings(request):
         removed_at__isnull=True,
     ).count()
     is_full = event.max_students is not None and total_registered >= event.max_students
+    
+    # تحويل السلسلة النصية إلى قائمة للإدارات المقفولة
+    locked_admins_list = [a.strip() for a in (event.locked_education_admin or '').split(',') if a.strip()]
+    
     education_admin_choices = [
         'بنها', 'طوخ', 'كفر شكر', 'شبين القناطر', 'الخانكة', 'قها',
         'قليوب', 'القناطر الخيرية', 'غرب شبرا الخيمة', 'شرق شبرا الخيمة',
@@ -477,6 +483,7 @@ def admin_event_settings(request):
         'total_registered': total_registered,
         'is_full': is_full,
         'education_admin_choices': education_admin_choices,
+        'locked_admins_list': locked_admins_list,
     })
 
 

@@ -100,7 +100,7 @@ class Event(models.Model):
     is_registration_closed = models.BooleanField(default=False, verbose_name='إغلاق التسجيل يدوياً')
     allow_existing_students_registration = models.BooleanField(default=True, verbose_name='السماح للطلاب المسجلين سابقاً بالتسجيل')
     is_education_admin_locked = models.BooleanField(default=False, verbose_name='قفل الإدارة التعليمية للتسجيل')
-    locked_education_admin = models.CharField(max_length=150, blank=True, default='العبور', verbose_name='الإدارة التعليمية المسموح بها')
+    locked_education_admin = models.TextField(blank=True, default='العبور', verbose_name='الإدارات التعليمية المسموح بها')
     allow_group_points = models.BooleanField(default=True, verbose_name='السماح بإضافة نقاط للمجموعات')
     is_finished = models.BooleanField(default=False, verbose_name='تم إنهاء الفعالية')
     is_maintenance_mode = models.BooleanField(default=False, verbose_name='وضع الصيانة')

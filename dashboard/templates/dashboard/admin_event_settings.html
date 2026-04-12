@@ -178,7 +178,15 @@
                     <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
                         <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">الإدارة التعليمية</span>
                         <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.is_education_admin_locked %}bg-amber-500/10 border-amber-500/20 text-amber-300{% else %}bg-slate-800/50 border-slate-700/50 text-slate-400{% endif %}">
-                            {% if event.is_education_admin_locked %}{{ event.locked_education_admin|default:"مقفول" }}{% else %}غير مقيد{% endif %}
+                            {% if event.is_education_admin_locked %}
+                                {% if locked_admins_list %}
+                                    {{ locked_admins_list|join:", " }}
+                                {% else %}
+                                    مقفول
+                                {% endif %}
+                            {% else %}
+                                غير مقيد
+                            {% endif %}
                         </span>
                     </div>
                     <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
@@ -239,12 +247,13 @@
                             </div>
                             <input type="checkbox" name="is_education_admin_locked" class="w-5 h-5 accent-amber-500" {% if event.is_education_admin_locked %}checked{% endif %}>
                         </label>
-                        <select name="locked_education_admin"
-                                class="w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold">
+                        <select name="locked_education_admin" multiple
+                                class="w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold h-32">
                             {% for a in education_admin_choices %}
-                            <option value="{{ a }}" {% if event.locked_education_admin == a %}selected{% endif %}>{{ a }}</option>
+                            <option value="{{ a }}" {% if a in locked_admins_list %}selected{% endif %}>{{ a }}</option>
                             {% endfor %}
                         </select>
+                        <p class="text-[10px] text-slate-500 italic mt-1 px-1">* اضغط Ctrl لاختيار أكثر من إدارة</p>
                     </div>
 
                     <button type="submit"
