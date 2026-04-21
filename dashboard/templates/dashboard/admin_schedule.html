@@ -1,4 +1,5 @@
 {% extends "dashboard/base_admin.html" %}
+{% load workshop_tags %}
 
 {% block title %}الجدول الزمني - لوحة التحكم{% endblock %}
 
@@ -64,44 +65,19 @@
                     <tr class="hover:bg-slate-800/20 transition-colors">
                         <td class="px-6 py-6 border-l border-slate-800 font-bold sticky right-0 bg-slate-900/80 backdrop-blur z-10">
                             <div class="flex flex-col gap-1">
-                                <span class="text-slate-200 text-xs">{{ label }}</span>
-                                <span class="text-[10px] text-slate-500 font-mono font-medium">
+                                <span class="text-slate-200 text-[10px]">{{ label }}</span>
+                                <span class="text-[9px] text-slate-500 font-mono font-medium">
                                     {{ value }}
                                 </span>
                             </div>
                         </td>
 
-                        {% if 'تسجيل' in label or 'راحة' in label or 'ترفيهي' in label or 'الختام' in label %}
-                        <td colspan="{{ groups.count }}" class="px-4 py-4">
-                            <div class="w-full py-4 rounded-2xl bg-slate-800/20 border border-dashed border-slate-700 flex items-center justify-center gap-4 group/special">
-                                {% if 'تسجيل' in label %}
-                                    <div class="p-2 rounded-xl bg-blue-500/10 text-blue-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="log-in" class="w-5 h-5"></i>
-                                    </div>
-                                    <span class="text-sm font-black text-slate-300">تسجيل الدخول وتنظيم المجموعات - لجميع المجموعات</span>
-                                {% elif 'راحة' in label %}
-                                    <div class="p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="coffee" class="w-5 h-5"></i>
-                                    </div>
-                                    <span class="text-sm font-black text-slate-300">استراحة قصيرة وانتقال</span>
-                                {% elif 'ترفيهي' in label %}
-                                    <div class="p-2 rounded-xl bg-violet-500/10 text-violet-400 group-hover/special:scale-110 transition-transform animate-pulse">
-                                        <i data-lucide="party-popper" class="w-5 h-5"></i>
-                                    </div>
-                                    <span class="text-sm font-black text-slate-300 uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">نشاط ترفيهي ولعب جماعي - لجميع المجموعات</span>
-                                {% elif 'الختام' in label %}
-                                    <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover/special:scale-110 transition-transform">
-                                        <i data-lucide="award" class="w-5 h-5"></i>
-                                    </div>
-                                    <span class="text-sm font-black text-slate-300">الجلسة الختامية وتوزيع الشهادات</span>
-                                {% endif %}
-                            </div>
-                        </td>
-                        {% else %}
-                            {% for group in groups %}
-                            <td class="px-4 py-4 align-top">
-                                {% for session in sessions %}
-                                    {% if session.period == value and session.group_id == group.id %}
+                        {% for group in groups %}
+                        <td class="px-4 py-4 align-top">
+                            {% set_var False as found_session %}
+                            {% for session in sessions %}
+                                {% if session.period == value and session.group_id == group.id %}
+                                    {% set_var True as found_session %}
                                     <div class="group/session relative p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-cyan-500/50 transition-all shadow-lg hover:shadow-cyan-500/5">
                                         <div class="flex items-start justify-between mb-3">
                                             <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 group-hover/session:scale-110 transition-transform">
@@ -140,18 +116,37 @@
                                             </div>
                                         </div>
                                     </div>
-                                    {% endif %}
-                                    {% endfor %}
-                                    <div class="mt-2">
-                                        <a href="{% url 'dashboard:admin_session_create' %}?group={{ group.id }}&period={{ value }}"
-                                           class="w-full flex items-center justify-center py-2 rounded-xl border border-dashed border-slate-800 text-slate-600 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all text-[10px] font-bold">
-                                            <i data-lucide="plus" class="w-3 h-3 ml-1"></i>
-                                            إضافة جلسة
-                                        </a>
-                                    </div>
-                            </td>
+                                {% endif %}
                             {% endfor %}
-                        {% endif %}
+
+                            {% if not found_session %}
+                                <div class="w-full h-full min-h-[60px] flex flex-col items-center justify-center gap-2 group/empty">
+                                    {% if 'ألعاب' in label or 'ترفيهي' in label %}
+                                        <div class="p-2 rounded-xl bg-amber-500/5 text-amber-500/40 group-hover/empty:bg-amber-500/10 group-hover/empty:text-amber-400 transition-all">
+                                            <i data-lucide="party-popper" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[9px] font-bold text-slate-600 group-hover:text-amber-500/60 transition-colors">نشاط ترفيهي</span>
+                                    {% elif 'انتقال' in label %}
+                                        <div class="p-2 rounded-xl bg-slate-800/30 text-slate-600 group-hover/empty:text-slate-400 transition-all">
+                                            <i data-lucide="move-right" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[9px] font-bold text-slate-600 transition-colors">انتقال</span>
+                                    {% elif 'تسجيل' in label %}
+                                        <div class="p-2 rounded-xl bg-blue-500/5 text-blue-500/40 group-hover/empty:text-blue-400 transition-all">
+                                            <i data-lucide="log-in" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[9px] font-bold text-slate-600 transition-colors">تسجيل</span>
+                                    {% else %}
+                                        <a href="{% url 'dashboard:admin_session_create' %}?group={{ group.id }}&period={{ value }}"
+                                           class="w-full flex flex-col items-center justify-center py-4 rounded-2xl border border-dashed border-slate-800 text-slate-600 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group/add">
+                                            <i data-lucide="plus" class="w-4 h-4 mb-1 group-hover/add:scale-110 transition-transform"></i>
+                                            <span class="text-[9px] font-bold">إضافة ورشة</span>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
                     </tr>
                     {% endfor %}
                 </tbody>
