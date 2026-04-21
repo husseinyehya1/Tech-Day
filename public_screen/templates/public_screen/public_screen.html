@@ -609,255 +609,214 @@
         </div>
     </div>
 
-    <div class="rounded-3xl bg-slate-900/40 border border-slate-800/50 backdrop-blur-xl p-4 md:p-8 flex-1 shadow-2xl overflow-hidden">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 gap-4">
+
+    {% endif %}
+
+    <!-- Official Detailed Schedule Integrated with System Styles -->
+    <div class="rounded-3xl bg-slate-900/40 border border-slate-800/50 backdrop-blur-xl p-5 md:p-8 mt-8 shadow-2xl overflow-hidden">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
             <div class="flex items-center gap-4">
-                <div class="p-2.5 md:p-3 rounded-2xl bg-amber-500/10 text-amber-500">
-                    <i data-lucide="calendar-days" class="w-5 h-5 md:w-6 md:h-6"></i>
+                <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                    <i data-lucide="table" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">الجدول الزمني للفعاليات</h2>
-                    <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">EDU-TECH | Modern Avenue School | 8:30 - 2:00</p>
+                    <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">الجدول التفصيلي للمجموعات</h2>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Tech Day Official Detailed Schedule</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-2xl bg-slate-950/50 border border-slate-800/50">
-                <div class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-cyan-500 animate-pulse"></div>
-                <span class="text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Official Schedule</span>
+            <div class="flex items-center gap-3 px-4 py-2 rounded-2xl bg-slate-950/50 border border-slate-800/50">
+                <div class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
+                <span class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Live Tracking</span>
             </div>
         </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-slate-800/50 relative custom-scrollbar bg-white/5">
-            <table class="w-full text-center border-collapse">
+        <div class="overflow-x-auto rounded-2xl border border-slate-800/50 custom-scrollbar bg-slate-950/20">
+            <table class="w-full text-center border-collapse min-w-[1000px]">
                 <thead>
-                    <tr class="bg-slate-950/60">
-                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 w-[120px] md:w-[160px]">الوقت</th>
-                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">A – Vision Team</th>
-                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">B – Knights Team</th>
-                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">C – Wisdom Team</th>
-                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">D – Warriors Team</th>
-                        <th class="px-4 py-4 text-[11px] md:text-sm font-black text-slate-200 border-b border-slate-800 min-w-[200px]">E – Pioneers Team</th>
+                    <tr class="bg-slate-950/80 text-right">
+                        <th class="px-4 py-5 text-xs font-black text-slate-200 border-b border-slate-800 w-[120px]">الفترة الزمنية</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Heroes Team (A)</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Vision Team</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Knights Team</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Wisdom Team</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Warriors Team</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Bright Stars</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Pioneers Team</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Masters Team</th>
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">Future Team</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-800/50">
-                    <tr class="bg-slate-900/30">
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm border-b border-slate-800" dir="ltr">8:30 – 8:45</td>
-                        <td colspan="5" class="px-4 py-4 border-b border-slate-800">
-                            <div class="inline-flex flex-col items-center gap-2">
-                                <div class="text-sm md:text-base font-black text-amber-200">تسجيل الدخول وتنظيم المجموعات</div>
-                                <div class="text-[11px] text-slate-400 font-bold">استقبال الطلاب – تسجيل الحضور – توزيع المجموعات – التوجيه لنقطة الانطلاق</div>
+                <tbody class="divide-y divide-slate-800/40">
+                    <!-- 8:00 - 9:00 -->
+                    <tr class="bg-amber-500/5">
+                        <td class="px-4 py-4 font-mono text-amber-400 text-xs font-bold border-l border-amber-500/20">8:00 – 9:00</td>
+                        <td colspan="9" class="px-4 py-4">
+                            <div class="flex flex-col items-center">
+                                <div class="text-sm font-black text-amber-200">📋 تسجيل الدخول وتنظيم المجموعات</div>
+                                <div class="text-[10px] text-slate-400 font-bold mt-1">استقبال – مسح QR – توزيع الطلاب على المجموعات – التوجيه للقاعات</div>
                             </div>
                         </td>
                     </tr>
 
+                    <!-- 9:00 - 9:55 -->
                     <tr>
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">8:45 – 9:30</td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Python Programming Basics</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Journey in The World of Games</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">From Idea To Design</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Robotics World</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
-                            </div>
-                        </td>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">9:00 – 9:55</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">💡 THINK OUTSIDE THE BOX</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">🗣️ Comm. Skills</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">🎨 Idea To Design</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">🤖 Robotics World</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">👤 Personality</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">🐍 Python Basics</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">🎮 Games World</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">🧠 Costly Mind</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-blue-300 bg-blue-500/5 border-x border-blue-500/10">🔑 KeyLeader</td>
                     </tr>
 
-                    <tr class="bg-slate-950/30">
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">9:30 – 9:35</td>
-                        <td colspan="5" class="px-4 py-4 text-slate-400 font-bold italic">فترة راحة وانتقال (5 دقائق)</td>
-                    </tr>
-
+                    <!-- 9:55 - 10:40 (Mixed) -->
                     <tr>
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">9:35 – 10:20</td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Journey in The World of Games</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">From Idea To Design</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Robotics World</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Python Programming Basics</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
-                            </div>
-                        </td>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">9:55 – 10:40</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي<br><span class="text-[9px] opacity-60">(9:55-10:40)</span></td>
+                        <td colspan="6" class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 فترة انتقال لورشة (2)</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي<br><span class="text-[9px] opacity-60">(9:55-10:40)</span></td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي<br><span class="text-[9px] opacity-60">(9:55-10:40)</span></td>
                     </tr>
 
-                    <tr class="bg-slate-950/30">
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">10:20 – 10:25</td>
-                        <td colspan="5" class="px-4 py-4 text-slate-400 font-bold italic">فترة راحة وانتقال (5 دقائق)</td>
-                    </tr>
-
+                    <!-- 10:05 - 11:00 (WS 2 Start) -->
                     <tr>
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">10:25 – 11:10</td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">From Idea To Design</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Robotics World</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Python Programming Basics</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Journey in The World of Games</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
-                            </div>
-                        </td>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">10:05 – 11:00</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">🎨 Idea To Design</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">🤖 Robotics World</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">👤 Personality</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">🐍 Python Basics</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">🧠 Costly Mind</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">🔑 KeyLeader</td>
                     </tr>
 
-                    <tr class="bg-amber-500/10">
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm border-t border-amber-500/10" dir="ltr">11:10 – 11:55</td>
-                        <td colspan="5" class="px-4 py-4 border-t border-amber-500/10">
-                            <div class="inline-flex flex-col items-center gap-2">
-                                <div class="text-sm md:text-base font-black text-amber-200">فترة الألعاب والنشاط الترفيهي</div>
-                                <div class="text-[11px] text-slate-300 font-bold">ألعاب جماعية – مسابقات خفيفة – نشاط حركي – استراحة مياه</div>
-                            </div>
-                        </td>
-                    </tr>
-
+                    <!-- Transitions -->
                     <tr>
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">11:55 – 12:40</td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Robotics World</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Python Programming Basics</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Journey in The World of Games</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">From Idea To Design</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
-                            </div>
-                        </td>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">10:40 – 10:50</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (2)</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (2)</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (2)</td>
                     </tr>
 
-                    <tr class="bg-slate-950/30">
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">12:40 – 12:45</td>
-                        <td colspan="5" class="px-4 py-4 text-slate-400 font-bold italic">فترة راحة وانتقال (5 دقائق)</td>
-                    </tr>
-
+                    <!-- 10:50 - 11:45 -->
                     <tr>
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm" dir="ltr">12:45 – 1:30</td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Cheap Dopamine, Costly Mind</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 5</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Python Programming Basics</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 1</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Journey in The World of Games</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 2</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">From Idea To Design</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 3</div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="inline-flex flex-col items-center gap-1">
-                                <div class="font-black text-slate-100">Robotics World</div>
-                                <div class="text-[11px] text-slate-400 font-bold">القاعة 4</div>
-                            </div>
-                        </td>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">10:50 – 11:45</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">🗣️ Comm. Skills</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">🎮 Games World</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-emerald-300 bg-emerald-500/5 border-x border-emerald-500/10">💡 THINK OUTSIDE THE BOX</td>
                     </tr>
 
-                    <tr class="bg-amber-500/10">
-                        <td class="px-4 py-4 font-mono text-slate-300 text-xs md:text-sm border-t border-amber-500/10" dir="ltr">1:30 – 2:00</td>
-                        <td colspan="5" class="px-4 py-4 border-t border-amber-500/10">
-                            <div class="inline-flex flex-col items-center gap-2">
-                                <div class="text-sm md:text-base font-black text-amber-200">الختام</div>
-                                <div class="text-[11px] text-slate-300 font-bold">تجميع الطلاب – كلمة قصيرة – شكر المنظمين والمحاضرين – صورة جماعية – خروج منظم</div>
+                    <!-- 11:00 - 11:45 (Mixed Activity) -->
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">11:00 – 11:45</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي<br><span class="text-[9px] opacity-60">(11:00-11:45)</span></td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي<br><span class="text-[9px] opacity-60">(11:00-11:45)</span></td>
+                        <td colspan="3" class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 فترة انتقال لورشة (3)</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي<br><span class="text-[9px] opacity-60">(11:00-11:45)</span></td>
+                    </tr>
+
+                    <!-- 11:10 - 12:05 (WS 3 Start) -->
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">11:10 – 12:05</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">🧠 Costly Mind</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">🎮 Games World</td>
+                        <td rowspan="3" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">🎨 Idea To Design</td>
+                    </tr>
+
+                    <!-- Transitions -->
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">11:45 – 11:55</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (3)</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (3)</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (3)</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (3)</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (3)</td>
+                        <td class="px-2 py-2 text-[10px] italic text-slate-500 bg-slate-800/20">🔄 انتقال (3)</td>
+                    </tr>
+
+                    <!-- 11:55 - 12:50 -->
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">11:55 – 12:50</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">🎨 Idea To Design</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">👤 Personality</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">🐍 Python Basics</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">🤖 Robotics World</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">🔑 KeyLeader</td>
+                        <td rowspan="2" class="px-2 py-4 text-[11px] font-bold text-violet-300 bg-violet-500/5 border-x border-violet-500/10">🗣️ Comm. Skills</td>
+                    </tr>
+
+                    <!-- 12:05 - 12:50 (Mixed Activity) -->
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">12:05 – 12:50</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-amber-400 bg-amber-500/10 border-x border-amber-500/20">🏃‍♂️ نشاط ترفيهي</td>
+                    </tr>
+
+                    <!-- 12:50 - 1:00 -->
+                    <tr class="bg-slate-900/40">
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">12:50 – 1:00</td>
+                        <td colspan="9" class="px-4 py-3 text-[11px] italic text-cyan-400 font-bold">🏁 تجميع الطلاب وانتقال للورشة الأخيرة (4)</td>
+                    </tr>
+
+                    <!-- 1:00 - 1:55 (WS 4) -->
+                    <tr>
+                        <td class="px-4 py-4 font-mono text-slate-400 text-xs font-bold">1:00 – 1:55</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">🤖 Robotics World</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">👤 Personality</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">🎮 Games World</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">🔑 KeyLeader</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">🧠 Costly Mind</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">💡 THINK OUTSIDE THE BOX</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">🗣️ Comm. Skills</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">🐍 Python Basics</td>
+                        <td class="px-2 py-4 text-[11px] font-bold text-rose-300 bg-rose-500/5 border-x border-rose-500/10">🎨 Idea To Design</td>
+                    </tr>
+
+                    <!-- 1:55 - 2:15 -->
+                    <tr class="bg-amber-500/5">
+                        <td class="px-4 py-4 font-mono text-amber-400 text-xs font-bold border-l border-amber-500/20">1:55 – 2:15</td>
+                        <td colspan="9" class="px-4 py-4">
+                            <div class="flex flex-col items-center">
+                                <div class="text-sm font-black text-amber-200">✨ الخاتمة والختام</div>
+                                <div class="text-[10px] text-slate-400 font-bold mt-1">كلمة ختامية – شكر الحضور – صورة جماعية – إعلان نهاية اليوم</div>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
+
+        <!-- Legend -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-6">
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <div class="w-3 h-3 rounded bg-blue-500"></div>
+                <span class="text-[10px] font-bold text-blue-300">الورشة 1</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <div class="w-3 h-3 rounded bg-emerald-500"></div>
+                <span class="text-[10px] font-bold text-emerald-300">الورشة 2</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
+                <div class="w-3 h-3 rounded bg-violet-500"></div>
+                <span class="text-[10px] font-bold text-violet-300">الورشة 3</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                <div class="w-3 h-3 rounded bg-rose-500"></div>
+                <span class="text-[10px] font-bold text-rose-300">الورشة 4</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div class="w-3 h-3 rounded bg-amber-500"></div>
+                <span class="text-[10px] font-bold text-amber-300">نشاط ترفيهي</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                <div class="w-3 h-3 rounded bg-slate-600"></div>
+                <span class="text-[10px] font-bold text-slate-400">فترة انتقال</span>
+            </div>
+        </div>
     </div>
-    {% endif %}
 </div>
 
 <style>
