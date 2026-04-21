@@ -2752,7 +2752,8 @@ def admin_schedule_random_assign(request):
     if request.method != 'POST':
         return redirect('dashboard:admin_schedule')
     current_event = Event.get_current()
-    workshops = list(Workshop.objects.filter(Q(event=current_event) | Q(event__isnull=True)))
+    # جلب كافة الورش المتاحة في النظام لضمان توزيعها بشكل صحيح
+    workshops = list(Workshop.objects.all())
     groups = list(Group.objects.filter(event=current_event))
     if not workshops or not groups:
         messages.error(request, 'يجب إضافة الورش والمجموعات أولًا قبل التوزيع التلقائي.')
@@ -2795,7 +2796,8 @@ def admin_session_create(request):
     if not require_admin(request.user):
         return HttpResponseForbidden()
     current_event = Event.get_current()
-    workshops = Workshop.objects.filter(Q(event=current_event) | Q(event__isnull=True))
+    # جلب كافة الورش المتاحة في النظام لضمان ظهورها جميعاً في القائمة
+    workshops = Workshop.objects.all()
     groups = Group.objects.filter(event=current_event)
     session = WorkshopSession()
     group_id_initial = request.GET.get('group') or ''
@@ -2875,7 +2877,8 @@ def admin_session_update(request, pk):
         return HttpResponseForbidden()
     session = get_object_or_404(WorkshopSession, pk=pk)
     current_event = Event.get_current()
-    workshops = Workshop.objects.filter(Q(event=current_event) | Q(event__isnull=True))
+    # جلب كافة الورش المتاحة في النظام لضمان ظهورها جميعاً في القائمة
+    workshops = Workshop.objects.all()
     groups = Group.objects.filter(event=current_event)
     if request.method == 'POST':
         workshop_id = request.POST.get('workshop') or ''
