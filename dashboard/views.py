@@ -2760,14 +2760,16 @@ def admin_schedule_random_assign(request):
     WorkshopSession.objects.filter(group__event=current_event).delete()
     
     # الفترات التي يتم فيها توزيع ورش فعلياً
-    workshop_periods = ['8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30']
+    workshop_periods = ['9:00-9:55', '10:05-10:40', '10:50-11:00', '11:10-11:45', '11:55-12:05', '12:05-12:50', '1:00-1:55']
     
     period_time_map = {
-        '8:45-9:30': (time(8, 45), time(9, 30)),
-        '9:35-10:20': (time(9, 35), time(10, 20)),
-        '10:25-11:10': (time(10, 25), time(11, 10)),
-        '11:55-12:40': (time(11, 55), time(12, 40)),
-        '12:45-1:30': (time(12, 45), time(13, 30)),
+        '9:00-9:55': (time(9, 0), time(9, 55)),
+        '10:05-10:40': (time(10, 5), time(10, 40)),
+        '10:50-11:00': (time(10, 50), time(11, 0)),
+        '11:10-11:45': (time(11, 10), time(11, 45)),
+        '11:55-12:05': (time(11, 55), time(12, 5)),
+        '12:05-12:50': (time(12, 5), time(12, 50)),
+        '1:00-1:55': (time(13, 0), time(13, 55)),
     }
     
     groups_sorted = sorted(groups, key=lambda g: g.code)
@@ -2815,7 +2817,9 @@ def admin_session_create(request):
         session.period = period or session.period
         session.start_time = start_time or session.start_time
         session.end_time = end_time or session.end_time
-        allowed_workshop_periods = {'8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30'}
+        allowed_workshop_periods = {
+            '9:00-9:55', '10:05-10:40', '10:50-11:00', '11:10-11:45', '11:55-12:05', '12:05-12:50', '1:00-1:55'
+        }
         if period and period not in allowed_workshop_periods:
             messages.error(request, 'هذه الفترة ليست فترة ورش، لا يمكن إنشاء جلسة لها.')
         elif not workshop or not group or not period or not start_time or not end_time:
@@ -2845,7 +2849,7 @@ def admin_session_create(request):
     period_choices = [
         (v, l)
         for v, l in WorkshopSession.PERIOD_CHOICES
-        if v in {'8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30'}
+        if v in {'9:00-9:55', '10:05-10:40', '10:50-11:00', '11:10-11:45', '11:55-12:05', '12:05-12:50', '1:00-1:55'}
     ]
     return render(
         request,
@@ -2879,7 +2883,9 @@ def admin_session_update(request, pk):
         period = request.POST.get('period') or session.period
         start_time = request.POST.get('start_time') or session.start_time
         end_time = request.POST.get('end_time') or session.end_time
-        allowed_workshop_periods = {'8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30'}
+        allowed_workshop_periods = {
+            '9:00-9:55', '10:05-10:40', '10:50-11:00', '11:10-11:45', '11:55-12:05', '12:05-12:50', '1:00-1:55'
+        }
         if period and period not in allowed_workshop_periods:
             messages.error(request, 'هذه الفترة ليست فترة ورش، لا يمكن إنشاء جلسة لها.')
             return redirect('dashboard:admin_session_update', pk=session.pk)
@@ -2895,7 +2901,7 @@ def admin_session_update(request, pk):
     period_choices = [
         (v, l)
         for v, l in WorkshopSession.PERIOD_CHOICES
-        if v in {'8:45-9:30', '9:35-10:20', '10:25-11:10', '11:55-12:40', '12:45-1:30'}
+        if v in {'9:00-9:55', '10:05-10:40', '10:50-11:00', '11:10-11:45', '11:55-12:05', '12:05-12:50', '1:00-1:55'}
     ]
     return render(
         request,
