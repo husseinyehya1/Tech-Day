@@ -8,7 +8,7 @@ import tempfile
 import shutil
 import mimetypes
 from urllib.parse import unquote
-import time
+import time as time_module
 import smtplib
 import ssl
 from django.conf import settings
@@ -5058,7 +5058,7 @@ def admin_smtp_diagnose(request):
     user = getattr(settings, 'EMAIL_HOST_USER', '') or ''
     has_password = bool(getattr(settings, 'EMAIL_HOST_PASSWORD', '') or '')
 
-    started = time.monotonic()
+    started = time_module.monotonic()
     try:
         # Create a more robust SSL context
         try:
@@ -5082,7 +5082,7 @@ def admin_smtp_diagnose(request):
         if user and has_password:
             server.login(user, settings.EMAIL_HOST_PASSWORD)
         server.quit()
-        elapsed_ms = int((time.monotonic() - started) * 1000)
+        elapsed_ms = int((time_module.monotonic() - started) * 1000)
         return JsonResponse(
             {
                 'ok': True,
@@ -5096,7 +5096,7 @@ def admin_smtp_diagnose(request):
             }
         )
     except Exception as e:
-        elapsed_ms = int((time.monotonic() - started) * 1000)
+        elapsed_ms = int((time_module.monotonic() - started) * 1000)
         return JsonResponse(
             {
                 'ok': False,
