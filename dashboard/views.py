@@ -2768,7 +2768,11 @@ def admin_schedule(request):
             session = None
             for s in sessions:
                 if s.group_id == group.id:
-                    # شرط التداخل: (بداية الجلسة قبل نهاية الفترة) وَ (نهاية الجلسة بعد بداية الفترة)
+                    # محاولة المطابقة أولاً عبر مفتاح الفترة (أكثر دقة في الحالات العادية)
+                    if s.period == period['value']:
+                        session = s
+                        break
+                    # fallback: شرط التداخل الزمني (للمرونة مع الورش الممتدة)
                     if s.start_time < period['end'] and s.end_time > period['start']:
                         session = s
                         break
@@ -2885,44 +2889,54 @@ def admin_session_create(request):
         workshop_id = request.POST.get('workshop') or ''
         group_id = request.POST.get('group') or ''
         period = request.POST.get('period') or ''
+        # دالة مساعدة لضبط الوقت (تحويل 1:00 إلى 13:00)
+        def normalize_time(t_str):
+            if not t_str: return None
+            try:
+                # إذا كان مدخل الوقت يحتوي على AM/PM أو بصيغة 24 ساعة
+                if isinstance(t_str, time): return t_str
+                parts = str(t_str).replace(' ', '').split(':')
+                h = int(parts[0])
+                m = int(parts[1][:2])
+                # تصحيح الساعات: أي ساعة أقل من 8 نعتبرها PM (مساءً)
+                if h < 8: h += 12
+                return time(h, m)
+            except: return None
+
+        period = (request.POST.get('period') or '').strip()
         start_time = request.POST.get('start_time') or ''
         end_time = request.POST.get('end_time') or ''
-        workshop = workshops.filter(id=workshop_id).first()
-        group = groups.filter(id=group_id).first()
-        session.workshop = workshop or session.workshop
-        session.group = group or session.group
-        session.period = period or session.period
-        session.start_time = start_time or session.start_time
-        session.end_time = end_time or session.end_time
-        allowed_workshop_periods = {
-            '9:00-9:55', '10:05-10:40', '10:50-11:00', '11:10-11:45', 
-            '11:55-12:05', '12:05-12:50', '1:00-1:55'
-        }
-        if period and period not in allowed_workshop_periods:
-            messages.error(request, 'هذه الفترة ليست فترة ورش، لا يمكن إنشاء جلسة لها.')
-        elif not workshop or not group or not period or not start_time or not end_time:
+        
+        start_time_obj = normalize_time(start_time)
+        end_time_obj = normalize_time(end_time)
+
+        # جلب كافة المفاتيح المتاحة للفترات لتجنب الأخطاء الإملائية
+        valid_periods = {v for v, l in WorkshopSession.PERIOD_CHOICES}
+        
+        if period and period not in valid_periods:
+            messages.error(request, 'الفترة الزمنية المختارة غير صالحة.')
+        elif not workshop or not group or not period or not start_time_obj or not end_time_obj:
             messages.error(request, 'يرجى ملء جميع الحقول المطلوبة قبل حفظ الجلسة.')
         else:
-            existing_session, created = WorkshopSession.objects.get_or_create(
-                group=group,
-                period=period,
-                defaults={
-                    'workshop': workshop,
-                    'start_time': start_time,
-                    'end_time': end_time,
-                },
-            )
-            if not created:
+            # التأكد من عدم تكرار الجلسة لنفس المجموعة والفترة
+            existing_session = WorkshopSession.objects.filter(group=group, period=period).first()
+            if existing_session:
                 existing_session.workshop = workshop
-                existing_session.start_time = start_time
-                existing_session.end_time = end_time
+                existing_session.start_time = start_time_obj
+                existing_session.end_time = end_time_obj
                 existing_session.save()
+            else:
+                WorkshopSession.objects.create(
+                    group=group,
+                    period=period,
+                    workshop=workshop,
+                    start_time=start_time_obj,
+                    end_time=end_time_obj,
+                )
             AdminLog.objects.create(
-                action='تم إنشاء جلسة جديدة في الجدول الزمني'
-                if created
-                else 'تم تعديل جلسة في الجدول الزمني'
+                action=f'تم حفظ جلسة ورشة للمجموعة {group.name} في فترة {period}'
             )
-            messages.success(request, 'تم حفظ الجلسة في الجدول الزمني.')
+            messages.success(request, 'تم حفظ الجلسة في الجدول الزمني بنجاح.')
             return redirect('dashboard:admin_schedule')
     period_choices = [
         (v, l)
@@ -2965,20 +2979,40 @@ def admin_session_update(request, pk):
         period = request.POST.get('period') or session.period
         start_time = request.POST.get('start_time') or session.start_time
         end_time = request.POST.get('end_time') or session.end_time
-        allowed_workshop_periods = {
-            '9:00-9:55', '10:05-10:40', '10:50-11:00', '11:10-11:45', '11:55-12:05', '12:05-12:50', '1:00-1:55'
-        }
-        if period and period not in allowed_workshop_periods:
-            messages.error(request, 'هذه الفترة ليست فترة ورش، لا يمكن إنشاء جلسة لها.')
+        # دالة مساعدة لضبط الوقت (تحويل 1:00 إلى 13:00)
+        def normalize_time(t_str):
+            if not t_str: return None
+            if isinstance(t_str, time): return t_str
+            try:
+                parts = str(t_str).replace(' ', '').split(':')
+                h = int(parts[0])
+                m = int(parts[1][:2])
+                # تصحيح الساعات: أي ساعة أقل من 8 نعتبرها PM (مساءً)
+                if h < 8: h += 12
+                return time(h, m)
+            except: return None
+
+        period = (request.POST.get('period') or '').strip()
+        start_time = request.POST.get('start_time') or ''
+        end_time = request.POST.get('end_time') or ''
+        
+        start_time_obj = normalize_time(start_time)
+        end_time_obj = normalize_time(end_time)
+
+        valid_periods = {v for v, l in WorkshopSession.PERIOD_CHOICES}
+        
+        if period and period not in valid_periods:
+            messages.error(request, 'الفترة الزمنية المختارة غير صالحة.')
             return redirect('dashboard:admin_session_update', pk=session.pk)
+
         session.workshop = workshops.filter(id=workshop_id).first() if workshop_id else session.workshop
         session.group = groups.filter(id=group_id).first() if group_id else session.group
-        session.period = period
-        session.start_time = start_time
-        session.end_time = end_time
+        session.period = period or session.period
+        session.start_time = start_time_obj or session.start_time
+        session.end_time = end_time_obj or session.end_time
         session.save()
-        AdminLog.objects.create(action='تم تعديل جلسة في الجدول الزمني')
-        messages.success(request, 'تم تعديل الجلسة')
+        AdminLog.objects.create(action=f'تم تعديل جلسة للمجموعة {session.group.name} في فترة {session.period}')
+        messages.success(request, 'تم تعديل الجلسة بنجاح')
         return redirect('dashboard:admin_schedule')
     period_choices = [
         (v, l)

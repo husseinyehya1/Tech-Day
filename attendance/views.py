@@ -672,7 +672,8 @@ def volunteer_schedule(request):
     for period in period_definitions:
         period_sessions = []
         for s in sessions:
-            if s.start_time < period['end'] and s.end_time > period['start']:
+            # محاولة المطابقة عبر المفتاح أو التداخل الزمني
+            if s.period == period['value'] or (s.start_time < period['end'] and s.end_time > period['start']):
                 period_sessions.append(s)
         
         if period_sessions:

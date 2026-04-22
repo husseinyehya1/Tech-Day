@@ -431,6 +431,11 @@ def public_screen_view(request):
             session = None
             for s in sessions:
                 if s.group_id == group.id:
+                    # محاولة المطابقة أولاً عبر مفتاح الفترة
+                    if s.period == period['value']:
+                        session = s
+                        break
+                    # fallback: شرط التداخل الزمني
                     if s.start_time < period['end'] and s.end_time > period['start']:
                         session = s
                         break
