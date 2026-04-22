@@ -2888,7 +2888,10 @@ def admin_session_create(request):
     if request.method == 'POST':
         workshop_id = request.POST.get('workshop') or ''
         group_id = request.POST.get('group') or ''
-        period = request.POST.get('period') or ''
+        
+        workshop = workshops.filter(id=workshop_id).first()
+        group = groups.filter(id=group_id).first()
+
         # دالة مساعدة لضبط الوقت (تحويل 1:00 إلى 13:00)
         def normalize_time(t_str):
             if not t_str: return None
@@ -2976,9 +2979,7 @@ def admin_session_update(request, pk):
     if request.method == 'POST':
         workshop_id = request.POST.get('workshop') or ''
         group_id = request.POST.get('group') or ''
-        period = request.POST.get('period') or session.period
-        start_time = request.POST.get('start_time') or session.start_time
-        end_time = request.POST.get('end_time') or session.end_time
+        
         # دالة مساعدة لضبط الوقت (تحويل 1:00 إلى 13:00)
         def normalize_time(t_str):
             if not t_str: return None
@@ -3005,11 +3006,16 @@ def admin_session_update(request, pk):
             messages.error(request, 'الفترة الزمنية المختارة غير صالحة.')
             return redirect('dashboard:admin_session_update', pk=session.pk)
 
-        session.workshop = workshops.filter(id=workshop_id).first() if workshop_id else session.workshop
-        session.group = groups.filter(id=group_id).first() if group_id else session.group
-        session.period = period or session.period
-        session.start_time = start_time_obj or session.start_time
-        session.end_time = end_time_obj or session.end_time
+        # تحديث بيانات الجلسة
+        new_workshop = workshops.filter(id=workshop_id).first()
+        new_group = groups.filter(id=group_id).first()
+        
+        if new_workshop: session.workshop = new_workshop
+        if new_group: session.group = new_group
+        if period: session.period = period
+        if start_time_obj: session.start_time = start_time_obj
+        if end_time_obj: session.end_time = end_time_obj
+        
         session.save()
         AdminLog.objects.create(action=f'تم تعديل جلسة للمجموعة {session.group.name} في فترة {session.period}')
         messages.success(request, 'تم تعديل الجلسة بنجاح')
