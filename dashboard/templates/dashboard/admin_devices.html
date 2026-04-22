@@ -1,0 +1,236 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}إدارة الأجهزة{% endblock %}
+
+{% block page %}
+<div class="space-y-6">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+    <div class="flex items-center gap-4">
+      <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+        <i data-lucide="tablet-smartphone" class="w-8 h-8"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-black text-slate-100">إدارة الأجهزة</h1>
+        <p class="text-sm text-slate-400 font-medium">متابعة أجهزة التطبيق + الحظر/إلغاء الحظر + تعطيل الإشعارات</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-bold text-slate-400">
+        الإجمالي: <span class="text-cyan-400">{{ total_count }}</span>
+      </div>
+      <div class="px-4 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-slate-200">
+        مسموح: <span class="text-emerald-400">{{ allowed_count }}</span>
+      </div>
+      <div class="px-4 py-2 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-[11px] font-bold text-slate-200">
+        محظور: <span class="text-rose-400">{{ banned_count }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+    <form method="get" class="flex flex-1 items-center gap-2">
+      <input type="hidden" name="status" value="{{ status }}">
+      <input name="q" value="{{ q }}" placeholder="بحث (device_id / اسم الجهاز / موديل / مستخدم)"
+             class="flex-1 px-4 py-3 rounded-2xl bg-slate-900/40 border border-slate-800 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/40 transition-all">
+      <button type="submit"
+              class="px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-black transition-all">
+        بحث
+      </button>
+    </form>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'dashboard:admin_devices' %}?status=all&q={{ q }}"
+         class="px-4 py-3 rounded-2xl border text-[11px] font-black transition-all {% if status == 'all' %}bg-cyan-500 text-slate-950 border-cyan-400{% else %}bg-slate-900/40 text-slate-300 border-slate-800 hover:bg-slate-800/50{% endif %}">
+        الكل
+      </a>
+      <a href="{% url 'dashboard:admin_devices' %}?status=allowed&q={{ q }}"
+         class="px-4 py-3 rounded-2xl border text-[11px] font-black transition-all {% if status == 'allowed' %}bg-emerald-500 text-slate-950 border-emerald-400{% else %}bg-slate-900/40 text-slate-300 border-slate-800 hover:bg-slate-800/50{% endif %}">
+        مسموح
+      </a>
+      <a href="{% url 'dashboard:admin_devices' %}?status=banned&q={{ q }}"
+         class="px-4 py-3 rounded-2xl border text-[11px] font-black transition-all {% if status == 'banned' %}bg-rose-500 text-slate-950 border-rose-400{% else %}bg-slate-900/40 text-slate-300 border-slate-800 hover:bg-slate-800/50{% endif %}">
+        محظور
+      </a>
+    </div>
+  </div>
+
+  <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-right">
+        <thead class="bg-slate-800/30 text-slate-500 text-[10px] uppercase tracking-wider font-bold border-b border-slate-800">
+          <tr>
+            <th class="px-6 py-4">الجهاز</th>
+            <th class="px-6 py-4">المستخدم</th>
+            <th class="px-6 py-4">النظام</th>
+            <th class="px-6 py-4">التطبيق</th>
+            <th class="px-6 py-4">البطارية</th>
+            <th class="px-6 py-4">آخر ظهور</th>
+            <th class="px-6 py-4">الإشعارات</th>
+            <th class="px-6 py-4">الحالة</th>
+            <th class="px-6 py-4 text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800">
+          {% for d in devices %}
+          <tr class="hover:bg-slate-800/30 transition-colors">
+            <td class="px-6 py-4">
+              <div class="font-black text-slate-100">{{ d.name|default:"—" }}</div>
+              <div class="text-[10px] text-slate-500 font-mono mt-1">{{ d.device_id }}</div>
+              {% if d.fcm_token_short %}
+              <div class="text-[10px] text-slate-500 font-mono mt-1">{{ d.fcm_token_short }}</div>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              {% if d.user %}
+              <div class="font-bold text-slate-200">{{ d.user.username }}</div>
+              <div class="text-[10px] text-slate-500">{{ d.user.email|default:"—" }}</div>
+              {% else %}
+              <div class="text-slate-600 font-bold">غير مرتبط</div>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-bold text-slate-200">{{ d.platform|default:"—" }}</div>
+              <div class="text-[10px] text-slate-500">{{ d.os_version|default:"—" }}</div>
+              <div class="text-[10px] text-slate-500">{{ d.manufacturer|default:"" }} {{ d.device_model|default:"" }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-mono text-[11px] text-slate-300">{{ d.app_version|default:"—" }}</div>
+              <div class="text-[10px] text-slate-500">Build {{ d.build_number|default:"—" }}</div>
+            </td>
+            <td class="px-6 py-4">
+              {% if d.battery_level is not None %}
+              <div class="font-black text-slate-200">{{ d.battery_level }}%</div>
+              {% else %}
+              <div class="text-slate-600 font-bold">—</div>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-[11px] font-mono text-slate-400">{{ d.last_seen_at|date:"Y-m-d H:i" }}</div>
+            </td>
+            <td class="px-6 py-4">
+              {% if d.fcm_device_id %}
+                {% if d.fcm_active %}
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> مفعلة
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-black border border-slate-700">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> متوقفة
+                </span>
+                {% endif %}
+              {% else %}
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 text-slate-600 text-[10px] font-black border border-slate-800">
+                  غير مرتبطة
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              {% if d.is_banned %}
+              <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-black border border-rose-500/20">
+                محظور
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">
+                مسموح
+              </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center justify-center gap-2">
+                <a href="{% url 'dashboard:admin_device_detail' d.pk %}"
+                   class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all border border-slate-700"
+                   title="تفاصيل">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </a>
+
+                {% if d.is_banned %}
+                <form method="post" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="unban">
+                  <input type="hidden" name="device_pk" value="{{ d.pk }}">
+                  <button type="submit"
+                          class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all border border-emerald-500/20"
+                          title="إلغاء الحظر">
+                    <i data-lucide="unlock" class="w-4 h-4"></i>
+                  </button>
+                </form>
+                {% else %}
+                <form method="post" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="ban">
+                  <input type="hidden" name="device_pk" value="{{ d.pk }}">
+                  <button type="submit"
+                          class="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-slate-950 transition-all border border-rose-500/20"
+                          title="حظر">
+                    <i data-lucide="ban" class="w-4 h-4"></i>
+                  </button>
+                </form>
+                {% endif %}
+
+                {% if d.fcm_device_id and not d.is_banned %}
+                  {% if d.fcm_active %}
+                  <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="disable_notifications">
+                    <input type="hidden" name="device_pk" value="{{ d.pk }}">
+                    <button type="submit"
+                            class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all border border-slate-700"
+                            title="تعطيل الإشعارات">
+                      <i data-lucide="bell-off" class="w-4 h-4"></i>
+                    </button>
+                  </form>
+                  {% else %}
+                  <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="enable_notifications">
+                    <input type="hidden" name="device_pk" value="{{ d.pk }}">
+                    <button type="submit"
+                            class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all border border-slate-700"
+                            title="تفعيل الإشعارات">
+                      <i data-lucide="bell" class="w-4 h-4"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="px-6 py-12 text-center space-y-3">
+              <div class="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto text-slate-600">
+                <i data-lucide="inbox" class="w-8 h-8"></i>
+              </div>
+              <div class="text-slate-500 font-bold">لا توجد أجهزة مطابقة</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if devices.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between gap-3 pt-2">
+    <div class="text-[11px] text-slate-500 font-bold">
+      صفحة {{ devices.number }} من {{ devices.paginator.num_pages }}
+    </div>
+    <div class="flex items-center gap-2">
+      {% if devices.has_previous %}
+      <a href="?status={{ status }}&q={{ q }}&page={{ devices.previous_page_number }}"
+         class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+        السابق
+      </a>
+      {% endif %}
+      {% if devices.has_next %}
+      <a href="?status={{ status }}&q={{ q }}&page={{ devices.next_page_number }}"
+         class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+        التالي
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+<script>lucide.createIcons();</script>
+{% endblock %}
+

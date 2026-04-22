@@ -1,0 +1,16 @@
+.env
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+tech_day_mobile/
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.vscode/
+.idea/
+*.log

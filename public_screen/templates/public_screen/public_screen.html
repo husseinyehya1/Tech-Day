@@ -1,0 +1,746 @@
+{% extends "base.html" %}
+
+{% block title %}شاشة العرض العامة - Tech Day{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 640px) {
+        .backdrop-blur,
+        .backdrop-blur-sm,
+        .backdrop-blur-xl {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+        }
+        .transition-all,
+        .duration-500,
+        .duration-300,
+        .duration-200 {
+            transition: none !important;
+            animation: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] max-w-7xl mx-auto w-full px-3 sm:px-4 lg:px-6 flex flex-col gap-5">
+    <!-- Header with Logos and Text -->
+    <div class="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-5 sm:p-6 shadow-2xl shadow-black/20 backdrop-blur-xl">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+            <!-- Logos -->
+            <div class="flex items-center gap-4">
+                <img src="/static/Ministry_of_Education_(Egypt)_logo.webp" alt="وزارة التربية والتعليم" class="h-14 sm:h-16 md:h-20 w-auto bg-white rounded-full p-1 shadow-lg">
+                <img src="/static/edutech-logo.webp" alt="الفريق التقني" class="h-14 sm:h-16 md:h-20 w-auto bg-white rounded-full p-1 shadow-lg">
+            </div>
+            
+            <!-- Text Content -->
+            <div class="text-center md:text-right flex-1">
+                <h1 class="text-xl md:text-2xl font-bold text-slate-50 mb-2">مديرية التربية والتعليم بالقليوبية</h1>
+                <h2 class="text-lg md:text-xl font-semibold text-cyan-400 mb-2">متمثلة في الفريق التقني بالقليوبية</h2>
+                <p class="text-base md:text-lg text-slate-300">في إدارة غرب شبرا التعليمية</p>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="public-registration-card" class="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-4 sm:p-6 shadow-2xl shadow-black/15 backdrop-blur-xl">
+        {% if event.is_finished %}
+        <div class="space-y-12 py-6">
+            <!-- Hero Section -->
+            <div class="text-center relative py-10">
+                <div class="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent rounded-3xl -z-10"></div>
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-slate-950 border border-cyan-500/30 text-cyan-400 mb-6 rotate-3 hover:rotate-0 transition-transform duration-500 shadow-2xl shadow-cyan-500/10">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h2 class="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">حصاد فعالية {{ event.name }}</h2>
+                <p class="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed px-4">
+                    انتهت رحلتنا التقنية لهذا اليوم، لكن أثرها مستمر. شكراً لكل المبدعين الذين جعلوا هذا اليوم استثنائياً.
+                </p>
+            </div>
+
+            <!-- Impact Stats Grid -->
+            <div class="grid gap-6 md:grid-cols-4 px-2">
+                <div class="relative overflow-hidden bg-slate-950/40 border border-slate-800 p-6 rounded-3xl transition-all hover:border-cyan-500/50 group">
+                    <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg class="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                    </div>
+                    <div class="text-3xl font-black text-white mb-1">{{ total_students }}</div>
+                    <div class="text-xs text-slate-500 font-bold uppercase tracking-widest">طالب مسجل</div>
+                </div>
+                <div class="relative overflow-hidden bg-slate-950/40 border border-slate-800 p-6 rounded-3xl transition-all hover:border-emerald-500/50 group">
+                    <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg class="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                    </div>
+                    <div class="text-3xl font-black text-emerald-400 mb-1">{{ total_present }}</div>
+                    <div class="text-xs text-slate-500 font-bold uppercase tracking-widest">حضور فعلي</div>
+                </div>
+                <div class="relative overflow-hidden bg-slate-950/40 border border-slate-800 p-6 rounded-3xl transition-all hover:border-cyan-500/50 group">
+                    <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg class="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    </div>
+                    <div class="text-3xl font-black text-cyan-400 mb-1">{{ attendance_rate }}%</div>
+                    <div class="text-xs text-slate-500 font-bold uppercase tracking-widest">نسبة الالتزام</div>
+                </div>
+                <div class="relative overflow-hidden bg-slate-950/40 border border-slate-800 p-6 rounded-3xl transition-all hover:border-amber-500/50 group">
+                    <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg class="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </div>
+                    <div class="text-3xl font-black text-amber-400 mb-1">{{ best_groups.count }}</div>
+                    <div class="text-xs text-slate-500 font-bold uppercase tracking-widest">فريق مبدع</div>
+                </div>
+            </div>
+
+            <div class="grid gap-8 lg:grid-cols-2">
+                <!-- Top Groups & Students Section -->
+                <div class="space-y-6">
+                    <!-- Top Groups (Teams) -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                            <span class="w-2 h-8 bg-amber-500 rounded-full"></span>
+                            أفضل الفرق (ترتيب النقاط)
+                        </h3>
+                        <div class="space-y-4">
+                            {% for group in best_groups %}
+                            <div class="flex items-center gap-4 p-3 rounded-2xl bg-slate-950/50 border border-slate-800/50 hover:border-amber-500/30 transition-all">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg shadow-inner
+                                     {% if forloop.counter == 1 %}bg-amber-400 text-amber-950
+                                     {% elif forloop.counter == 2 %}bg-slate-300 text-slate-900
+                                     {% elif forloop.counter == 3 %}bg-amber-700 text-amber-50
+                                     {% else %}bg-slate-800 text-slate-400{% endif %}">
+                                    {{ forloop.counter }}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-slate-100">{{ group.name }}</div>
+                                    <div class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Team Code: {{ group.code }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-lg font-black text-amber-400">{{ group.points }}</div>
+                                    <div class="text-[9px] text-slate-600 font-bold uppercase">Points</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Top Rated Workshops -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                            <span class="w-2 h-8 bg-rose-500 rounded-full"></span>
+                            الورش الأكثر تميزاً (تقييم الطلاب)
+                        </h3>
+                        <div class="space-y-4">
+                            {% for workshop in top_workshops %}
+                            <div class="p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-bold text-slate-100">{{ workshop.title }}</span>
+                                    <div class="flex items-center gap-1 text-rose-400">
+                                        <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                        <span class="text-xs font-black">{{ workshop.avg_rating }}</span>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-rose-500 h-full" style="width: {{ workshop.rating_percent }}%"></div>
+                                </div>
+                                <div class="mt-2 text-[10px] text-slate-500 text-right">{{ workshop.feedback_count }} تقييم</div>
+                            </div>
+                            {% empty %}
+                            <p class="text-center py-4 text-slate-500 text-xs">لم يتم تسجيل تقييمات بعد</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis & Demographics -->
+                <div class="space-y-6">
+                    <!-- Top Students -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                            <span class="w-2 h-8 bg-cyan-500 rounded-full"></span>
+                            أبطال الفعالية (الأفراد)
+                        </h3>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            {% for student in top_points_students %}
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-950/30 border border-slate-800/40 group hover:bg-slate-900/50 transition-all">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-8 h-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 group-hover:text-cyan-400 transition-colors">
+                                        {{ forloop.counter }}
+                                    </div>
+                                    <div class="truncate">
+                                        <div class="text-xs font-bold text-slate-200 truncate">{{ student.name }}</div>
+                                        <div class="text-[9px] text-slate-500 truncate">{{ student.group.name|default:"مشارك حر" }}</div>
+                                    </div>
+                                </div>
+                                <div class="text-cyan-400 font-black text-sm ml-2">{{ student.points }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Education Admin Breakdown -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                            <span class="w-2 h-8 bg-emerald-500 rounded-full"></span>
+                            المشاركة حسب الإدارات
+                        </h3>
+                        <div class="space-y-4">
+                            {% for admin in stats_by_admin %}
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-2">
+                                    <span class="text-slate-300 font-medium">{{ admin.education_admin|default:"غير محدد" }}</span>
+                                    <span class="text-slate-500">{{ admin.checked_in_count }} حاضر من {{ admin.count }}</span>
+                                </div>
+                                <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                                    <div class="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full rounded-full transition-all duration-1000" 
+                                         style="width: {% widthratio admin.checked_in_count admin.count 100 %}%"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Grade Distribution Chips -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                            <span class="w-2 h-8 bg-violet-500 rounded-full"></span>
+                            توزيع المراحل الدراسية
+                        </h3>
+                        <div class="flex flex-wrap gap-3">
+                            {% for grade in stats_by_grade %}
+                            <div class="flex-1 min-w-[120px] bg-slate-950/60 border border-slate-800 p-4 rounded-2xl text-center group hover:border-violet-500/50 transition-all">
+                                <div class="text-2xl font-black text-white mb-1">{{ grade.count }}</div>
+                                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider group-hover:text-violet-400 transition-colors">{{ grade.name }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Volunteers Recognition -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                            <span class="w-2 h-8 bg-blue-500 rounded-full"></span>
+                            أبطال التنظيم (فريقنا الرائع)
+                        </h3>
+                        <div class="flex flex-wrap gap-2">
+                            {% for volunteer in volunteers %}
+                            <span class="px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] font-bold">
+                                {{ volunteer }}
+                            </span>
+                            {% empty %}
+                            <p class="text-slate-500 text-xs italic">فريق مجهول الهوية لكن عظيم الأثر!</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Certificates & Next Steps -->
+                    <div class="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 rounded-3xl p-6 relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                            <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+                        {% if certificates_sent %}
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-[11px] font-black mb-3">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            تم إرسال الشهادات للبريد الإلكتروني المسجل
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">🎓 الشهادات جاهزة في بريدك</h3>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                            تم إرسال شهادات الحضور والتقدير إلى البريد الإلكتروني المسجل لكل طالب. 
+                            في حال عدم ظهور الرسالة في صندوق الوارد، يرجى مراجعة مجلد <span class="font-bold text-white">Spam / Junk</span>.
+                        </p>
+                        {% else %}
+                        <h3 class="text-xl font-bold text-white mb-3">ماذا بعد؟ (الشهادات)</h3>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                            سيتم إرسال شهادات الحضور والتقدير عبر البريد الإلكتروني المسجل في النظام خلال 
+                            <span class="text-white font-bold underline decoration-cyan-500">48 ساعة</span> من الآن.
+                        </p>
+                        {% endif %}
+                        <div class="text-xs text-cyan-100 font-bold flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            يرجى دائماً مراجعة البريد الإلكتروني المسجل في النظام للتحديثات والشهادات.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social & Call to Action -->
+            <div class="text-center pt-10 border-t border-slate-800/50">
+                <p class="text-slate-400 mb-6 text-lg">لا تدع الرحلة تنتهي هنا.. انضم لمجتمعنا التقني</p>
+                <div class="flex flex-wrap justify-center gap-4 px-4">
+                    <a href="https://www.facebook.com/ETQal/" target="_blank" 
+                       class="flex items-center gap-4 px-8 py-4 rounded-2xl bg-[#1877F2] hover:bg-[#1877F2]/90 transition-all shadow-xl shadow-blue-500/10 group">
+                        <svg class="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                        <div class="text-right">
+                            <div class="text-xs text-white/70 font-bold uppercase tracking-widest">تابعنا الآن</div>
+                            <div class="text-lg font-black text-white group-hover:scale-105 transition-transform">الفريق التقني بالقليوبية</div>
+                        </div>
+                    </a>
+                </div>
+                <div class="mt-8 text-slate-600 text-[10px] uppercase tracking-[0.2em] font-bold">
+                    EduTech Egypt • القليوبية • 2026
+                </div>
+            </div>
+        </div>
+        {% elif is_closed %}
+        <div class="text-center py-12 space-y-6">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-rose-500/10 border border-rose-500/20 text-rose-500 mb-2 shadow-2xl shadow-rose-500/10">
+                <i data-lucide="lock" class="w-10 h-10"></i>
+            </div>
+            <div class="space-y-2">
+                <h2 class="text-3xl font-black text-white">باب التسجيل مغلق حالياً</h2>
+                <p class="text-slate-400 text-lg max-w-md mx-auto leading-relaxed">
+                    نعتذر منك، لقد تم إغلاق باب التسجيل في فعالية {{ event.name }} بشكل نهائي.
+                </p>
+            </div>
+            <div class="pt-4">
+                <a href="https://www.facebook.com/ETQal/" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all">
+                    <i data-lucide="facebook" class="w-4 h-4"></i>
+                    <span>تابعنا للمستجدات</span>
+                </a>
+            </div>
+        </div>
+        {% elif is_full %}
+        <div class="text-center py-6">
+            <div class="inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 15c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span class="text-lg font-bold">عذراً، تم اكتمال العدد الأقصى للمسجلين</span>
+            </div>
+            <p class="text-slate-400 text-sm">نعتذر عن عدم استقبال طلبات جديدة حالياً لوصولنا للحد الأقصى المسموح به للطلاب.</p>
+        </div>
+        {% else %}
+        <div class="relative overflow-hidden p-5 sm:p-6 lg:p-10 rounded-3xl bg-slate-900/50 border border-slate-800/70 shadow-2xl shadow-black/10 backdrop-blur-xl">
+            <!-- Decorative Elements -->
+            <div class="absolute -top-24 -left-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10 flex flex-col lg:flex-row gap-12 items-start">
+                <!-- Form Header Info -->
+                <div class="lg:w-1/3 space-y-6">
+                    <div class="inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                        <i data-lucide="user-plus" class="w-5 h-5"></i>
+                        <span class="text-xs font-black uppercase tracking-widest">Registration Form</span>
+                    </div>
+                    
+                    <h2 class="text-3xl md:text-4xl font-black text-white leading-tight">انضم إلينا في رحلة <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-400">Tech Day</span></h2>
+                    
+                    <p class="text-slate-400 leading-relaxed">
+                        كن جزءاً من أكبر تجمع تقني للطلاب في القليوبية. سجل بياناتك الآن وسنقوم بمراجعة طلبك وإخطارك عبر البريد الإلكتروني.
+                    </p>
+
+                    <div class="space-y-4 pt-4">
+                        <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 shrink-0">
+                                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-sm">
+                                <div class="text-slate-200 font-bold">بياناتك في أمان</div>
+                                <div class="text-slate-500 text-xs">نستخدم بياناتك فقط للتواصل بخصوص الفعالية</div>
+                            </div>
+                        </div>
+                        
+                        {% if event.max_students %}
+                        <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                                <i data-lucide="clock" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-sm">
+                                <div class="text-slate-200 font-bold">المقاعد المتبقية</div>
+                                <div class="text-amber-500 font-black text-lg">{{ event.max_students|add:total_students_neg }} <span class="text-[10px] text-slate-500 uppercase">Seat(s)</span></div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Actual Form -->
+                <div class="lg:w-2/3 w-full bg-slate-950/30 p-1 rounded-[2.5rem] border border-slate-800/50">
+                    <form method="post" class="bg-slate-900/40 p-6 md:p-8 rounded-[2.2rem] space-y-8">
+                        {% csrf_token %}
+                        
+                        <div class="grid gap-6 md:grid-cols-2">
+                            <!-- Name Arabic -->
+                            <div class="space-y-2 group">
+                                <label for="full_name_ar" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                    <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                                    الاسم الكامل (عربي)
+                                </label>
+                                <input id="full_name_ar" name="full_name_ar" type="text" required placeholder="مثال: محمد أحمد علي"
+                                       class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                            </div>
+
+                            <!-- Name English -->
+                            <div class="space-y-2 group">
+                                <label for="full_name_en" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                    <i data-lucide="type" class="w-3.5 h-3.5"></i>
+                                    Full Name (English)
+                                </label>
+                                <input id="full_name_en" name="full_name_en" type="text" required placeholder="Ex: Mohamed Ahmed Ali"
+                                       class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                            </div>
+
+                            <!-- Email -->
+                            <div class="space-y-2 group">
+                                <label for="email" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                                    البريد الإلكتروني
+                                </label>
+                                <input id="email" name="email" type="email" required placeholder="yourname@example.com"
+                                       class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                            </div>
+
+                            <!-- Phone Number -->
+                            <div class="space-y-2 group">
+                                <label for="phone_number" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                    <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                                    رقم الهاتف (واتساب)
+                                </label>
+                                <input id="phone_number" name="phone_number" type="tel" required placeholder="01xxxxxxxxx"
+                                       class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                            </div>
+
+                            <!-- School Name -->
+                            <div class="space-y-2 group">
+                                <label for="school" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                    <i data-lucide="school" class="w-3.5 h-3.5"></i>
+                                    اسم المدرسة
+                                </label>
+                                <input id="school" name="school" type="text" required placeholder="اكتب اسم مدرستك"
+                                       class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                            </div>
+
+                            <!-- Education Admin -->
+                            <div class="space-y-2 group">
+                                <label for="education_admin" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                                    الإدارة التعليمية
+                                </label>
+                                <div class="relative">
+                                    <select id="education_admin" name="education_admin" required
+                                            class="appearance-none w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                                        {% if education_admins|length > 1 or not event.is_education_admin_locked %}
+                                            <option value="" disabled selected>اختر الإدارة التعليمية</option>
+                                        {% endif %}
+                                        
+                                        {% for admin_name in education_admins %}
+                                            <option value="{{ admin_name }}" {% if education_admins|length == 1 and event.is_education_admin_locked %}selected{% endif %}>{{ admin_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-500">
+                                        <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grade -->
+                            <div class="space-y-2 group">
+                                <label for="grade" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                    <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i>
+                                    السنة الدراسية
+                                </label>
+                                <div class="relative">
+                                    <select id="grade" name="grade" required
+                                            class="appearance-none w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all">
+                                        <option value="" disabled selected>اختر السنة الدراسية</option>
+                                        
+                                        <optgroup label="المرحلة الإعدادية" class="bg-slate-900">
+                                            <option value="1-prep">الأول الإعدادي</option>
+                                            <option value="2-prep">الثاني الإعدادي</option>
+                                            <option value="3-prep">الثالث الإعدادي</option>
+                                        </optgroup>
+                                        <optgroup label="المرحلة الثانوية" class="bg-slate-900">
+                                            <option value="1-sec">الأول الثانوي</option>
+                                            <option value="2-sec">الثاني الثانوي</option>
+                                            <option value="3-sec">الثالث الثانوي</option>
+                                        </optgroup>
+                                    </select>
+                                    <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-500">
+                                        <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interests -->
+                        <div class="space-y-2 group">
+                            <label for="interests" class="text-xs font-bold text-slate-400 group-focus-within:text-cyan-400 transition-colors flex items-center gap-2">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                الاهتمامات والهوايات / الحاجات اللي بتحبها
+                            </label>
+                            <textarea id="interests" name="interests" rows="3" placeholder="كلمنا عن نفسك شوية.. بتحب البرمجة؟ الجرافيك؟ الروبوتات؟"
+                                      class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none"></textarea>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4">
+                            <div class="space-y-1">
+                                <p class="text-[10px] text-slate-500 max-w-[200px] leading-relaxed">
+                                    بالضغط على إرسال، أنت توافق على شروط الانضمام لفعالية Tech Day.
+                                </p>
+                                <a href="{% url 'public_screen:terms' %}" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold underline flex items-center gap-1">
+                                    <i data-lucide="external-link" class="w-2.5 h-2.5"></i>
+                                    عرض شروط الانضمام كاملة
+                                </a>
+                            </div>
+                            <button type="submit"
+                                    class="group relative inline-flex items-center gap-3 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:-translate-y-1">
+                                <span>إرسال الطلب</span>
+                                <i data-lucide="send" class="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if not event.is_finished %}
+    <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div class="grid gap-4 sm:grid-cols-3 w-full md:w-auto">
+            <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-4 shadow-xl shadow-black/10">
+                <div class="text-xs text-slate-400 mb-1">الوقت الآن</div>
+                <div class="text-2xl md:text-3xl font-mono" id="clock">{{ now|date:"H:i" }}</div>
+            </div>
+            <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-4 shadow-xl shadow-black/10">
+                <div class="text-xs text-slate-400 mb-1">تاريخ الفعالية</div>
+                {% if event and event.start_datetime %}
+                <div class="text-sm md:text-base text-slate-200">
+                    {{ event.start_datetime|date:"Y-m-d" }}
+                </div>
+                {% else %}
+                <div class="text-sm md:text-base text-slate-500">
+                    سيتم تحديده لاحقًا
+                </div>
+                {% endif %}
+            </div>
+            <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-4 shadow-xl shadow-black/10">
+                <div class="text-xs text-slate-400 mb-1">موعد بدء الفعالية</div>
+                {% if event and event.start_datetime %}
+                <div class="text-sm md:text-base text-slate-200">
+                    {{ event.start_datetime|date:"H:i" }}
+                </div>
+                {% else %}
+                <div class="text-sm md:text-base text-slate-500">
+                    سيتم تحديده لاحقًا
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="rounded-3xl bg-emerald-500/10 border border-emerald-500/30 px-6 py-4 text-center w-full md:w-auto shadow-xl shadow-emerald-500/5">
+            <div class="text-xs text-emerald-300">إجمالي عدد الطلاب</div>
+            <div class="text-3xl font-bold">{{ total_students }}</div>
+        </div>
+    </div>
+
+    <div class="grid gap-5 md:grid-cols-2">
+        <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-5 shadow-xl shadow-black/10">
+            <div class="text-xs text-slate-400 mb-1">الورشة الحالية</div>
+            {% if current_session %}
+                <div class="text-2xl font-semibold mb-1">{{ current_session.workshop.title }}</div>
+                <div class="text-sm text-slate-300 mb-1">القاعة: {{ current_session.workshop.room }}</div>
+                <div class="text-xs text-slate-400">الفترة: {{ current_session.get_period_display }}</div>
+            {% else %}
+                <div class="text-sm text-slate-400">لا توجد ورشة حالية الآن</div>
+            {% endif %}
+        </div>
+        <div class="rounded-3xl bg-slate-900/60 border border-slate-800/80 p-5 shadow-xl shadow-black/10">
+            <div class="text-xs text-slate-400 mb-1">الورشة القادمة</div>
+            {% if next_session %}
+                <div class="text-2xl font-semibold mb-1">{{ next_session.workshop.title }}</div>
+                <div class="text-sm text-slate-300 mb-1">القاعة: {{ next_session.workshop.room }}</div>
+                <div class="text-xs text-slate-400">الفترة: {{ next_session.get_period_display }}</div>
+            {% else %}
+                <div class="text-sm text-slate-400">لا توجد ورشة قادمة</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 flex-1">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+                <span class="p-2 rounded-lg bg-amber-500/10 text-amber-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
+                    </svg>
+                </span>
+                لوحة الشرف (Leaderboard)
+            </h2>
+            <div class="text-xs text-slate-400">ترتيب المجموعات حسب إجمالي النقاط</div>
+        </div>
+        <div class="grid gap-4 md:grid-cols-5">
+            {% for group in best_groups %}
+            <div class="relative group">
+                <!-- Rank Badge -->
+                <div class="absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10
+                    {% if forloop.counter == 1 %}bg-amber-400 text-amber-950
+                    {% elif forloop.counter == 2 %}bg-slate-300 text-slate-900
+                    {% elif forloop.counter == 3 %}bg-amber-700 text-amber-50
+                    {% else %}bg-slate-800 text-slate-400{% endif %}">
+                    {{ forloop.counter }}
+                </div>
+                
+                <div class="h-full rounded-2xl bg-slate-950/80 border border-slate-800 p-5 flex flex-col items-center justify-center transition-all hover:border-cyan-500/50 hover:bg-slate-900/90">
+                    <div class="inline-flex items-center justify-center h-14 w-14 rounded-full text-2xl font-black mb-3"
+                         style="background-color: {{ group.color }}20; color: {{ group.color }}; border: 2px solid {{ group.color }}40;">
+                        {{ group.code }}
+                    </div>
+                    <div class="text-center">
+                        <div class="text-base font-bold text-slate-100 mb-1">{{ group.name }}</div>
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                            <span class="text-lg font-black">{{ group.points }}</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider">نقطة</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full py-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+                لا توجد نقاط مسجلة بعد. ابدأ التفاعل للحصول على نقاط!
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+
+    {% endif %}
+
+    <!-- Official Detailed Schedule Integrated with System Styles -->
+    <div class="rounded-3xl bg-slate-900/40 border border-slate-800/50 backdrop-blur-xl p-5 md:p-8 mt-8 shadow-2xl overflow-hidden">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+            <div class="flex items-center gap-4">
+                <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                    <i data-lucide="table" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">الجدول التفصيلي للمجموعات</h2>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Tech Day Official Detailed Schedule</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2 rounded-2xl bg-slate-950/50 border border-slate-800/50">
+                <div class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
+                <span class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Live Tracking</span>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-800/50 custom-scrollbar bg-slate-950/20">
+            <table class="w-full text-center border-collapse min-w-[1000px]">
+                <thead>
+                    <tr class="bg-slate-950/80 text-right">
+                        <th class="px-4 py-5 text-xs font-black text-slate-200 border-b border-slate-800 w-[120px]">الفترة الزمنية</th>
+                        {% for group in schedule_groups %}
+                        <th class="px-2 py-5 text-xs font-black text-slate-200 border-b border-slate-800">
+                            {{ group.name }}<br>
+                            <span class="text-[9px] text-slate-500">({{ group.code }})</span>
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/40">
+                    {% for row in schedule_matrix %}
+                    <tr class="{% if 'انتقال' in row.period.label %}bg-slate-900/20{% elif 'الألعاب' in row.period.label %}bg-amber-500/5{% endif %}">
+                        <td class="px-4 py-4 font-mono text-slate-400 text-[10px] font-bold border-l border-slate-800/50">
+                            {{ row.period.value }}
+                        </td>
+                        
+                        {% for item in row.group_sessions %}
+                        <td class="px-2 py-4 text-[10px] font-bold">
+                            {% if item.session %}
+                                <div class="text-cyan-400">
+                                    {{ item.session.workshop.title }}
+                                </div>
+                                <div class="text-[8px] text-slate-500 mt-0.5">
+                                    📍 {{ item.session.workshop.room }}
+                                </div>
+                            {% elif item.activity_label %}
+                                <span class="{% if 'الألعاب' in item.activity_label %}text-amber-400{% else %}text-slate-600{% endif %}">
+                                    {{ item.activity_label }}
+                                </span>
+                            {% else %}
+                                <span class="text-slate-800">-</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Legend -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-6">
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <div class="w-3 h-3 rounded bg-blue-500"></div>
+                <span class="text-[10px] font-bold text-blue-300">الورشة 1</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <div class="w-3 h-3 rounded bg-emerald-500"></div>
+                <span class="text-[10px] font-bold text-emerald-300">الورشة 2</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
+                <div class="w-3 h-3 rounded bg-violet-500"></div>
+                <span class="text-[10px] font-bold text-violet-300">الورشة 3</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                <div class="w-3 h-3 rounded bg-rose-500"></div>
+                <span class="text-[10px] font-bold text-rose-300">الورشة 4</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div class="w-3 h-3 rounded bg-amber-500"></div>
+                <span class="text-[10px] font-bold text-amber-300">نشاط ترفيهي</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                <div class="w-3 h-3 rounded bg-slate-600"></div>
+                <span class="text-[10px] font-bold text-slate-400">فترة انتقال</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.1);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(30, 41, 59, 0.5);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(6, 182, 212, 0.3);
+    }
+    
+    /* Smooth horizontal scroll indicator for mobile */
+    @media (max-width: 768px) {
+        .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x proximity;
+        }
+        th, td {
+            scroll-snap-align: start;
+        }
+    }
+</style>
+
+<script>
+    function updateClock() {
+        var element = document.getElementById("clock");
+        if (!element) return;
+        var now = new Date();
+        var hours = now.getHours().toString().padStart(2, "0");
+        var minutes = now.getMinutes().toString().padStart(2, "0");
+        element.textContent = hours + ":" + minutes;
+    }
+    setInterval(updateClock, 1000 * 30);
+</script>
+{% endblock %}

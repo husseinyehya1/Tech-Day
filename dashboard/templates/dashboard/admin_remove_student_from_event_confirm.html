@@ -1,0 +1,63 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}إزالة طالب من الفعالية الحالية - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-start gap-4">
+            <div class="p-3 rounded-2xl bg-rose-500/10 text-rose-400">
+                <i data-lucide="user-x" class="w-8 h-8"></i>
+            </div>
+            <div class="flex-1">
+                <h1 class="text-2xl font-black text-slate-100">إزالة طالب من الفعالية الحالية</h1>
+                <p class="text-sm text-slate-400 font-medium mt-1">سيتم إلغاء تسجيل الطالب في الفعالية الحالية، ويمكن إرسال بريد له بالسبب (اختياري).</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        <div class="p-6 space-y-4">
+            <div class="rounded-2xl bg-slate-950/60 border border-slate-800 p-5 space-y-2">
+                <div class="text-sm text-slate-300">
+                    الطالب: <span class="font-black text-white">{{ student.name }}</span>
+                </div>
+                <div class="text-sm text-slate-300">
+                    رقم الطالب: <span class="font-mono text-cyan-400">{{ student.student_id }}</span>
+                </div>
+                <div class="text-sm text-slate-300">
+                    الفعالية: <span class="font-black text-slate-100">{{ event.name }}</span>
+                    <span class="text-slate-500">•</span>
+                    <span class="text-slate-300">{{ event.location_name }} {{ event.year }}</span>
+                </div>
+                <div class="text-xs text-slate-500 font-bold">
+                    البريد المُستخدم للإرسال: {{ registration.email|default:student.email|default:"—" }}
+                </div>
+            </div>
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <div class="space-y-2">
+                    <label for="reason" class="text-xs font-bold text-slate-400">سبب الإزالة (اختياري)</label>
+                    <textarea id="reason" name="reason" rows="4"
+                              placeholder="اكتب السبب هنا (سيظهر للطالب في البريد)..."
+                              class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40 focus:border-rose-500/40 transition-all resize-none"></textarea>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="{% url 'dashboard:admin_current_event_students' %}"
+                       class="flex-1 px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700 text-center">
+                        إلغاء
+                    </a>
+                    <button type="submit"
+                            class="flex-1 px-6 py-3 rounded-2xl bg-rose-500 hover:bg-rose-400 text-slate-950 text-sm font-black transition-all shadow-lg shadow-rose-500/20 active:scale-95 flex items-center justify-center gap-2">
+                        <i data-lucide="user-x" class="w-4 h-4"></i>
+                        إزالة الطالب
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

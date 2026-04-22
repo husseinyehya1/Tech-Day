@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}الطلاب - Tech Day{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6 px-4 md:px-0">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <h1 class="text-2xl md:text-3xl font-black text-white tracking-tight">
+            قائمة الطلاب
+        </h1>
+        <span class="text-[11px] text-slate-500 font-mono bg-slate-900/70 border border-slate-800 px-3 py-1 rounded-full">
+            {{ students|length }} طالب/ة
+        </span>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-[1.75rem] shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs md:text-sm">
+                <thead class="bg-slate-950/80 text-slate-400 text-[11px] uppercase tracking-widest">
+                    <tr>
+                        <th class="px-4 md:px-6 py-3 text-right font-bold">الاسم</th>
+                        <th class="px-4 md:px-6 py-3 text-right font-bold">الرقم</th>
+                        <th class="px-4 md:px-6 py-3 text-right font-bold">المجموعة</th>
+                        <th class="px-4 md:px-6 py-3 text-right font-bold">عرض</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/80">
+                    {% for student in students %}
+                    <tr class="hover:bg-slate-900/80 transition-colors">
+                        <td class="px-4 md:px-6 py-3 whitespace-nowrap text-slate-100">
+                            {{ student.name }}
+                        </td>
+                        <td class="px-4 md:px-6 py-3 whitespace-nowrap text-slate-300 font-mono text-xs">
+                            {{ student.student_id }}
+                        </td>
+                        <td class="px-4 md:px-6 py-3 whitespace-nowrap">
+                            {% if student.group %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-900 border border-slate-700 text-slate-200">
+                                {{ student.group.code }}
+                            </span>
+                            {% else %}
+                            <span class="text-slate-600 text-xs">بدون مجموعة</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 md:px-6 py-3 whitespace-nowrap">
+                            <a href="{% url 'students:detail' student.pk %}"
+                               class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-[11px] font-black tracking-widest hover:bg-cyan-400 transition-colors">
+                                <span>فتح الملف</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-4 md:px-6 py-6 text-center text-slate-400 text-sm">
+                            لا توجد بيانات طلاب بعد
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

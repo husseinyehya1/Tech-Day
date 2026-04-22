@@ -1,0 +1,207 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}{% if student %}تعديل طالب{% else %}إضافة طالب جديد{% endif %} - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="{% if student %}user-cog{% else %}user-plus{% endif %}" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">
+                    {% if student %}تعديل بيانات الطالب{% else %}إضافة طالب جديد{% endif %}
+                </h1>
+                <p class="text-sm text-slate-400 font-medium">إدارة المعلومات الشخصية والأكاديمية للطالب</p>
+            </div>
+        </div>
+        <a href="{% url 'dashboard:admin_students_list' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للقائمة</span>
+        </a>
+    </div>
+
+    <form method="post" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        {% csrf_token %}
+        
+        <div class="p-6 space-y-8">
+            <!-- Basic Information -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 text-cyan-400 mb-2">
+                    <i data-lucide="info" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">المعلومات الأساسية</h3>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="name">اسم الطالب بالكامل</label>
+                        <div class="relative group">
+                            <i data-lucide="user" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                            <input id="name" name="name" type="text" required
+                                   value="{{ student.name|default_if_none:'' }}"
+                                   placeholder="أدخل اسم الطالب الثلاثي..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="student_id">رقم الطالب (QR ID)</label>
+                        <div class="relative group">
+                            <i data-lucide="hash" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                            <input id="student_id" name="student_id" type="text" required
+                                   value="{{ student.student_id|default_if_none:'' }}"
+                                   placeholder="رقم فريد للطالب..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm font-mono text-cyan-400">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Academic & Group Info -->
+            <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                <div class="flex items-center gap-2 text-amber-400 mb-2">
+                    <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">البيانات التعليمية والتنظيمية</h3>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="group">تخصيص المجموعة</label>
+                        <div class="relative group">
+                            <i data-lucide="layers" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors pointer-events-none"></i>
+                            <select id="group" name="group"
+                                    class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm appearance-none">
+                                <option value="">بدون مجموعة</option>
+                                {% for group in groups %}
+                                <option value="{{ group.id }}" {% if student and student.group_id == group.id %}selected{% endif %}>
+                                    {{ group.name }} ({{ group.code }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="grade">السنة الدراسية</label>
+                        <div class="relative group">
+                            <i data-lucide="book-open" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors pointer-events-none"></i>
+                            <select id="grade" name="grade"
+                                    class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm appearance-none">
+                                <option value="">غير محدد</option>
+                                <optgroup label="المرحلة الابتدائية" class="bg-slate-900">
+                                    <option value="4-prim" {% if student.grade == '4-prim' %}selected{% endif %}>الرابع الابتدائي</option>
+                                    <option value="5-prim" {% if student.grade == '5-prim' %}selected{% endif %}>الخامس الابتدائي</option>
+                                    <option value="6-prim" {% if student.grade == '6-prim' %}selected{% endif %}>السادس الابتدائي</option>
+                                </optgroup>
+                                <optgroup label="المرحلة الإعدادية" class="bg-slate-900">
+                                    <option value="1-prep" {% if student.grade == '1-prep' %}selected{% endif %}>الأول الإعدادي</option>
+                                    <option value="2-prep" {% if student.grade == '2-prep' %}selected{% endif %}>الثاني الإعدادي</option>
+                                    <option value="3-prep" {% if student.grade == '3-prep' %}selected{% endif %}>الثالث الإعدادي</option>
+                                </optgroup>
+                                <optgroup label="المرحلة الثانوية" class="bg-slate-900">
+                                    <option value="1-sec" {% if student.grade == '1-sec' %}selected{% endif %}>الأول الثانوي</option>
+                                    <option value="2-sec" {% if student.grade == '2-sec' %}selected{% endif %}>الثاني الثانوي</option>
+                                    <option value="3-sec" {% if student.grade == '3-sec' %}selected{% endif %}>الثالث الثانوي</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="school">المدرسة</label>
+                        <div class="relative group">
+                            <i data-lucide="building" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors"></i>
+                            <input id="school" name="school" type="text"
+                                   value="{{ student.school|default_if_none:'' }}"
+                                   placeholder="اسم المدرسة..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="education_admin">الإدارة التعليمية</label>
+                        <div class="relative group">
+                            <i data-lucide="map" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors"></i>
+                            <input id="education_admin" name="education_admin" type="text"
+                                   value="{{ student.education_admin|default_if_none:'' }}"
+                                   placeholder="مثال: إدارة بنها..."
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact & Account -->
+            <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                <div class="flex items-center gap-2 text-violet-400 mb-2">
+                    <i data-lucide="mail" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">التواصل والحساب</h3>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="email">البريد الإلكتروني</label>
+                        <div class="relative group">
+                            <i data-lucide="at-sign" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                            <input id="email" name="email" type="email"
+                                   value="{{ student.email|default_if_none:'' }}"
+                                   placeholder="example@email.com"
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 mr-2" for="phone_number">رقم الهاتف</label>
+                        <div class="relative group">
+                            <i data-lucide="phone" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                            <input id="phone_number" name="phone_number" type="tel"
+                                   value="{{ student.phone_number|default_if_none:'' }}"
+                                   placeholder="01xxxxxxxxx"
+                                   class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Administrative Flags -->
+            <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                <div class="flex items-center gap-2 text-rose-400 mb-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">إجراءات إدارية</h3>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <label class="relative flex items-center gap-4 p-4 rounded-2xl bg-slate-950/50 border border-slate-800 cursor-pointer hover:bg-slate-900 transition-colors group">
+                        <input id="is_blacklisted" name="is_blacklisted" type="checkbox"
+                               {% if student.is_blacklisted %}checked{% endif %}
+                               class="w-5 h-5 rounded-lg bg-slate-800 border-slate-700 text-rose-500 focus:ring-rose-500/50 focus:ring-offset-0 transition-all">
+                        <div>
+                            <div class="text-sm font-bold text-slate-200 group-hover:text-rose-400 transition-colors">القائمة السوداء</div>
+                            <div class="text-[10px] text-slate-500">منع الطالب من حضور الفعاليات مستقبلاً</div>
+                        </div>
+                    </label>
+                    <label class="relative flex items-center gap-4 p-4 rounded-2xl bg-slate-950/50 border border-slate-800 cursor-pointer hover:bg-slate-900 transition-colors group">
+                        <input id="is_certificate_banned" name="is_certificate_banned" type="checkbox"
+                               {% if student.is_certificate_banned %}checked{% endif %}
+                               class="w-5 h-5 rounded-lg bg-slate-800 border-slate-700 text-rose-500 focus:ring-rose-500/50 focus:ring-offset-0 transition-all">
+                        <div>
+                            <div class="text-sm font-bold text-slate-200 group-hover:text-rose-400 transition-colors">حجب الشهادة</div>
+                            <div class="text-[10px] text-slate-500">منع الطالب من الحصول على شهادة الحضور</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Footer -->
+        <div class="p-6 bg-slate-950/50 border-t border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'dashboard:admin_students_list' %}"
+                   class="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+                    إلغاء
+                </a>
+                <button type="submit"
+                        class="px-8 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20 transition-all active:scale-95">
+                    {% if student %}حفظ كافة التعديلات{% else %}إضافة الطالب الآن{% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

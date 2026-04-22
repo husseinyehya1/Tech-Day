@@ -1,0 +1,136 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}النسخ الاحتياطي - Tech Day{% endblock %}
+
+{% block page %}
+<div class="space-y-8 pb-12">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1">
+            <h1 class="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                <span class="text-orange-400">النسخ</span>
+                الاحتياطي
+            </h1>
+            <p class="text-slate-400 text-sm">قم بحماية بياناتك عن طريق إنشاء نسخ احتياطية دورية أو استعادتها عند الحاجة.</p>
+        </div>
+        <div class="flex items-center gap-3 bg-slate-900/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-slate-800/50">
+            <div class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
+            <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">System Backup v2.0</span>
+        </div>
+    </div>
+
+    <div class="grid gap-8 lg:grid-cols-2">
+        <!-- Backup Creation Card -->
+        <div class="group relative overflow-hidden bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-8 rounded-[2.5rem] hover:border-cyan-500/30 transition-all duration-500">
+            <div class="absolute -right-12 -top-12 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl group-hover:bg-cyan-500/10 transition-all"></div>
+            
+            <div class="relative space-y-6">
+                <div class="w-16 h-16 bg-cyan-500/10 rounded-3xl flex items-center justify-center text-cyan-400 border border-cyan-500/20 group-hover:scale-110 transition-transform">
+                    <i data-lucide="download-cloud" class="w-8 h-8"></i>
+                </div>
+                
+                <div class="space-y-2">
+                    <h2 class="text-2xl font-black text-white">إنشاء نسخة احتياطية</h2>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        سيتم تجميع كافة بيانات النظام (الطلاب، المجموعات، الورش، الحضور، والسجلات) في ملف واحد بصيغة JSON يمكنك تحميله والاحتفاظ به.
+                    </p>
+                </div>
+
+                <div class="pt-4 space-y-3">
+                    <form action="{% url 'dashboard:admin_backup_download' %}" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="type" value="json">
+                        <button type="submit" 
+                                class="w-full flex items-center justify-center gap-3 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 active:scale-[0.98]">
+                            <i data-lucide="file-json" class="w-5 h-5"></i>
+                            تحميل نسخة JSON (شاملة الحسابات)
+                        </button>
+                    </form>
+
+                    <form action="{% url 'dashboard:admin_backup_download' %}" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="type" value="db_file">
+                        <button type="submit" 
+                                class="w-full flex items-center justify-center gap-3 px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm transition-all border border-slate-700 active:scale-[0.98]">
+                            <i data-lucide="database" class="w-5 h-5"></i>
+                            تحميل ملف قاعدة البيانات الأصلي (.sqlite3)
+                        </button>
+                    </form>
+                </div>
+
+                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-500 bg-slate-950/50 p-3 rounded-xl border border-slate-800/50">
+                    <i data-lucide="info" class="w-3.5 h-3.5 text-amber-500"></i>
+                    <span>نوصي بإنشاء نسخة احتياطية بعد كل عملية تسجيل دخول جماعي أو انتهاء يوم تدريبي.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Restore Data Card -->
+        <div class="group relative overflow-hidden bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-8 rounded-[2.5rem] hover:border-emerald-500/30 transition-all duration-500">
+            <div class="absolute -right-12 -top-12 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all"></div>
+            
+            <div class="relative space-y-6">
+                <div class="w-16 h-16 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                    <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                </div>
+                
+                <div class="space-y-2">
+                    <h2 class="text-2xl font-black text-white">استرجاع البيانات</h2>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        قم برفع ملف النسخة الاحتياطية (JSON) الذي قمت بتحميله مسبقاً لاستعادة كافة البيانات إلى الحالة التي كانت عليها.
+                    </p>
+                </div>
+
+                <div class="pt-4">
+                    <form action="{% url 'dashboard:admin_backup_restore' %}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                        {% csrf_token %}
+                        <div class="relative group/input">
+                            <input type="file" name="backup_file" id="backup_file" required accept=".json,.sqlite3"
+                                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <div class="flex items-center gap-3 px-6 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl text-slate-400 group-hover/input:border-emerald-500/50 transition-all">
+                                <i data-lucide="file-up" class="w-5 h-5"></i>
+                                <span id="file-name" class="text-sm font-medium">اختر ملف (.json أو .sqlite3)...</span>
+                            </div>
+                        </div>
+                        <button type="submit" 
+                                onclick="return confirm('⚠️ تحذير شديد: هذه العملية ستقوم بمسح كافة البيانات الحالية (الطلاب، المجموعات، الحضور، وحسابات المستخدمين غير الأدمن) نهائياً قبل استعادة النسخة. هل أنت متأكد؟')"
+                                class="w-full flex items-center justify-center gap-3 px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 active:scale-[0.98]">
+                            <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                            بدء عملية الاسترجاع الشامل
+                        </button>
+                    </form>
+                </div>
+
+                <div class="flex items-center gap-2 text-[10px] font-bold text-red-400 bg-red-400/5 p-3 rounded-xl border border-red-400/10">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                    <span>تنبيه: عملية الاسترجاع قد تؤدي لتكرار البيانات أو الكتابة فوق البيانات الحالية.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Info -->
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-6 rounded-[2rem] flex flex-col md:flex-row items-center gap-6">
+        <div class="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 shrink-0">
+            <i data-lucide="shield-check" class="w-10 h-10 text-cyan-400"></i>
+        </div>
+        <div class="space-y-1 text-center md:text-right">
+            <h3 class="text-white font-bold">الفرق بين أنواع النسخ</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">
+                <strong class="text-cyan-400">نسخة JSON:</strong> تشمل كافة البيانات والحسابات (بما في ذلك كلمات السر المشفرة)، وهي الطريقة الأكثر أماناً لنقل البيانات بين أنظمة التشغيل المختلفة.
+                <br>
+                <strong class="text-slate-300">ملف قاعدة البيانات:</strong> هو نسخة طبق الأصل من الملف الفعلي للنظام، يمكن استخدامه كبديل سريع في حال تلف ملف النظام الأصلي.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('backup_file').onchange = function() {
+        var fileName = this.files[0] ? this.files[0].name : 'اختر ملف النسخة الاحتياطية...';
+        document.getElementById('file-name').textContent = fileName;
+        document.getElementById('file-name').classList.remove('text-slate-400');
+        document.getElementById('file-name').classList.add('text-emerald-400');
+    };
+</script>
+{% endblock %}

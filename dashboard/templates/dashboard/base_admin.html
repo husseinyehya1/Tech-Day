@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row gap-4 sm:gap-6">
+    <!-- Sidebar / Mobile Nav -->
+    <aside class="w-full lg:w-72 shrink-0">
+        <!-- Mobile Toggle Button -->
+        <button onclick="document.getElementById('admin-sidebar').classList.toggle('hidden')" 
+                class="lg:hidden w-full mb-2 flex items-center justify-between px-5 py-3.5 bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl text-slate-200 shadow-lg active:scale-[0.98] transition-all">
+            <div class="flex items-center gap-3">
+                <i data-lucide="menu" class="w-5 h-5 text-cyan-400"></i>
+                <span class="text-xs font-black uppercase tracking-widest">قائمة الإدارة</span>
+            </div>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i>
+        </button>
+
+        <!-- Sidebar Content -->
+        <div id="admin-sidebar" class="hidden lg:block bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl p-4 sm:p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 lg:animate-none">
+            <div class="flex items-center gap-3 mb-6 sm:mb-8 px-2">
+                <div class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                </div>
+                <div>
+                    <div class="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-500 font-bold">لوحة التحكم</div>
+                    <div class="text-xs sm:text-sm font-bold text-slate-200">Tech Day الإدارة</div>
+                </div>
+            </div>
+
+            <nav class="space-y-1">
+                <div class="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2 px-3">العامة</div>
+                <a href="{% url 'dashboard:admin_dashboard' %}"
+                   class="flex items-center gap-3 px-4 py-2 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_dashboard' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="home" class="w-4 h-4"></i>
+                    <span class="text-xs sm:text-sm font-medium">الرئيسية</span>
+                </a>
+                <a href="{% url 'dashboard:admin_event_settings' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_event_settings' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">إعدادات الفعالية</span>
+                </a>
+                <a href="{% url 'dashboard:admin_archived_events_list' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_archived_events_list admin_archived_event_detail' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">سجل الفعاليات</span>
+                </a>
+
+                <div class="pt-4 text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2 px-3">إدارة الأفراد</div>
+                <a href="{% url 'dashboard:admin_smart_search' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_smart_search' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">البحث الذكي</span>
+                </a>
+                <a href="{% url 'dashboard:admin_students_list' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_students_list admin_student_create admin_student_update admin_student_delete admin_student_transfer' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">الطلاب</span>
+                </a>
+                <a href="{% url 'dashboard:admin_current_event_students' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_current_event_students' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="user-check" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">طلاب الفعالية الحالية</span>
+                </a>
+                <a href="{% url 'dashboard:admin_student_violations' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_student_violations' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">مخالفات الطلاب</span>
+                </a>
+                <a href="{% url 'dashboard:admin_supervisors' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_supervisors admin_supervisor_create admin_supervisor_update' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="user-check" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">المشرفون</span>
+                </a>
+                <a href="{% url 'dashboard:admin_volunteers' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_volunteers admin_volunteer_create admin_volunteer_update' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="heart" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">المتطوعون</span>
+                </a>
+                <a href="{% url 'workshops:list' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group text-slate-400 hover:text-slate-200">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">لوحة المشرفين</span>
+                </a>
+
+                <div class="pt-4 text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2 px-3">المحتوى والتنظيم</div>
+                <a href="{% url 'dashboard:admin_groups' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_groups admin_group_create admin_group_update' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">المجموعات</span>
+                </a>
+                <a href="{% url 'dashboard:admin_workshops' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_workshops admin_workshop_update' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="cpu" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">الورش</span>
+                </a>
+                <a href="{% url 'dashboard:admin_schedule' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_schedule admin_session_update admin_session_create' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">الجدول الزمني</span>
+                </a>
+
+                <div class="pt-4 text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2 px-3">التواصل والتقارير</div>
+                <a href="{% url 'dashboard:admin_registrations_list' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_registrations_list admin_registration_detail' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">طلبات التسجيل</span>
+                </a>
+                <a href="{% url 'dashboard:admin_notifications' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_notifications' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="bell" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">التنبيهات</span>
+                </a>
+                <a href="{% url 'dashboard:admin_custom_email' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_custom_email' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="mail" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">بريد مخصص</span>
+                </a>
+                <a href="{% url 'dashboard:admin_failed_emails_list' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_failed_emails_list' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="mail-warning" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">الإيميلات المنتظرة</span>
+                </a>
+                <a href="{% url 'dashboard:admin_vip_invites' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_vip_invites' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="star" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">دعوات VIP</span>
+                </a>
+                <a href="{% url 'dashboard:admin_volunteer_notes' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_volunteer_notes' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="message-square" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">ملاحظات المتطوعين</span>
+                </a>
+                <a href="{% url 'dashboard:admin_support_requests' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_support_requests' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">طلبات دعم الطلاب</span>
+                </a>
+                <a href="{% url 'dashboard:admin_reports' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_reports' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">التقارير</span>
+                </a>
+                <a href="{% url 'dashboard:admin_statistics' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name == 'admin_statistics' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">الإحصائيات</span>
+                </a>
+
+                <div class="pt-4 text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2 px-3">النظام</div>
+                <a href="{% url 'dashboard:admin_app_versions' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_app_versions admin_app_version_create admin_app_version_update admin_app_version_delete' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="smartphone" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">إصدارات التطبيق</span>
+                </a>
+                <a href="{% url 'dashboard:admin_devices' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_devices admin_device_detail' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="tablet-smartphone" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">إدارة الأجهزة</span>
+                </a>
+                <a href="{% url 'dashboard:admin_public_forms' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_public_forms admin_public_form_detail admin_public_form_submissions admin_public_form_submission_detail' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="file-pen-line" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">الاستمارات</span>
+                </a>
+                <a href="{% url 'dashboard:admin_logs' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_logs' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="history" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">سجل العمليات</span>
+                </a>
+                <a href="{% url 'dashboard:admin_public_screen' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_public_screen' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="monitor" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">شاشة العرض</span>
+                </a>
+                <a href="{% url 'dashboard:admin_backup_page' %}"
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all hover:bg-slate-800 group {% if request.resolver_match.url_name in 'admin_backup_page admin_backup_download admin_backup_restore' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+                    <i data-lucide="database" class="w-4 h-4"></i>
+                    <span class="text-sm font-medium">النسخ الاحتياطي</span>
+                </a>
+            </nav>
+        </div>
+    </aside>
+    <section class="flex-1 min-w-0 space-y-6">
+        {% if messages %}
+        <div class="space-y-3">
+            {% for message in messages %}
+            <div class="rounded-2xl border border-slate-700/50 bg-slate-900/50 backdrop-blur px-5 py-3 text-sm text-slate-200 flex items-center gap-3">
+                <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block page %}{% endblock %}
+    </section>
+</div>
+{% endblock %}

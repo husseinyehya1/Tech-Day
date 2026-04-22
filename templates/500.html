@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}حدث خطأ غير متوقع - Tech Day{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center">
+    <div class="text-center space-y-4">
+        <div class="inline-flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500/40 px-4 py-1 text-xs text-rose-300">
+            خطأ في الخادم
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold text-slate-50">
+            حدث خطأ غير متوقع أثناء معالجة الطلب
+        </h1>
+        <p class="text-sm md:text-base text-slate-400 max-w-xl mx-auto">
+            نعمل على حل المشكلة في أقرب وقت. إذا استمر ظهور هذه الرسالة، برجاء المحاولة لاحقًا أو التواصل مع فريق الدعم.
+        </p>
+        <div class="flex items-center justify-center gap-3 pt-2">
+            <a href="/"
+               class="inline-flex items-center px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-semibold">
+                العودة للصفحة الرئيسية
+            </a>
+            <a href="{% url 'users:login' %}"
+               class="inline-flex items-center px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold">
+                صفحة تسجيل الدخول
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

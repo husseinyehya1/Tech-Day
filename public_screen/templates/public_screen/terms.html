@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}شروط الانضمام - Tech Day{% endblock %}
+
+{% block content %}
+<div class="min-h-screen pt-20 pb-12 px-4 sm:px-6">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="mb-12 text-center">
+            <div class="inline-flex p-4 rounded-3xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 mb-6 shadow-2xl shadow-cyan-500/20">
+                <i data-lucide="shield-check" class="w-10 h-10 animate-pulse"></i>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-4">شروط الانضمام لفعالية Tech Day</h1>
+            <p class="text-slate-400 text-lg">يرجى قراءة الشروط والتعليمات التالية بعناية قبل إتمام عملية التسجيل.</p>
+        </div>
+
+        <!-- Terms Content -->
+        <div class="space-y-8 relative">
+            <!-- Decorative Background Glow -->
+            <div class="absolute -top-24 -left-24 w-96 h-96 bg-cyan-500/5 blur-[120px] -z-10 rounded-full"></div>
+            <div class="absolute -bottom-24 -right-24 w-80 h-80 bg-violet-600/5 blur-[100px] -z-10 rounded-full"></div>
+
+            <!-- Section 1: Attendance -->
+            <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] shadow-xl hover:border-cyan-500/30 transition-all group">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="clock" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-white">1️⃣ الحضور والالتزام</h2>
+                </div>
+                <ul class="space-y-4 text-slate-300 leading-relaxed">
+                    <li class="flex items-start gap-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-2 shrink-0"></span>
+                        <span>الالتزام بحضور جميع الورش المحددة في البرنامج أو حضور الحد الأدنى المعلن لكل ورشة.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-2 shrink-0"></span>
+                        <span>يُفضل الحضور في الوقت المحدد لكل نشاط أو ورشة.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Section 2: Behavior -->
+            <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] shadow-xl hover:border-violet-500/30 transition-all group">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 rounded-2xl bg-violet-500/10 text-violet-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-white">2️⃣ السلوك والمسؤولية</h2>
+                </div>
+                <ul class="space-y-4 text-slate-300 leading-relaxed">
+                    <li class="flex items-start gap-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-violet-500 mt-2 shrink-0"></span>
+                        <span>الالتزام بالسلوك الحضاري واحترام المشاركين والفريق المنظم.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-violet-500 mt-2 shrink-0"></span>
+                        <span>يمنع استخدام الأجهزة أو التطبيقات لأغراض شخصية خلال الورش ما لم يسمح بها المشرف.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-violet-500 mt-2 shrink-0"></span>
+                        <span>المسؤولية تقع على الطالب عن أي أضرار متعمدة للمعدات أو الأجهزة المستخدمة.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Section 3: Technical -->
+            <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] shadow-xl hover:border-emerald-500/30 transition-all group">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="code-2" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-white">3️⃣ المحتوى والاستخدام التقني</h2>
+                </div>
+                <ul class="space-y-4 text-slate-300 leading-relaxed">
+                    <li class="flex items-start gap-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
+                        <span>يُسمح باستخدام الأنظمة والبرامج المخصصة للفعالية فقط.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
+                        <span>يُمنع نسخ أو مشاركة المحتوى دون إذن فريق EDU-TECH.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
+                        <span>الالتزام بتعليمات السلامة في الورش الأوفلاين، خاصة عند التعامل مع الأجهزة الإلكترونية.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Section 4: Media -->
+            <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] shadow-xl hover:border-amber-500/30 transition-all group">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 rounded-2xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="camera" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-white">4️⃣ الموافقة على الصور والفيديو</h2>
+                </div>
+                <div class="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+                    <p class="text-slate-300 leading-relaxed">
+                        بالمشاركة في الفعالية، يوافق الطالب (أو ولي الأمر إذا كان الطالب قاصرًا) على التقاط صور وفيديوهات خلال الورش والفعاليات، والتي قد تُستخدم للتوثيق أو النشر عبر وسائل EDU-TECH الرسمية.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 5: Acceptance -->
+            <div class="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 p-8 rounded-[2.5rem] shadow-2xl text-center group">
+                <div class="inline-flex p-3 rounded-2xl bg-white/10 text-white mb-6 group-hover:rotate-12 transition-transform">
+                    <i data-lucide="check-circle" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white mb-4">5️⃣ القبول والالتزام</h2>
+                <p class="text-cyan-100/80 text-lg leading-relaxed mb-8">
+                    بالضغط على “إرسال” أو “تأكيد التسجيل”، يوافق الطالب (أو ولي الأمر) على جميع الشروط السابقة.
+                </p>
+                <div class="flex justify-center">
+                    <a href="{% url 'public_screen:public_screen' %}" class="px-10 py-4 bg-white text-blue-700 rounded-2xl font-black text-sm transition-all hover:scale-105 hover:shadow-xl shadow-lg flex items-center gap-3">
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        <span>العودة لصفحة التسجيل</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+</script>
+{% endblock %}

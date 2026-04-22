@@ -1,0 +1,61 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}أرشفة الفعالية - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-2xl mx-auto py-12 px-4">
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-10 text-center space-y-8 shadow-2xl relative overflow-hidden">
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl"></div>
+
+        <div class="relative space-y-6">
+            <div class="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mx-auto border border-rose-500/20 shadow-2xl shadow-rose-500/10">
+                <i data-lucide="alert-triangle" class="w-12 h-12"></i>
+            </div>
+            
+            <div class="space-y-2">
+                <h1 class="text-3xl font-black text-white tracking-tight">أرشفة الفعالية الحالية</h1>
+                <p class="text-slate-400 text-sm leading-relaxed max-w-md mx-auto">
+                    أنت على وشك أرشفة فعالية <span class="text-white font-bold">{{ event }}</span>. 
+                    هذا الإجراء سيقوم بتجميد البيانات الحالية وبدء فعالية جديدة من الصفر.
+                </p>
+            </div>
+
+            <div class="bg-slate-950/50 border border-slate-800 rounded-2xl p-6 text-right space-y-4">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="info" class="w-4 h-4"></i> ماذا سيحدث بعد الأرشفة؟
+                </h3>
+                <ul class="space-y-3">
+                    <li class="flex items-start gap-3 text-sm text-slate-300">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>سيتم حفظ جميع الحضور والنقاط والنتائج في رابط أرشيف ثابت.</span>
+                    </li>
+                    <li class="flex items-start gap-3 text-sm text-slate-300">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>سيتم تصفير نقاط الطلاب والمجموعات والحضور في النظام الرئيسي.</span>
+                    </li>
+                    <li class="flex items-start gap-3 text-sm text-slate-300">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>ستبقى حسابات المستخدمين (طلاب، مشرفين، متطوعين) كما هي.</span>
+                    </li>
+                    <li class="flex items-start gap-3 text-sm text-slate-300">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>سيتم إنشاء فعالية جديدة تلقائياً لبدء العمل من الصفر.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <form method="POST" class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                {% csrf_token %}
+                <a href="{% url 'dashboard:admin_dashboard' %}" class="w-full sm:w-auto px-8 py-4 bg-slate-950 border border-slate-800 text-slate-400 rounded-2xl text-sm font-black hover:bg-slate-900 transition-all">
+                    إلغاء وتراجع
+                </a>
+                <button type="submit" class="w-full sm:w-auto px-10 py-4 bg-rose-500 hover:bg-rose-400 text-slate-950 rounded-2xl text-sm font-black transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-3">
+                    <i data-lucide="archive" class="w-5 h-5"></i>
+                    تأكيد الأرشفة والبدء من جديد
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

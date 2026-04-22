@@ -1,0 +1,169 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}طلبات تسجيل الطلاب - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="clipboard-list" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">طلبات تسجيل الطلاب</h1>
+                <p class="text-sm text-slate-400 font-medium">مراجعة وإدارة طلبات الالتحاق بالفعالية</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <form method="get" class="flex items-center gap-2">
+                <input type="hidden" name="status" value="{{ status }}">
+                <input name="q" value="{{ q }}" placeholder="بحث (اسم / بريد / مدرسة / هاتف)"
+                       class="w-64 max-w-[60vw] px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-bold text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/40 transition-all">
+                <button type="submit"
+                        class="px-4 py-2 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-[11px] font-black transition-all">
+                    بحث
+                </button>
+            </form>
+            <div class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-bold text-slate-400">
+                إجمالي الطلبات: <span class="text-cyan-400">{{ total_count }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registrations Table Card -->
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-right">
+                <thead class="bg-slate-800/30 text-slate-500 text-[10px] uppercase tracking-wider font-bold border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4">بيانات الطالب</th>
+                        <th class="px-6 py-4">المستوى التعليمي</th>
+                        <th class="px-6 py-4">الحالة</th>
+                        <th class="px-6 py-4">تاريخ الطلب</th>
+                        <th class="px-6 py-4 text-center">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for reg in registrations %}
+                    <tr class="hover:bg-slate-800/30 transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-cyan-500/10 group-hover:text-cyan-400 transition-colors">
+                                    <i data-lucide="user-plus" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-100">{{ reg.full_name_ar }}</div>
+                                    <div class="text-[10px] text-slate-500 font-medium flex items-center gap-2 mt-0.5">
+                                        <i data-lucide="mail" class="w-3 h-3"></i>
+                                        {{ reg.email }}
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 font-medium flex items-center gap-2 mt-0.5">
+                                        <i data-lucide="building" class="w-3 h-3"></i>
+                                        {{ reg.school }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-xs font-bold text-slate-300">
+                                {% if reg.grade == '4-prim' %}رابع ابتدائي
+                                {% elif reg.grade == '5-prim' %}خامس ابتدائي
+                                {% elif reg.grade == '6-prim' %}سادس ابتدائي
+                                {% elif reg.grade == '1-prep' %}أول إعدادي
+                                {% elif reg.grade == '2-prep' %}ثاني إعدادي
+                                {% elif reg.grade == '3-prep' %}ثالث إعدادي
+                                {% elif reg.grade == '1-sec' %}أول ثانوي
+                                {% elif reg.grade == '2-sec' %}ثاني ثانوي
+                                {% elif reg.grade == '3-sec' %}ثالث ثانوي
+                                {% else %}{{ reg.grade|default:"-" }}
+                                {% endif %}
+                            </div>
+                            <div class="text-[10px] text-slate-500">{{ reg.education_admin }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if reg.status == "pending" %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-black border border-amber-500/20 uppercase tracking-wider">
+                                    <span class="w-1 h-1 rounded-full bg-amber-400 animate-pulse"></span>
+                                    قيد المراجعة
+                                </span>
+                            {% elif reg.status == "approved" %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20 uppercase tracking-wider">
+                                    <i data-lucide="check-circle" class="w-3 h-3"></i>
+                                    تمت الموافقة
+                                </span>
+                            {% elif reg.status == "rejected" %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-black border border-rose-500/20 uppercase tracking-wider">
+                                    <i data-lucide="x-circle" class="w-3 h-3"></i>
+                                    مرفوض
+                                </span>
+                            {% else %}
+                                <span class="text-[10px] font-bold text-slate-600 italic">غير معروف</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2 text-[11px] text-slate-400 font-bold">
+                                    <i data-lucide="calendar" class="w-3 h-3"></i>
+                                    {{ reg.created_at|date:"Y-m-d" }}
+                                </div>
+                                <div class="flex items-center gap-2 text-[10px] text-slate-500">
+                                    <i data-lucide="clock" class="w-3 h-3"></i>
+                                    {{ reg.created_at|date:"H:i" }}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="{% url 'dashboard:admin_registration_detail' reg.pk %}" title="مراجعة الطلب"
+                                   class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 hover:bg-cyan-500 hover:text-slate-950 transition-all border border-slate-700 text-xs font-bold flex items-center gap-2">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                    مراجعة
+                                </a>
+                                {% if reg.student %}
+                                <a href="{% url 'students:detail' reg.student.pk %}" title="صفحة الطالب"
+                                   class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-violet-500/10 hover:text-violet-400 transition-all border border-slate-700">
+                                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center space-y-3">
+                            <div class="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto text-slate-600">
+                                <i data-lucide="inbox" class="w-8 h-8"></i>
+                            </div>
+                            <div class="text-slate-500 font-bold">لا توجد طلبات تسجيل حالياً</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if registrations.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-between gap-3 pt-2">
+        <div class="text-[11px] text-slate-500 font-bold">
+            صفحة {{ registrations.number }} من {{ registrations.paginator.num_pages }}
+        </div>
+        <div class="flex items-center gap-2">
+            {% if registrations.has_previous %}
+            <a href="?status={{ status }}&q={{ q }}&page={{ registrations.previous_page_number }}"
+               class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+                السابق
+            </a>
+            {% endif %}
+            {% if registrations.has_next %}
+            <a href="?status={{ status }}&q={{ q }}&page={{ registrations.next_page_number }}"
+               class="px-4 py-2 rounded-2xl bg-slate-800/50 border border-slate-700 text-[11px] font-black text-slate-200 hover:bg-slate-700/50 transition-all">
+                التالي
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

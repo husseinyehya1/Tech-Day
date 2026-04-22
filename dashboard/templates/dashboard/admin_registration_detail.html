@@ -1,0 +1,273 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}مراجعة طلب تسجيل طالب - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-4xl mx-auto space-y-8 pb-12">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                    <i data-lucide="user-plus" class="w-6 h-6 text-amber-400"></i>
+                </div>
+                <h1 class="text-3xl font-black text-white tracking-tight">مراجعة طلب التسجيل</h1>
+            </div>
+            <p class="text-slate-400 text-sm mr-12">التأكد من بيانات الطالب بدقة قبل اتخاذ قرار القبول أو الرفض.</p>
+        </div>
+        <a href="{% url 'dashboard:admin_registrations_list' %}"
+           class="group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 text-sm font-bold text-slate-300 transition-all">
+            <i data-lucide="chevron-right" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i>
+            رجوع للطلبات
+        </a>
+    </div>
+
+    <!-- Registration Details Card -->
+    <div class="relative group">
+        <div class="absolute -inset-1 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-[2.5rem] blur-xl opacity-50"></div>
+        <div class="relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-[2.5rem] p-8 space-y-8">
+            
+            <div class="grid gap-8 md:grid-cols-2">
+                <!-- Primary Info -->
+                <div class="space-y-6">
+                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-amber-500 rounded-full"></span>
+                        البيانات الشخصية
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex flex-col gap-1 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/50">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">الاسم الكامل (عربي)</span>
+                            <span class="text-lg font-black text-white">{{ registration.full_name_ar }}</span>
+                        </div>
+                        <div class="flex flex-col gap-1 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/50">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">Full Name (English)</span>
+                            <span class="text-lg font-black text-white font-sans">{{ registration.full_name_en }}</span>
+                        </div>
+                        <div class="flex flex-col gap-1 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/50">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">البريد الإلكتروني</span>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="mail" class="w-4 h-4 text-cyan-400"></i>
+                                <span class="text-sm font-mono text-cyan-400">{{ registration.email }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Academic Info -->
+                <div class="space-y-6">
+                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-cyan-500 rounded-full"></span>
+                        البيانات الدراسية
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-1 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/50">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">السنة الدراسية</span>
+                                <span class="text-sm font-black text-cyan-400">
+                                    {% if registration.grade == '4-prim' %}رابع ابتدائي
+                                    {% elif registration.grade == '5-prim' %}خامس ابتدائي
+                                    {% elif registration.grade == '6-prim' %}سادس ابتدائي
+                                    {% elif registration.grade == '1-prep' %}أول إعدادي
+                                    {% elif registration.grade == '2-prep' %}ثاني إعدادي
+                                    {% elif registration.grade == '3-prep' %}ثالث إعدادي
+                                    {% elif registration.grade == '1-sec' %}أول ثانوي
+                                    {% elif registration.grade == '2-sec' %}ثاني ثانوي
+                                    {% elif registration.grade == '3-sec' %}ثالث ثانوي
+                                    {% else %}{{ registration.grade|default:"-" }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="flex flex-col gap-1 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/50">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">تاريخ الطلب</span>
+                                <span class="text-sm font-black text-white">{{ registration.created_at|date:"Y-m-d" }}</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/50">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">المدرسة</span>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="school" class="w-4 h-4 text-slate-400"></i>
+                                <span class="text-sm font-bold text-slate-200">{{ registration.school }}</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1 p-4 bg-slate-950/40 rounded-2xl border border-slate-800/50">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">الإدارة التعليمية</span>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-slate-400"></i>
+                                <span class="text-sm font-bold text-slate-200">{{ registration.education_admin }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interests Section -->
+            {% if registration.interests %}
+            <div class="space-y-4 pt-4">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                    الاهتمامات والهوايات
+                </h3>
+                <div class="p-6 bg-amber-500/5 rounded-[2rem] border border-amber-500/10 text-sm text-slate-300 leading-relaxed italic">
+                    {{ registration.interests }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Status Badge -->
+            <div class="flex items-center justify-between p-6 bg-slate-950/50 rounded-3xl border border-slate-800/50">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
+                        <i data-lucide="info" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">حالة الطلب الحالية</span>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            {% if registration.status == "pending" %}
+                                <span class="text-sm font-black text-amber-400">قيد المراجعة</span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            {% elif registration.status == "approved" %}
+                                <span class="text-sm font-black text-emerald-400">تم القبول</span>
+                            {% elif registration.status == "rejected" %}
+                                <span class="text-sm font-black text-rose-400">مرفوض</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if registration.student %}
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">مرتبط بحساب طالب</span>
+                    <a href="{% url 'students:detail' registration.student.pk %}" class="text-sm font-bold text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1">
+                        {{ registration.student.name }}
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Forms -->
+    {% if registration.status == "pending" %}
+    <form method="post" class="relative group">
+        {% csrf_token %}
+        <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 rounded-[2.5rem] blur-xl opacity-50"></div>
+        <div class="relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-[2.5rem] p-8 space-y-8">
+            <h3 class="text-xl font-black text-white flex items-center gap-3">
+                <div class="w-2 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+                اتخاذ إجراء بشأن الطلب
+            </h3>
+
+            {% if possible_student_matches or possible_registration_matches %}
+            <div class="p-6 rounded-3xl bg-amber-500/5 border border-amber-500/10 space-y-5">
+                <div class="flex items-center gap-2 text-amber-400">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                    <div class="text-xs font-black uppercase tracking-widest">تطابق محتمل (منع الدوبليكيت)</div>
+                </div>
+
+                {% if possible_student_matches %}
+                <div class="space-y-3">
+                    <div class="text-xs font-black text-slate-200">طلاب موجودين بنفس البيانات</div>
+                    <div class="space-y-2">
+                        {% for s in possible_student_matches %}
+                        <label class="flex items-start gap-3 p-4 rounded-2xl bg-slate-950/50 border border-slate-800 hover:border-amber-500/30 transition-all cursor-pointer">
+                            <input type="radio" name="link_student_id" value="{{ s.id }}" class="mt-1 w-4 h-4 accent-amber-500">
+                            <div class="min-w-0">
+                                <div class="text-sm font-black text-white">{{ s.name }} <span class="text-slate-500 font-bold">({{ s.student_id }})</span></div>
+                                <div class="text-[11px] text-slate-400 font-bold truncate">{{ s.school|default:"—" }} • {{ s.education_admin|default:"—" }} • {{ s.grade|default:"—" }}</div>
+                                <div class="text-[11px] text-slate-500 font-bold truncate">{{ s.email|default:"—" }} • {{ s.phone_number|default:"—" }}</div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-bold">اختيار طالب هنا هيعمل ربط الطلب بالطالب الموجود بدل إنشاء طالب جديد.</div>
+                </div>
+                {% endif %}
+
+                {% if possible_registration_matches %}
+                <div class="space-y-3">
+                    <div class="text-xs font-black text-slate-200">طلبات مشابهة في نفس الفعالية</div>
+                    <div class="space-y-2">
+                        {% for r in possible_registration_matches %}
+                        <div class="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="text-sm font-black text-slate-100 truncate">{{ r.full_name_ar }}</div>
+                                    <div class="text-[11px] text-slate-500 font-bold truncate">{{ r.school }} • {{ r.email }} • {{ r.phone_number|default:"—" }}</div>
+                                </div>
+                                <span class="shrink-0 px-3 py-1 rounded-xl border text-[10px] font-black uppercase tracking-widest {% if r.status == 'approved' %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300{% elif r.status == 'pending' %}bg-amber-500/10 border-amber-500/20 text-amber-300{% else %}bg-rose-500/10 border-rose-500/20 text-rose-300{% endif %}">
+                                    {{ r.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <label class="flex items-center gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                    <input type="checkbox" name="force_new" value="1" class="w-5 h-5 accent-rose-500">
+                    <span class="text-sm font-bold text-slate-200">إنشاء طالب جديد رغم وجود تطابق</span>
+                </label>
+            </div>
+            {% endif %}
+
+            <div class="grid gap-8 md:grid-cols-2">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 px-1">
+                        <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+                        <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="group">المجموعة (اختياري)</label>
+                    </div>
+                    <select id="group" name="group"
+                            class="w-full rounded-2xl bg-slate-950 border border-slate-800 px-5 py-4 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all">
+                        <option value="">بدون مجموعة - سيتم التعيين لاحقاً</option>
+                        {% for group in groups %}
+                        <option value="{{ group.id }}">{{ group.name }} ({{ group.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 px-1">
+                        <i data-lucide="x-circle" class="w-4 h-4 text-rose-400"></i>
+                        <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="rejection_reason">سبب الرفض (في حالة الرفض)</label>
+                    </div>
+                    <textarea id="rejection_reason" name="rejection_reason" rows="3"
+                              class="w-full rounded-2xl bg-slate-950 border border-slate-800 px-5 py-4 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all"
+                              placeholder="سيتم إرسال هذا السبب للطالب عبر البريد..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-end gap-4 pt-4">
+                <button type="submit" name="action" value="reject"
+                        class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-slate-950 border border-rose-500/20 text-sm font-black uppercase tracking-widest transition-all">
+                    <i data-lucide="user-x" class="w-5 h-5"></i>
+                    رفض الطلب نهائياً
+                </button>
+                <button type="submit" name="action" value="approve"
+                        class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                    <i data-lucide="user-check" class="w-5 h-5"></i>
+                    قبول الطلب وتفعيل الحساب
+                </button>
+            </div>
+        </div>
+    </form>
+    {% else %}
+    <div class="p-8 bg-slate-900/20 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] border-dashed text-center">
+        <div class="flex flex-col items-center gap-4 opacity-60">
+            <div class="p-4 bg-slate-800/50 rounded-full border border-slate-700/50">
+                <i data-lucide="lock" class="w-8 h-8 text-slate-500"></i>
+            </div>
+            <div class="space-y-1">
+                <p class="text-lg font-black text-slate-200 uppercase tracking-tight">الطلب مغلق</p>
+                <p class="text-slate-500 text-sm">
+                    {% if registration.status == "approved" %}
+                        تمت الموافقة على هذا الطلب مسبقاً وإنشاء حساب للطالب.
+                    {% elif registration.status == "rejected" %}
+                        تم رفض هذا الطلب مسبقاً ولا يمكن تعديله.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

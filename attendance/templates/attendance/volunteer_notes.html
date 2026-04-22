@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}ملاحظات المتطوع - Tech Day{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8 pb-12">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
+                    <i data-lucide="message-square-quote" class="w-6 h-6 text-cyan-400"></i>
+                </div>
+                <h1 class="text-3xl font-black text-white tracking-tight">ملاحظات المتطوع</h1>
+            </div>
+            <p class="text-slate-400 text-sm mr-12">اكتب ملاحظاتك الميدانية ليتم مراجعتها من قبل الإدارة.</p>
+        </div>
+        <a href="{% url 'attendance:volunteer_dashboard' %}"
+           class="group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 text-sm font-bold text-slate-300 transition-all">
+            <i data-lucide="chevron-right" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i>
+            رجوع للوحة التحكم
+        </a>
+    </div>
+
+    <!-- New Note Form -->
+    <div class="relative group">
+        <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-[2.5rem] blur-xl opacity-50"></div>
+        <div class="relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-[2.5rem] p-8 space-y-8">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 px-1">
+                        <i data-lucide="pen-tool" class="w-4 h-4 text-cyan-400"></i>
+                        <label class="text-sm font-black text-slate-200 uppercase tracking-widest" for="note">ملاحظة جديدة</label>
+                    </div>
+                    <textarea id="note" name="note" rows="5" required
+                              class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-5 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder:text-slate-600 leading-relaxed"
+                              placeholder="اكتب ملاحظاتك هنا (مثال: مشكلة في قاعة، فكرة للتحسين، طالب يحتاج متابعة)..."></textarea>
+                </div>
+
+                <div class="flex items-center justify-end">
+                    <button type="submit"
+                            class="group relative inline-flex items-center gap-3 px-10 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:-translate-y-1 overflow-hidden w-full sm:w-auto justify-center">
+                        <span>حفظ الملاحظة</span>
+                        <i data-lucide="save" class="w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notes History -->
+    <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-[2.5rem] p-8 space-y-8">
+        <div class="flex items-center justify-between px-1">
+            <h2 class="text-xl font-black text-white flex items-center gap-3">
+                <div class="w-2 h-8 bg-cyan-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.5)]"></div>
+                سجل ملاحظاتك السابقة
+            </h2>
+            <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">إجمالي الملاحظات: {{ notes|length }}</span>
+        </div>
+
+        <div class="grid gap-6 sm:grid-cols-2">
+            {% for note in notes %}
+            <div class="group relative p-6 rounded-3xl bg-slate-950/40 border border-slate-800/50 hover:border-cyan-500/30 transition-all">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <div class="p-2 bg-cyan-500/10 rounded-lg">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-500"></i>
+                        </div>
+                        <span class="text-[10px] font-mono text-slate-500">{{ note.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-300 leading-relaxed group-hover:text-slate-100 transition-colors whitespace-pre-line">
+                    {{ note.text }}
+                </p>
+            </div>
+            {% empty %}
+            <div class="sm:col-span-2 flex flex-col items-center justify-center py-16 opacity-40">
+                <i data-lucide="scroll-text" class="w-16 h-16 text-slate-600 mb-4"></i>
+                <p class="text-sm font-black uppercase tracking-widest text-slate-400">لا توجد ملاحظات مسجلة بعد</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

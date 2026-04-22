@@ -1,0 +1,360 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}إعدادات الفعالية - لوحة التحكم{% endblock %}
+
+{% block page %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="settings-2" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">إعدادات الفعالية</h1>
+                <p class="text-sm text-slate-400 font-medium">تحكم في هوية الفعالية، مواعيدها، ومواقعها</p>
+            </div>
+        </div>
+        <a href="{% url 'dashboard:admin_dashboard' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition-all border border-slate-700">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للرئيسية</span>
+        </a>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-3">
+        <!-- Main Settings Form -->
+        <div class="lg:col-span-2 space-y-6">
+            <form method="post" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save">
+                
+                <!-- Form Sections -->
+                <div class="p-6 space-y-8">
+                    <!-- General Info -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2 text-cyan-400 mb-2">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                            <h3 class="text-xs font-black uppercase tracking-widest">التوقيت والمواعيد</h3>
+                        </div>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 mr-2" for="start_date">تاريخ الفعالية</label>
+                                <div class="relative group">
+                                    <i data-lucide="calendar-days" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                                    <input id="start_date" name="start_date" type="date"
+                                           value="{% if event.start_datetime %}{{ event.start_datetime|date:'Y-m-d' }}{% endif %}"
+                                           class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 mr-2" for="start_time">وقت البدء</label>
+                                <div class="relative group">
+                                    <i data-lucide="clock" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-cyan-400 transition-colors"></i>
+                                    <input id="start_time" name="start_time" type="time"
+                                           value="{% if event.start_datetime %}{{ event.start_datetime|date:'H:i' }}{% endif %}"
+                                           class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all font-bold text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                        <div class="flex items-center gap-2 text-amber-400 mb-2">
+                            <i data-lucide="map-pin" class="w-4 h-4"></i>
+                            <h3 class="text-xs font-black uppercase tracking-widest">الموقع الجغرافي</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 mr-2" for="location_name">اسم المكان</label>
+                                <div class="relative group">
+                                    <i data-lucide="building-2" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors"></i>
+                                    <input id="location_name" name="location_name" type="text"
+                                           value="{{ event.location_name }}"
+                                           class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm"
+                                           placeholder="مثال: مدرسة المتفوقين للعلوم والتكنولوجيا">
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 mr-2" for="location_link">رابط خرائط جوجل</label>
+                                <div class="relative group">
+                                    <i data-lucide="link" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-amber-400 transition-colors"></i>
+                                    <input id="location_link" name="location_link" type="url"
+                                           value="{{ event.location_link }}"
+                                           class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold text-sm"
+                                           placeholder="https://goo.gl/maps/...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Info -->
+                    <div class="space-y-4 pt-6 border-t border-slate-800/50">
+                        <div class="flex items-center gap-2 text-violet-400 mb-2">
+                            <i data-lucide="info" class="w-4 h-4"></i>
+                            <h3 class="text-xs font-black uppercase tracking-widest">معلومات إضافية</h3>
+                        </div>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 mr-2" for="arrival_time_text">وقت الحضور</label>
+                                <div class="relative group">
+                                    <i data-lucide="user-plus" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                                    <input id="arrival_time_text" name="arrival_time_text" type="text"
+                                           value="{{ event.arrival_time_text }}"
+                                           class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm"
+                                           placeholder="مثال: 8:30 صباحاً">
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 mr-2" for="max_students">الحد الأقصى للطلاب</label>
+                                <div class="relative group">
+                                    <i data-lucide="users-2" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                                    <input id="max_students" name="max_students" type="number" min="0"
+                                           value="{{ event.max_students|default_if_none:'' }}"
+                                           class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm"
+                                           placeholder="غير محدود">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-500 mr-2" for="whatsapp_group_link">رابط مجموعة الواتساب</label>
+                            <div class="relative group">
+                                <i data-lucide="message-circle" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-emerald-400 transition-colors"></i>
+                                <input id="whatsapp_group_link" name="whatsapp_group_link" type="url"
+                                       value="{{ event.whatsapp_group_link }}"
+                                       class="w-full pr-11 pl-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-bold text-sm"
+                                       placeholder="https://chat.whatsapp.com/...">
+                            </div>
+                        </div>
+                        <div class="space-y-2 pt-4 border-t border-slate-800/50">
+                            <label class="text-xs font-bold text-slate-500 mr-2" for="event_instructions">تعليمات الفعالية للطلاب</label>
+                            <div class="relative group">
+                                <i data-lucide="scroll-text" class="absolute right-4 top-5 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                                <textarea id="event_instructions" name="event_instructions" rows="6"
+                                          class="w-full pr-11 pl-4 py-4 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-bold text-sm leading-relaxed"
+                                          placeholder="اكتب هنا التعليمات التي تود وصولها للطلاب (مثل: الالتزام بالزي الرسمي، إحضار اللابتوب، موعد الاستراحة...)">{{ event.event_instructions }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Footer -->
+                <div class="p-6 bg-slate-950/50 border-t border-slate-800 flex items-center justify-between">
+                    <p class="text-[10px] text-slate-500 font-bold max-w-[200px] leading-relaxed italic">
+                        * تأكد من صحة الروابط والمواعيد قبل الحفظ حيث سيتم استخدامها في رسائل البريد الإلكتروني.
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <button type="submit"
+                                class="px-8 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20 transition-all active:scale-95">
+                            حفظ كافة التغييرات
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar / Action Panels -->
+        <div class="space-y-6">
+            <div class="p-6 rounded-3xl bg-slate-900/40 border border-slate-800 space-y-5">
+                <div class="flex items-center gap-2 text-slate-400 mb-1">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">Config Panel</h3>
+                </div>
+
+                <div class="grid gap-2">
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">التسجيل</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.is_registration_closed %}bg-rose-500/10 border-rose-500/20 text-rose-300{% else %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300{% endif %}">
+                            {% if event.is_registration_closed %}مغلق{% else %}مفتوح{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">طلاب قدامى</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.allow_existing_students_registration %}bg-emerald-500/10 border-emerald-500/20 text-emerald-300{% else %}bg-rose-500/10 border-rose-500/20 text-rose-300{% endif %}">
+                            {% if event.allow_existing_students_registration %}مسموح{% else %}ممنوع{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">الإدارة التعليمية</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.is_education_admin_locked %}bg-amber-500/10 border-amber-500/20 text-amber-300{% else %}bg-slate-800/50 border-slate-700/50 text-slate-400{% endif %}">
+                            {% if event.is_education_admin_locked %}
+                                {% if locked_admins_list %}
+                                    {{ locked_admins_list|join:", " }}
+                                {% else %}
+                                    مقفول
+                                {% endif %}
+                            {% else %}
+                                غير مقيد
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">الحد الأقصى</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if is_full %}bg-rose-500/10 border-rose-500/20 text-rose-300{% else %}bg-slate-800/50 border-slate-700/50 text-slate-400{% endif %}">
+                            {% if event.max_students %}{{ total_registered }}/{{ event.max_students }}{% else %}غير محدود{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/40 border border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">الصيانة</span>
+                        <span class="px-3 py-1 rounded-xl border text-[10px] font-black {% if event.is_maintenance_mode %}bg-rose-500/10 border-rose-500/20 text-rose-300{% else %}bg-slate-800/50 border-slate-700/50 text-slate-400{% endif %}">
+                            {% if event.is_maintenance_mode %}مفعلة{% else %}متوقفة{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <form method="post" class="space-y-4 pt-4 border-t border-slate-800/50">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="config">
+
+                    <label class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i data-lucide="user-plus" class="w-4 h-4 text-cyan-400"></i>
+                            <span class="text-xs font-black">قفل التسجيل</span>
+                        </div>
+                        <input type="checkbox" name="is_registration_closed" class="w-5 h-5 accent-rose-500" {% if event.is_registration_closed %}checked{% endif %}>
+                    </label>
+
+                    <label class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i data-lucide="user-x" class="w-4 h-4 text-amber-400"></i>
+                            <span class="text-xs font-black">السماح للطلاب المسجلين سابقاً</span>
+                        </div>
+                        <input type="checkbox" name="allow_existing_students_registration" class="w-5 h-5 accent-emerald-500" {% if event.allow_existing_students_registration %}checked{% endif %}>
+                    </label>
+
+                    <label class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+                            <span class="text-xs font-black">السماح بنقاط المجموعات</span>
+                        </div>
+                        <input type="checkbox" name="allow_group_points" class="w-5 h-5 accent-emerald-500" {% if event.allow_group_points %}checked{% endif %}>
+                    </label>
+
+                    <label class="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/40 border border-slate-800 cursor-pointer">
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i data-lucide="wrench" class="w-4 h-4 text-rose-400"></i>
+                            <span class="text-xs font-black">تفعيل وضع الصيانة</span>
+                        </div>
+                        <input type="checkbox" name="is_maintenance_mode" class="w-5 h-5 accent-rose-500" {% if event.is_maintenance_mode %}checked{% endif %}>
+                    </label>
+
+                    <div class="p-4 rounded-2xl bg-slate-950/40 border border-slate-800 space-y-3">
+                        <label class="flex items-center justify-between gap-3 cursor-pointer">
+                            <div class="flex items-center gap-2 text-slate-300">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-amber-400"></i>
+                                <span class="text-xs font-black">قفل الإدارة التعليمية للتسجيل</span>
+                            </div>
+                            <input type="checkbox" name="is_education_admin_locked" class="w-5 h-5 accent-amber-500" {% if event.is_education_admin_locked %}checked{% endif %}>
+                        </label>
+                        <select name="locked_education_admin" multiple
+                                class="w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all font-bold h-32">
+                            {% for a in education_admin_choices %}
+                            <option value="{{ a }}" {% if a in locked_admins_list %}selected{% endif %}>{{ a }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-[10px] text-slate-500 italic mt-1 px-1">* اضغط Ctrl لاختيار أكثر من إدارة</p>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20 transition-all active:scale-95">
+                        حفظ إعدادات القيود
+                    </button>
+                </form>
+            </div>
+
+            <!-- Event Control -->
+            <div class="p-6 rounded-3xl bg-slate-900/40 border border-slate-800 space-y-4">
+                <div class="flex items-center gap-2 text-slate-400 mb-2">
+                    <i data-lucide="power" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">حالة التشغيل</h3>
+                </div>
+
+                {% if not event.is_finished %}
+                <div class="space-y-4">
+                    <div class="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-center">
+                        <div class="text-emerald-400 font-black text-lg mb-1">الفعالية جارية</div>
+                        <div class="text-[10px] text-slate-500">يتم حالياً استقبال الطلاب وتسجيل الحضور</div>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="end">
+                        <button type="submit"
+                                class="w-full py-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500 text-rose-500 hover:text-slate-950 font-black text-sm transition-all group">
+                            <i data-lucide="stop-circle" class="w-4 h-4 inline-block ml-2 group-hover:animate-pulse"></i>
+                            إنهاء الفعالية الآن
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="space-y-4">
+                    <div class="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 text-center">
+                        <div class="text-rose-400 font-black text-lg mb-1">الفعالية متوقفة</div>
+                        <div class="text-[10px] text-slate-500">انتهت الفعالية وجاري استخراج الشهادات</div>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="resume">
+                        <button type="submit"
+                                class="w-full py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500 text-emerald-500 hover:text-slate-950 font-black text-sm transition-all group">
+                            <i data-lucide="play-circle" class="w-4 h-4 inline-block ml-2 group-hover:animate-spin"></i>
+                            إعادة تشغيل الفعالية
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Bulk Communications -->
+            <div class="p-6 rounded-3xl bg-slate-900/40 border border-slate-800 space-y-4">
+                <div class="flex items-center gap-2 text-slate-400 mb-2">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <h3 class="text-xs font-black uppercase tracking-widest">مراسلات جماعية</h3>
+                </div>
+
+                {% if event.location_name and event.location_link %}
+                <form method="post" action="{% url 'dashboard:admin_send_location_email' %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="w-full p-4 rounded-2xl bg-slate-800/50 border border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800 text-right transition-all group">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-slate-200">تأكيد الموعد والمكان</span>
+                            <i data-lucide="mail" class="w-4 h-4 text-slate-500 group-hover:text-cyan-400"></i>
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">إرسال تفاصيل الموقع ووقت الحضور لطلاب الفعالية الحالية فقط.</p>
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if event.whatsapp_group_link %}
+                <form method="post" action="{% url 'dashboard:admin_send_whatsapp_link' %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="w-full p-4 rounded-2xl bg-slate-800/50 border border-slate-700 hover:border-emerald-500/50 hover:bg-slate-800 text-right transition-all group">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-slate-200">رابط مجموعة الواتساب</span>
+                            <i data-lucide="message-square" class="w-4 h-4 text-slate-500 group-hover:text-emerald-400"></i>
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">دعوة طلاب الفعالية الحالية فقط للانضمام لمجموعة الفعالية الرسمية.</p>
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if event.event_instructions %}
+                <form method="post" action="{% url 'dashboard:admin_send_event_instructions' %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="w-full p-4 rounded-2xl bg-slate-800/50 border border-slate-700 hover:border-violet-500/50 hover:bg-slate-800 text-right transition-all group">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-slate-200">إرسال التعليمات للطلاب</span>
+                            <i data-lucide="send" class="w-4 h-4 text-slate-500 group-hover:text-violet-400"></i>
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">إرسال تعليمات الفعالية المكتوبة لطلاب الفعالية الحالية فقط عبر البريد.</p>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

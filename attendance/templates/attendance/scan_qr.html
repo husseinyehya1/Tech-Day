@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+
+{% block title %}تسجيل الحضور بالـ QR - Tech Day{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="relative z-50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+        <div class="flex items-center gap-4">
+            <div class="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="qr-code" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">ماسح الحضور الذكي</h1>
+                <p class="text-sm text-slate-400 font-medium">سجل حضور الطلاب بسرعة وسهولة عبر QR</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-2xl border border-slate-700/50">
+            {% if session %}
+                <div class="flex items-center gap-2 mr-2">
+                    <form action="{% url 'attendance:mark_all_group_present' session.id %}" method="POST" onsubmit="return confirm('هل أنت متأكد من تسجيل حضور {{ checked_in_not_present_count }} طالب من مجموعة ({{ session.group.code }})؟ (سيتم تسجيل الطلاب الذين سجلوا حضوراً للفعالية فقط)');">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                class="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-[11px] font-bold text-emerald-400 border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale"
+                                {% if checked_in_not_present_count == 0 %}disabled{% endif %}>
+                            <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                            تسجيل حضور المجموعة ({{ checked_in_not_present_count }})
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+            <div id="scanner-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 text-[11px] font-bold text-slate-500 transition-all">
+                <span class="w-2 h-2 rounded-full bg-slate-700 animate-pulse"></span>
+                <span id="scanner-text">جاري التحميل</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[1fr,350px]">
+        <!-- Scanner Viewport -->
+        <div class="space-y-4">
+            <div class="relative group">
+                <!-- Scanner Decoration -->
+                <div class="absolute -top-2 -left-2 w-8 h-8 border-t-4 border-l-4 border-cyan-500 rounded-tl-lg z-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <div class="absolute -top-2 -right-2 w-8 h-8 border-t-4 border-r-4 border-cyan-500 rounded-tr-lg z-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <div class="absolute -bottom-2 -left-2 w-8 h-8 border-b-4 border-l-4 border-cyan-500 rounded-bl-lg z-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <div class="absolute -bottom-2 -right-2 w-8 h-8 border-b-4 border-r-4 border-cyan-500 rounded-br-lg z-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                
+                <div id="reader" class="w-full aspect-square md:aspect-video rounded-3xl overflow-hidden bg-slate-950 border-2 border-slate-800 shadow-2xl shadow-cyan-500/5 relative">
+                </div>
+
+                <!-- Settings Overlay -->
+                <div class="absolute top-4 left-4 z-40">
+                    <div class="relative group/settings">
+                        <button id="toggle-settings" class="p-2.5 rounded-2xl bg-slate-900/90 hover:bg-cyan-500 text-slate-400 hover:text-slate-950 border border-slate-800 shadow-xl transition-all active:scale-95">
+                            <i data-lucide="settings-2" class="w-5 h-5"></i>
+                        </button>
+                        
+                        <div id="settings-dropdown" class="absolute left-0 top-full mt-3 w-64 bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl z-[100] hidden animate-in fade-in zoom-in-95 duration-200 origin-top-left">
+                            <div class="p-5 border-b border-slate-800">
+                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <i data-lucide="camera" class="w-4 h-4 text-cyan-500"></i>
+                                    إعدادات الكاميرا
+                                </h4>
+                            </div>
+                            <div class="p-4 space-y-4">
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-500 mr-1 uppercase tracking-tighter">تبديل الكاميرا</label>
+                                    <div class="relative">
+                                        <select id="camera-select" class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 appearance-none cursor-pointer">
+                                            <option value="">الكاميرا الخلفية (تلقائي)</option>
+                                        </select>
+                                        <i data-lucide="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 pointer-events-none"></i>
+                                    </div>
+                                </div>
+                                <div class="pt-2">
+                                    <button id="restart-scanner" class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-cyan-500/10 text-cyan-400 text-[11px] font-black hover:bg-cyan-500/20 transition-all border border-cyan-500/20">
+                                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                        إعادة تشغيل الكاميرا
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Loading UI -->
+                <div id="reader-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 z-20 transition-opacity duration-500 rounded-3xl">
+                    <div class="relative w-20 h-20 mb-4">
+                        <div class="absolute inset-0 border-4 border-cyan-500/20 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-t-cyan-500 rounded-full animate-spin"></div>
+                        <i data-lucide="camera" class="absolute inset-0 m-auto w-8 h-8 text-cyan-500/50"></i>
+                    </div>
+                    <p class="text-slate-400 font-bold text-sm">جاري تفعيل الكاميرا...</p>
+                </div>
+            </div>
+
+            <!-- Manual Input Card -->
+            <div class="p-6 rounded-3xl bg-slate-900/40 border border-slate-800 space-y-6">
+                <div class="flex items-center gap-3 mb-2">
+                    <i data-lucide="keyboard" class="w-4 h-4 text-slate-500"></i>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500">الإدخال والبحث اليدوي</h3>
+                </div>
+                
+                <div class="grid gap-4 md:grid-cols-2">
+                    <!-- Student Search by Name -->
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-2 px-1">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-cyan-400"></i>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">بحث باسم الطالب</label>
+                        </div>
+                        <div class="relative group/search">
+                            <input type="text" id="student_name_search"
+                                   class="w-full rounded-2xl bg-slate-950/50 border border-slate-800 px-5 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder:text-slate-700"
+                                   placeholder="اكتب اسم الطالب للبحث..." autocomplete="off">
+                            <!-- Search Results Dropdown -->
+                            <div id="search_results" class="absolute z-50 left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hidden shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                                <!-- Results will be injected here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual ID Input -->
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-2 px-1">
+                            <i data-lucide="hash" class="w-3.5 h-3.5 text-amber-400"></i>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">رقم الطالب (ID)</label>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1 group">
+                                <input id="manual-id" type="text" placeholder="رقم الطالب..."
+                                       class="w-full pr-4 pl-4 py-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all font-bold text-sm"
+                                       autocomplete="off" inputmode="numeric">
+                            </div>
+                            <button id="manual-submit" class="px-5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/20 transition-all active:scale-95 disabled:opacity-50">
+                                تسجيل
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Panel -->
+        <div class="space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 px-2">الحالة والنتائج</h3>
+            
+            <div id="status-container" class="space-y-4">
+                <!-- Result Success Card (Template) -->
+                <div id="result-card" class="hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div class="p-6 rounded-3xl bg-emerald-500/10 border-2 border-emerald-500/20 relative overflow-hidden group">
+                        <!-- Decorative bg -->
+                        <div class="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+                                    <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                                </div>
+                                <span id="res-time" class="text-[10px] font-mono font-bold text-emerald-500/60 bg-emerald-500/5 px-2 py-1 rounded-lg">12:30:45</span>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="text-[10px] font-bold text-emerald-500/50 uppercase tracking-widest mb-1">اسم الطالب</div>
+                                    <div id="res-student" class="text-xl font-black text-slate-100 leading-tight">--</div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4 pt-4 border-t border-emerald-500/10">
+                                    <div>
+                                        <div class="text-[10px] font-bold text-emerald-500/50 uppercase tracking-widest mb-1">المجموعة</div>
+                                        <div id="res-group" class="text-sm font-mono font-bold text-cyan-400">--</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-emerald-500/50 uppercase tracking-widest mb-1">الورشة</div>
+                                        <div id="res-workshop" class="text-sm font-bold text-slate-200 truncate">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Duplicate Card -->
+                <div id="duplicate-card" class="hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div class="p-6 rounded-3xl bg-amber-500/10 border-2 border-amber-500/20">
+                        <div class="flex items-center gap-3 mb-4 text-amber-400">
+                            <i data-lucide="copy" class="w-6 h-6"></i>
+                            <h4 class="font-black">حضور مكرر!</h4>
+                        </div>
+                        <p class="text-sm text-slate-300 font-medium mb-4">تم تسجيل حضور هذا الطالب مسبقاً في هذه الفعالية.</p>
+                        <div class="p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+                            <div class="text-[10px] font-bold text-amber-500/50 uppercase mb-1">اسم الطالب</div>
+                            <div id="dup-student" class="text-sm font-bold text-slate-100">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Card -->
+                <div id="error-card" class="hidden animate-in fade-in zoom-in duration-300">
+                    <div class="p-6 rounded-3xl bg-rose-500/10 border-2 border-rose-500/20 text-center">
+                        <div class="w-16 h-16 rounded-full bg-rose-500/20 flex items-center justify-center mx-auto mb-4 text-rose-500">
+                            <i data-lucide="x-circle" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="font-black text-rose-400 mb-2">خطأ في المسح</h4>
+                        <p id="error-text" class="text-sm text-slate-400 font-medium leading-relaxed">عذراً، لم يتم العثور على سجل لهذا الطالب في النظام.</p>
+                    </div>
+                </div>
+
+                <!-- Idle State -->
+                <div id="idle-card" class="p-8 rounded-3xl bg-slate-900/40 border border-slate-800 border-dashed text-center space-y-4">
+                    <div class="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto text-slate-600">
+                        <i data-lucide="scan" class="w-10 h-10 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-400">جاهز للمسح</h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">بانتظار مسح أول كود QR للبدء في معالجة البيانات</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pro Tips -->
+            <div class="p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
+                <div class="flex gap-3">
+                    <i data-lucide="lightbulb" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        <span class="text-cyan-400 font-bold">نصيحة:</span> 
+                        تأكد من وجود إضاءة كافية وحافظ على ثبات الكاميرا للحصول على أفضل سرعة مسح.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    var isSending = false;
+    var lastCode = null;
+    var lastCodeTime = 0;
+    var html5QrCode = null;
+    var currentCameraId = localStorage.getItem('preferredCameraId');
+
+    function updateScannerUI(status, colorClass, text) {
+        const indicator = document.getElementById("scanner-indicator");
+        const dot = indicator.querySelector('span:first-child');
+        const textEl = document.getElementById("scanner-text");
+        
+        indicator.className = `flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 text-[11px] font-bold ${colorClass} transition-all`;
+        dot.className = `w-2 h-2 rounded-full ${colorClass.replace('text-', 'bg-')} ${status === 'scanning' ? 'animate-pulse' : ''}`;
+        textEl.textContent = text;
+    }
+
+    function showCard(cardId) {
+        const cards = ['result-card', 'duplicate-card', 'error-card', 'idle-card'];
+        cards.forEach(id => {
+            const el = document.getElementById(id);
+            if (id === cardId) {
+                el.classList.remove('hidden');
+                // Re-trigger animation
+                el.style.animation = 'none';
+                el.offsetHeight; /* trigger reflow */
+                el.style.animation = null;
+            } else {
+                el.classList.add('hidden');
+            }
+        });
+    }
+
+    function playFeedback(type) {
+        if (window.navigator.vibrate) {
+            if (type === 'success') window.navigator.vibrate(100);
+            if (type === 'error') window.navigator.vibrate([100, 50, 100]);
+        }
+    }
+
+    function showResult(data) {
+        var now = new Date();
+        var timeStr = now.toLocaleTimeString("ar-EG", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+
+        if (data.is_already_checked_in) {
+            document.getElementById("dup-student").textContent = data.student || "مجهول";
+            showCard("duplicate-card");
+            playFeedback('error');
+        } else {
+            document.getElementById("res-time").textContent = timeStr;
+            document.getElementById("res-student").textContent = data.student || "--";
+            document.getElementById("res-group").textContent = data.group || "--";
+            document.getElementById("res-workshop").textContent = data.workshop || "--";
+            showCard("result-card");
+            playFeedback('success');
+        }
+    }
+
+    function showError(message) {
+        console.warn("Scanner Error:", message);
+        document.getElementById("error-text").textContent = message || "حدث خطأ غير متوقع";
+        showCard("error-card");
+        playFeedback('error');
+    }
+
+    function sendAttendance(studentId) {
+        if (!studentId || isSending) return;
+        
+        isSending = true;
+        updateScannerUI('sending', 'text-amber-400', 'جاري الإرسال...');
+        
+        const manualButton = document.getElementById("manual-submit");
+        manualButton.disabled = true;
+
+        fetch("{{ scan_url|default:request.path }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: new URLSearchParams({student_id: studentId}).toString(),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showResult(data);
+                updateScannerUI('scanning', 'text-emerald-400', 'جاهز للمسح');
+            } else {
+                showError(data.message);
+                updateScannerUI('scanning', 'text-emerald-400', 'جاهز للمسح');
+            }
+        })
+        .catch(() => {
+            showError("تعذر الاتصال بالخادم، يرجى التحقق من الإنترنت");
+            updateScannerUI('error', 'text-rose-500', 'خطأ في الاتصال');
+        })
+        .finally(() => {
+            isSending = false;
+            manualButton.disabled = false;
+        });
+    }
+
+    // Initialize Scanner Logic
+    async function startScanner(cameraId = null) {
+        const placeholder = document.getElementById('reader-placeholder');
+        if (placeholder) {
+            placeholder.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        try {
+            // إيقاف الماسح القديم بالكامل وتفريغ الـ DOM
+            if (html5QrCode) {
+                try { 
+                    await html5QrCode.stop(); 
+                    html5QrCode.clear(); 
+                } catch(e) {
+                    console.warn("Stop error:", e);
+                }
+            }
+            
+            // إنشاء مثيل جديد دائماً لضمان النظافة عند التبديل
+            html5QrCode = new Html5Qrcode("reader");
+            
+            const config = { 
+                fps: 20, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
+
+            const onScanSuccess = (decodedText) => {
+                var now = Date.now();
+                if (decodedText === lastCode && now - lastCodeTime < 4000) return;
+                lastCode = decodedText;
+                lastCodeTime = now;
+                sendAttendance(decodedText);
+            };
+
+            // بدء التشغيل
+            if (cameraId) {
+                await html5QrCode.start(cameraId, config, onScanSuccess);
+            } else {
+                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+            }
+            
+            // نجاح التشغيل: إخفاء التحميل وتحديث الواجهة
+            if (placeholder) {
+                placeholder.classList.add('opacity-0', 'pointer-events-none');
+            }
+            updateScannerUI('scanning', 'text-emerald-400', 'جاهز للمسح');
+            
+            // انتظار ثانية واحدة لضمان أن المتصفح قد سمى الكاميرات (Labels)
+            setTimeout(initCameras, 1000);
+            
+        } catch (err) {
+            console.error("Scanner Start Error:", err);
+            // في حالة الخطأ، نخفي التحميل ونظهر رسالة هادئة
+            if (placeholder) {
+                placeholder.classList.add('opacity-0', 'pointer-events-none');
+            }
+            updateScannerUI('error', 'text-slate-500', 'بانتظار الكاميرا');
+        }
+    }
+
+    // Load Cameras
+    async function initCameras() {
+        const select = document.getElementById('camera-select');
+        try {
+            const devices = await Html5Qrcode.getCameras();
+            select.innerHTML = '';
+            
+            if (devices && devices.length > 0) {
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.id;
+                    option.text = device.label || `كاميرا ${select.length + 1}`;
+                    if (device.id === currentCameraId) option.selected = true;
+                    select.appendChild(option);
+                });
+            } else {
+                select.innerHTML = '<option value="">الكاميرا الخلفية (تلقائي)</option>';
+            }
+        } catch (err) {
+            // صمت مطبق عند الخطأ كما طلب المستخدم
+            select.innerHTML = '<option value="">الكاميرا الافتراضية</option>';
+        }
+    }
+
+    // Settings UI Listeners
+    document.getElementById('toggle-settings').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('settings-dropdown').classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+        document.getElementById('settings-dropdown').classList.add('hidden');
+    });
+
+    document.getElementById('settings-dropdown').addEventListener('click', (e) => e.stopPropagation());
+
+    document.getElementById('camera-select').addEventListener('change', (e) => {
+        const newId = e.target.value;
+        if (newId) {
+            currentCameraId = newId;
+            localStorage.setItem('preferredCameraId', newId);
+            startScanner(newId);
+        }
+    });
+
+    document.getElementById('restart-scanner').addEventListener('click', () => {
+        startScanner(currentCameraId);
+    });
+
+    // Event Listeners
+    const searchInput = document.getElementById('student_name_search');
+    const resultsContainer = document.getElementById('search_results');
+    const manualIdInput = document.getElementById('manual-id');
+    let debounceTimer;
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            resultsContainer.classList.add('hidden');
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetch(`{% url 'attendance:search_students' %}?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.students.length > 0) {
+                        resultsContainer.innerHTML = '';
+                        data.students.forEach(student => {
+                            const div = document.createElement('div');
+                            div.className = 'p-4 hover:bg-slate-800 cursor-pointer border-b border-slate-800/50 last:border-0 transition-colors group';
+                            div.innerHTML = `
+                                <div class="flex items-center justify-between">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors">${student.name}</span>
+                                        <span class="text-[10px] text-slate-500 font-medium">${student.group_code || 'بدون مجموعة'} • ${student.school || 'بدون مدرسة'}</span>
+                                    </div>
+                                    <span class="text-xs font-mono font-bold text-cyan-500 bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/20">${student.student_id}</span>
+                                </div>
+                            `;
+                            div.addEventListener('click', () => {
+                                manualIdInput.value = student.student_id;
+                                searchInput.value = student.name;
+                                resultsContainer.classList.add('hidden');
+                                manualIdInput.focus();
+                            });
+                            resultsContainer.appendChild(div);
+                        });
+                        resultsContainer.classList.remove('hidden');
+                    } else {
+                        resultsContainer.classList.add('hidden');
+                    }
+                })
+                .catch(() => resultsContainer.classList.add('hidden'));
+        }, 300);
+    });
+
+    // Close results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.classList.add('hidden');
+        }
+    });
+
+    document.getElementById("manual-submit").addEventListener("click", function() {
+        const input = document.getElementById("manual-id");
+        const val = input.value.trim();
+        if (val) {
+            sendAttendance(val);
+            input.value = "";
+        }
+    });
+
+    document.getElementById("manual-id").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") document.getElementById("manual-submit").click();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+         initCameras();
+         startScanner(currentCameraId);
+         if (window.lucide) lucide.createIcons();
+     });
+ </script>
+
+<style>
+    /* Override html5-qrcode styles for better integration */
+    #reader { border: none !important; }
+    #reader img { display: none !important; }
+    #reader__dashboard_section_csr button {
+        background: #0f172a !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 12px !important;
+        padding: 8px 16px !important;
+        font-family: 'Cairo', sans-serif !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        cursor: pointer !important;
+    }
+    #reader__dashboard_section_csr button:hover {
+        background: #1e293b !important;
+    }
+    #reader__status_span { display: none !important; }
+    #reader video {
+        border-radius: 24px !important;
+        object-fit: cover !important;
+    }
+</style>
+{% endblock %}

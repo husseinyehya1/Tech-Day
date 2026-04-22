@@ -1,0 +1,14 @@
+# Fly.io Docker Ignore
+tech_day_mobile/
+__pycache__/
+*.pyc
+db.sqlite3
+media/
+staticfiles/
+.env
+.git/
+.github/
+node_modules/
+.vscode/
+.idea/
+*.log
