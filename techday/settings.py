@@ -40,7 +40,7 @@ allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '')
 if allowed_hosts_env:
     ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
 else:
-    ALLOWED_HOSTS = ['td.edutech-egy.com', 'verify.edutech-egy.com', 'localhost', '127.0.0.1', 'tech-day.fly.dev', "10.206.53.174" ]
+    ALLOWED_HOSTS = ['td.obour.edutech-egy.com', 'verify.edutech-egy.com', 'localhost', '127.0.0.1', 'tech-day.fly.dev', "10.206.53.174" ]
 
 
 # Application definition
