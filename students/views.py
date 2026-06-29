@@ -10,8 +10,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
-from weasyprint import HTML, CSS
-
 from techday.utils import send_email_async, get_styled_email_html, send_registration_confirmation_email
 
 from attendance.models import Attendance
@@ -609,6 +607,15 @@ def send_certificate_email(request, pk):
     cert_html = render_to_string('students/certificate.html', certificate_context)
     
     # تحويل الروابط النسبية لروابط مطلقة لـ WeasyPrint
+    try:
+        from weasyprint import HTML
+    except Exception:
+        messages.error(
+            request,
+            "تعذر إنشاء ملف الشهادة PDF على هذا الجهاز حالياً لعدم اكتمال مكتبات WeasyPrint."
+        )
+        return redirect('students:detail', pk=pk)
+
     base_url = request.build_absolute_uri('/')
     pdf_file = io.BytesIO()
     HTML(string=cert_html, base_url=base_url).write_pdf(pdf_file)
